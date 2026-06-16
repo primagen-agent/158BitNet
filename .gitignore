@@ -1,0 +1,7 @@
+build/
+models/
+*.log
+*.tmp
+tests/*.bin
+.DS_Store
+.worktrees/
