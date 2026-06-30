@@ -17,6 +17,7 @@ int bitnet_load_lora(bitnet_model_t *model, const char *path, float scale);
 int bitnet_lora_count(const bitnet_model_t *model);
 int bitnet_embedding_length(const bitnet_model_t *model);
 int bitnet_vocab_size(const bitnet_model_t *model);
+int bitnet_chat_template_kind(const bitnet_model_t *model);
 const float *bitnet_get_last_hidden(const bitnet_context_t *ctx);
 
 int bitnet_tokenize(bitnet_model_t *model, const char *text, int *tokens, int max_tokens);

@@ -40,6 +40,44 @@ static int expect_tensor(const gguf_file_t *file, const char *name, unsigned int
     return 0;
 }
 
+static int test_i2s_model_metadata(void) {
+    static const char model_path[] = BITNET_SOURCE_DIR "/models/ggml-model-i2_s.gguf";
+    const uint64_t token_dims[] = {2560, 128256};
+    const uint64_t norm_dims[] = {2560};
+    const uint64_t attn_q_dims[] = {2560, 2560};
+    const uint64_t attn_k_dims[] = {2560, 640};
+    const uint64_t ffn_down_dims[] = {6912, 2560};
+    gguf_file_t file;
+    int rc = gguf_open(model_path, &file);
+    if (rc != 0) return 0;
+
+    rc = expect_string_metadata(&file, "general.architecture", "bitnet-b1.58");
+    if (rc != 0) { gguf_close(&file); return rc + 200; }
+    rc = expect_string_metadata(&file, "tokenizer.ggml.model", "gpt2");
+    if (rc != 0) { gguf_close(&file); return rc + 210; }
+    rc = expect_u32_metadata(&file, "general.file_type", BITNET_BITNET_B158_FILE_TYPE_I2_S, 220);
+    if (rc != 0) { gguf_close(&file); return rc; }
+    rc = expect_u32_metadata(&file, "bitnet-b1.58.embedding_length", 2560, 230);
+    if (rc != 0) { gguf_close(&file); return rc; }
+    rc = expect_u32_metadata(&file, "bitnet-b1.58.block_count", 30, 240);
+    if (rc != 0) { gguf_close(&file); return rc; }
+
+    rc = expect_tensor(&file, "token_embd.weight", BITNET_TARGET_TENSOR_TYPE_F16, token_dims, 2);
+    if (rc != 0) { gguf_close(&file); return rc + 250; }
+    rc = expect_tensor(&file, "output_norm.weight", BITNET_TARGET_TENSOR_TYPE_F32, norm_dims, 1);
+    if (rc != 0) { gguf_close(&file); return rc + 260; }
+    rc = expect_tensor(&file, "blk.0.attn_q.weight", BITNET_TARGET_TENSOR_TYPE_I2_S, attn_q_dims, 2);
+    if (rc != 0) { gguf_close(&file); return rc + 270; }
+    rc = expect_tensor(&file, "blk.0.attn_k.weight", BITNET_TARGET_TENSOR_TYPE_I2_S, attn_k_dims, 2);
+    if (rc != 0) { gguf_close(&file); return rc + 280; }
+    rc = expect_tensor(&file, "blk.0.ffn_down.weight", BITNET_TARGET_TENSOR_TYPE_I2_S, ffn_down_dims, 2);
+    if (rc != 0) { gguf_close(&file); return rc + 290; }
+
+    rc = bitnet_validate_target_model(&file);
+    gguf_close(&file);
+    return rc == 0 ? 0 : rc + 300;
+}
+
 int main(void) {
     static const char model_path[] = BITNET_SOURCE_DIR "/models/bitcpm4-1b-tq2_0.gguf";
     const uint64_t output_dims[] = {2048, 73448};
@@ -90,5 +128,7 @@ int main(void) {
     if (rc != 0) return rc;
 
     gguf_close(&file);
+    rc = test_i2s_model_metadata();
+    if (rc != 0) return rc;
     return 0;
 }

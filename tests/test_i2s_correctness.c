@@ -114,6 +114,18 @@ int main(void) {
         fprintf(stderr, "matmul_i2s_neon failed\n"); return 1;
     }
 
+    float *i2s_signed_out = (float *)calloc(out_dim, sizeof(float));
+    if (i2s_signed_out == NULL) {
+        fprintf(stderr, "alloc i2s_signed_out failed\n");
+        return 1;
+    }
+    if (bitnet_tq2_0_matmul_i2s_neon(packed, packed_scales, NULL,
+                                      out_dim, in_dim, qvec, vec_scale,
+                                      i2s_signed_out) != 0) {
+        fprintf(stderr, "matmul_i2s_neon signed path failed\n");
+        return 1;
+    }
+
     /* Compare results */
     int failures = 0;
     float max_diff = 0.0f;
@@ -123,6 +135,14 @@ int main(void) {
         if (!almost_equal(ref_out[i], i2s_out[i], 0.01f)) {
             printf("Row %d: ref=%.6f i2s=%.6f diff=%.6f\n", i, ref_out[i], i2s_out[i], diff);
             failures++;
+        }
+        {
+            float signed_diff = fabsf(i2s_out[i] - i2s_signed_out[i]);
+            if (!almost_equal(i2s_out[i], i2s_signed_out[i], 0.01f)) {
+                printf("Row %d: i2s_bsum=%.6f i2s_signed=%.6f diff=%.6f\n",
+                       i, i2s_out[i], i2s_signed_out[i], signed_diff);
+                failures++;
+            }
         }
     }
 
@@ -143,6 +163,7 @@ int main(void) {
     free(packed_scales);
     free(packed_bsums);
     free(i2s_out);
+    free(i2s_signed_out);
 
     return failures > 0 ? 1 : 0;
 }

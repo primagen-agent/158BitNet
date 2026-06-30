@@ -42,6 +42,54 @@ static float env_float_or_default(const char *name, float fallback) {
     return parsed;
 }
 
+typedef struct utf8_stream_state {
+    char pending[4];
+    int pending_len;
+    int pending_expected;
+} utf8_stream_state_t;
+
+static int utf8_expected_len(unsigned char b) {
+    if (b < 0x80u) return 1;
+    if (b >= 0xC2u && b <= 0xDFu) return 2;
+    if (b >= 0xE0u && b <= 0xEFu) return 3;
+    if (b >= 0xF0u && b <= 0xF4u) return 4;
+    return 0;
+}
+
+static int utf8_is_cont(unsigned char b) {
+    return (b & 0xC0u) == 0x80u;
+}
+
+static void print_decoded_utf8(utf8_stream_state_t *state, const char *bytes, int byte_len) {
+    if (state == NULL || bytes == NULL || byte_len <= 0) return;
+
+    for (int i = 0; i < byte_len; ++i) {
+        unsigned char b = (unsigned char)bytes[i];
+
+        if (state->pending_len == 0) {
+            int expected = utf8_expected_len(b);
+            if (expected == 1) {
+                putchar((int)b);
+            } else if (expected > 1) {
+                state->pending[0] = (char)b;
+                state->pending_len = 1;
+                state->pending_expected = expected;
+            }
+        } else if (utf8_is_cont(b)) {
+            state->pending[state->pending_len++] = (char)b;
+            if (state->pending_len == state->pending_expected) {
+                fwrite(state->pending, 1, (size_t)state->pending_expected, stdout);
+                state->pending_len = 0;
+                state->pending_expected = 0;
+            }
+        } else {
+            state->pending_len = 0;
+            state->pending_expected = 0;
+            --i;
+        }
+    }
+}
+
 int main(int argc, char **argv) {
     bitnet_model_t *model = NULL;
     bitnet_context_t *ctx = NULL;
@@ -54,7 +102,10 @@ int main(int argc, char **argv) {
     int repeat_last_n = env_int_or_default("BITNET_REPEAT_LAST_N", DEFAULT_REPEAT_LAST_N);
     float repeat_penalty = env_float_or_default("BITNET_REPEAT_PENALTY", DEFAULT_REPEAT_PENALTY);
     char decoded[256];
+    utf8_stream_state_t utf8_state;
     int i = 0;
+
+    memset(&utf8_state, 0, sizeof(utf8_state));
 
     if (argc < 3) {
         fprintf(stderr, "Usage: %s <model.gguf> <prompt> [num_tokens]\n", argv[0]);
@@ -162,8 +213,11 @@ int main(int argc, char **argv) {
             break;
         }
 
-        if (bitnet_decode_token(model, next_token, decoded, (int)sizeof(decoded)) > 0) {
-            printf("%s", decoded);
+        {
+            int decoded_len = bitnet_decode_token(model, next_token, decoded, (int)sizeof(decoded));
+            if (decoded_len > 0) {
+                print_decoded_utf8(&utf8_state, decoded, decoded_len);
+            }
             fflush(stdout);
         }
 

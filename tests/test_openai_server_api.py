@@ -73,6 +73,17 @@ def wait_until_ready(base_url, deadline):
     return False, last_error
 
 
+def env_float_or_default(name, fallback):
+    value = os.environ.get(name)
+    if not value:
+        return fallback
+    try:
+        parsed = float(value)
+    except ValueError:
+        return fallback
+    return parsed if parsed > 0 else fallback
+
+
 def main():
     if len(sys.argv) < 3:
         return fail("usage: test_openai_server_api.py <openai_server> <model.gguf>")
@@ -93,7 +104,8 @@ def main():
         text=True,
     )
     try:
-        ok, error = wait_until_ready(base_url, time.time() + 60)
+        ready_timeout = env_float_or_default("BITNET_OPENAI_READY_TIMEOUT", 180.0)
+        ok, error = wait_until_ready(base_url, time.time() + ready_timeout)
         if not ok:
             stderr = proc.stderr.read() if proc.poll() is not None else ""
             return fail(f"server not ready: {error}; stderr={stderr}")

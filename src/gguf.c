@@ -311,6 +311,10 @@ const char *gguf_tensor_type_name(uint32_t type) {
         case 33: return "Q6_K_ALT";
         case 34: return "TQ1_0";
         case 35: return "TQ2_0";
+        case 36: return "I2_S";
+        case 37: return "I8_S";
+        case 38: return "TL1";
+        case 39: return "TL2";
         default: return "UNKNOWN";
     }
 }

@@ -9,6 +9,10 @@
 #include "sampler.h"
 #include "tensor.h"
 
+#if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
+#include "bitnet_metal.h"
+#endif
+
 #if defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
@@ -42,6 +46,21 @@
 #define BITNET_MAX_TQ2_BLOCKS 128
 #define BITNET_LORA_MAX_RANK 256
 #define BITNET_LORA_OUTPUT_BLOCK_INDEX UINT32_MAX
+
+typedef enum bitnet_weight_format {
+    BITNET_WEIGHT_FORMAT_TQ2_0 = 0,
+    BITNET_WEIGHT_FORMAT_I2_S = 1
+} bitnet_weight_format_t;
+
+typedef enum bitnet_ffn_activation {
+    BITNET_FFN_ACTIVATION_SILU = 0,
+    BITNET_FFN_ACTIVATION_RELU2 = 1
+} bitnet_ffn_activation_t;
+
+typedef enum bitnet_chat_template_kind_internal {
+    BITNET_CHAT_TEMPLATE_CHATML = 0,
+    BITNET_CHAT_TEMPLATE_BITNET_B158 = 1
+} bitnet_chat_template_kind_internal_t;
 
 typedef enum bitnet_lora_layer {
     BITNET_LORA_LAYER_ATTN_Q = 0,
@@ -115,6 +134,19 @@ typedef struct bitnet_tq2_i2s_cache {
     int32_t **bsums;     /* per-block bsums [block_count][2: hidden + ffn] */
 } bitnet_tq2_i2s_cache_t;
 
+#if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
+typedef struct bitnet_block_metal_i2s_weights {
+    bitnet_metal_i2s_tensor_t *ffn_gate;
+    bitnet_metal_i2s_tensor_t *ffn_up;
+    bitnet_metal_i2s_tensor_t *ffn_down;
+} bitnet_block_metal_i2s_weights_t;
+
+typedef struct bitnet_metal_i2s_cache {
+    bitnet_metal_i2s_context_t *ctx;
+    bitnet_block_metal_i2s_weights_t *blocks;
+} bitnet_metal_i2s_cache_t;
+#endif
+
 typedef struct bitnet_tq2_scale_cache {
     bitnet_block_scale_cache_t *blocks;
 } bitnet_tq2_scale_cache_t;
@@ -132,8 +164,14 @@ struct bitnet_model {
     int8_t *output_q8_scales_i8;
     float *output_q8_d;
     uint32_t token_embd_type;
+    uint32_t weight_tensor_type;
+    bitnet_weight_format_t weight_format;
     int output_is_tied_token_embd;
     int output_q8_blockscale;
+#if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
+    bitnet_metal_output_t *metal_output;
+    bitnet_metal_i2s_cache_t metal_i2s_cache;
+#endif
 
     uint32_t embedding_length;
     uint32_t block_count;
@@ -149,6 +187,12 @@ struct bitnet_model {
     float embedding_scale;
     float residual_scale;
     float logit_scale;
+    float rope_freq_base;
+    float rms_norm_eps;
+    bitnet_ffn_activation_t ffn_activation;
+    int use_attn_sub_norm;
+    int use_ffn_sub_norm;
+    int chat_template_kind;
     bitnet_lora_adapter_t *lora;
 };
 
@@ -669,6 +713,11 @@ int bitnet_vocab_size(const bitnet_model_t *model) {
     return (int)model->vocab_size;
 }
 
+int bitnet_chat_template_kind(const bitnet_model_t *model) {
+    if (model == NULL) return 0;
+    return model->chat_template_kind;
+}
+
 static int bitnet_apply_lora(const bitnet_model_t *model,
                              int block_index,
                              bitnet_lora_layer_t layer_id,
@@ -788,7 +837,7 @@ static float bitnet_quantize_f32_to_i8(const float *src, int n, int8_t *dst) {
 
 static int bitnet_rms_norm_quant_tq2_i8(float *dst, const float *src, const float *weight,
                                         int n, int8_t *qvec, float *scale,
-                                        int32_t *block_bsums) {
+                                        int32_t *block_bsums, float eps) {
     float sum = 0.0f;
     float max_abs = 0.0f;
     int i = 0;
@@ -812,7 +861,7 @@ static int bitnet_rms_norm_quant_tq2_i8(float *dst, const float *src, const floa
         sum += src[i] * src[i];
     }
 
-    const float inv_rms = 1.0f / sqrtf(sum / (float)n + 1e-6f);
+    const float inv_rms = 1.0f / sqrtf(sum / (float)n + eps);
 
     i = 0;
 #if defined(__ARM_NEON)
@@ -1039,7 +1088,7 @@ static bitnet_output_pool_t g_output_pool = {
 static pthread_once_t g_output_pool_once = PTHREAD_ONCE_INIT;
 
 #define BITNET_OUTPUT_SPIN_ITERS 5000
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(__APPLE__)
 #define BITNET_OUTPUT_PARK_USLEEP 1
 #else
 #define BITNET_OUTPUT_PARK_USLEEP 100
@@ -1387,6 +1436,10 @@ static int bitnet_choose_q8_compact_output_chunk_rows(int output_blocks_per_col)
     if (output_blocks_per_col == 10 || output_blocks_per_col == 16) {
         return bitnet_choose_output_chunk_rows_with_default(64);
     }
+#elif defined(__APPLE__)
+    if (output_blocks_per_col == 10 || output_blocks_per_col == 16) {
+        return bitnet_choose_output_chunk_rows_with_default(128);
+    }
 #else
     (void)output_blocks_per_col;
 #endif
@@ -1463,7 +1516,11 @@ static void *bitnet_output_pool_worker_main(void *ptr) {
                 return NULL;
             }
             if (atomic_load_explicit(&g_output_pool.park, memory_order_acquire)) {
+#if defined(__APPLE__)
+                usleep(g_output_pool.n_threads > 3 ? 100 : BITNET_OUTPUT_PARK_USLEEP);
+#else
                 usleep(BITNET_OUTPUT_PARK_USLEEP);
+#endif
                 spin_count = 0;
                 continue;
             }
@@ -1776,6 +1833,11 @@ typedef struct bitnet_model_config {
     float embedding_scale;
     float residual_scale;
     float logit_scale;
+    float rope_freq_base;
+    float rms_norm_eps;
+    bitnet_ffn_activation_t ffn_activation;
+    int use_attn_sub_norm;
+    int use_ffn_sub_norm;
 } bitnet_model_config_t;
 
 static const char *model_config_prefix(const gguf_file_t *file) {
@@ -1789,7 +1851,47 @@ static const char *model_config_prefix(const gguf_file_t *file) {
     if (strcmp(entry->string_value, "minicpm") == 0) {
         return "minicpm";
     }
+    if (strcmp(entry->string_value, "bitnet-b1.58") == 0) {
+        return "bitnet-b1.58";
+    }
     return NULL;
+}
+
+static int model_arch_is_bitnet_b158(const gguf_file_t *file) {
+    const gguf_metadata_t *entry = gguf_find_metadata(file, "general.architecture");
+    return entry != NULL && entry->type == GGUF_TYPE_STRING &&
+           entry->string_value != NULL &&
+           strcmp(entry->string_value, "bitnet-b1.58") == 0;
+}
+
+static uint32_t model_weight_tensor_type_for_file(const gguf_file_t *file) {
+    const gguf_metadata_t *entry = gguf_find_metadata(file, "general.file_type");
+    if (entry != NULL && entry->type == GGUF_TYPE_UINT32 &&
+        entry->value.u64 == BITNET_BITNET_B158_FILE_TYPE_I2_S) {
+        return BITNET_TARGET_TENSOR_TYPE_I2_S;
+    }
+    return BITNET_TARGET_TENSOR_TYPE_TQ2_0;
+}
+
+static int model_file_type_supported(const gguf_file_t *file) {
+    const gguf_metadata_t *entry = gguf_find_metadata(file, "general.file_type");
+    uint32_t file_type = 0;
+    if (entry == NULL || entry->type != GGUF_TYPE_UINT32) {
+        return 0;
+    }
+    file_type = (uint32_t)entry->value.u64;
+    return file_type == BITNET_TARGET_FILE_TYPE ||
+           file_type == BITNET_BITNET_B158_FILE_TYPE_I2_S;
+}
+
+static int model_tokenizer_supported(const gguf_file_t *file) {
+    const gguf_metadata_t *entry = gguf_find_metadata(file, "tokenizer.ggml.model");
+    if (entry == NULL || entry->type != GGUF_TYPE_STRING ||
+        entry->string_value == NULL) {
+        return 0;
+    }
+    return strcmp(entry->string_value, "llama") == 0 ||
+           strcmp(entry->string_value, "gpt2") == 0;
 }
 
 static uint32_t read_arch_config_u32(const gguf_file_t *file, const char *prefix, const char *suffix) {
@@ -1841,6 +1943,20 @@ static int read_model_config(const gguf_file_t *file, bitnet_model_config_t *cfg
     cfg->embedding_scale = read_arch_config_f32_default(file, prefix, "embedding_scale", 1.0f);
     cfg->residual_scale = read_arch_config_f32_default(file, prefix, "residual_scale", 1.0f);
     cfg->logit_scale = read_arch_config_f32_default(file, prefix, "logit_scale", 1.0f);
+    cfg->rope_freq_base = read_arch_config_f32_default(file, prefix, "rope.freq_base", 10000.0f);
+    cfg->rms_norm_eps = read_arch_config_f32_default(file, prefix,
+                                                     "attention.layer_norm_rms_epsilon",
+                                                     1e-6f);
+    cfg->ffn_activation = BITNET_FFN_ACTIVATION_SILU;
+
+    if (model_arch_is_bitnet_b158(file)) {
+        cfg->embedding_scale = 1.0f;
+        cfg->residual_scale = 1.0f;
+        cfg->logit_scale = 1.0f;
+        cfg->ffn_activation = BITNET_FFN_ACTIVATION_RELU2;
+        cfg->use_attn_sub_norm = 1;
+        cfg->use_ffn_sub_norm = 1;
+    }
 
     if (cfg->embedding_length == 0) {
         cfg->embedding_length = tensor_dim_u32(file, "output.weight", 0);
@@ -1939,9 +2055,9 @@ static int build_tensor_i2s(const gguf_file_t *file, const gguf_tensor_t *tensor
     size_t packed_size = bitnet_tq2_0_i2s_packed_size(out_dim, in_dim);
     int out_dim_padded = (out_dim + 3) & ~3;
     int n_groups = out_dim_padded / 4;
-    int sub_blocks_per_group = in_dim / 64; /* QK_I2S = 64 */
-    size_t scales_count = (size_t)n_groups * (size_t)sub_blocks_per_group * 4;
-    size_t bsums_count = scales_count;
+    int blocks_per_row = in_dim / BITNET_TQ2_0_QK;
+    size_t scales_count = (size_t)n_groups * (size_t)blocks_per_row * 4;
+    size_t bsums_count = (size_t)n_groups * (size_t)(in_dim / 64) * 4; /* QK_I2S = 64 */
     uint8_t *packed = NULL;
     float *scales = NULL;
     int32_t *bsums = NULL;
@@ -1979,6 +2095,115 @@ static int build_tensor_i2s(const gguf_file_t *file, const gguf_tensor_t *tensor
     *scales_out = scales;
     *bsums_out = bsums;
     return 0;
+}
+
+static size_t native_i2s_tensor_data_size(int out_dim, int in_dim) {
+    if (out_dim <= 0 || in_dim <= 0 || (in_dim % 64) != 0) {
+        return 0;
+    }
+    return (size_t)out_dim * (size_t)in_dim / 4u + 32u;
+}
+
+static int native_i2s_code_at(const uint8_t *row_data, int pos) {
+    int sb = pos / 128;
+    int e = pos % 128;
+    int group_idx = e / 32;
+    int group_pos = e % 32;
+    uint8_t packed = row_data[(size_t)sb * 32u + (size_t)group_pos];
+    return (int)((packed >> (6 - 2 * group_idx)) & 3u);
+}
+
+static int build_native_i2s_tensor(const gguf_file_t *file, const gguf_tensor_t *tensor,
+                                   int out_dim, int in_dim,
+                                   uint8_t **packed_out, float **scales_out, int32_t **bsums_out) {
+    const uint8_t *weight = (const uint8_t *)gguf_get_tensor_ptr(file, tensor);
+    size_t packed_size = bitnet_tq2_0_i2s_packed_size(out_dim, in_dim);
+    int out_dim_padded = (out_dim + 3) & ~3;
+    int n_groups = out_dim_padded / 4;
+    int blocks_per_row = in_dim / BITNET_TQ2_0_QK;
+    int sub_blocks_per_group = in_dim / 64;
+    size_t native_size = native_i2s_tensor_data_size(out_dim, in_dim);
+    size_t native_row_size = (size_t)in_dim / 4u;
+    size_t scales_count = (size_t)n_groups * (size_t)blocks_per_row * 4u;
+    size_t bsums_count = (size_t)n_groups * (size_t)sub_blocks_per_group * 4u;
+    uint8_t *packed = NULL;
+    float *scales = NULL;
+    int32_t *bsums = NULL;
+    float tensor_scale = 0.0f;
+
+    if (file == NULL || tensor == NULL || weight == NULL || packed_out == NULL ||
+        scales_out == NULL || bsums_out == NULL || packed_size == 0 ||
+        native_size < 32u || blocks_per_row <= 0) {
+        return -1;
+    }
+
+    memcpy(&tensor_scale, weight + native_size - 32u, sizeof(tensor_scale));
+
+    packed = (uint8_t *)calloc(packed_size, sizeof(*packed));
+    scales = (float *)malloc(scales_count * sizeof(*scales));
+    bsums = (int32_t *)calloc(bsums_count, sizeof(*bsums));
+    if (packed == NULL || scales == NULL || bsums == NULL) {
+        free(bsums);
+        free(scales);
+        free(packed);
+        return -1;
+    }
+
+    for (int grp = 0; grp < n_groups; ++grp) {
+        int row_base = grp * 4;
+        for (int blk = 0; blk < blocks_per_row; ++blk) {
+            float *dst_scales = scales + ((size_t)grp * (size_t)blocks_per_row +
+                                          (size_t)blk) * 4u;
+            for (int r = 0; r < 4; ++r) {
+                dst_scales[r] = row_base + r < out_dim ? tensor_scale : 0.0f;
+            }
+        }
+
+        for (int sb = 0; sb < sub_blocks_per_group; ++sb) {
+            int elem_base = sb * 64;
+            uint8_t *dst = packed + (size_t)grp * (size_t)sub_blocks_per_group * 64u +
+                           (size_t)sb * 64u;
+            int32_t *dst_bsums = bsums + ((size_t)grp * (size_t)sub_blocks_per_group +
+                                          (size_t)sb) * 4u;
+
+            for (int r = 0; r < 4; ++r) {
+                int row = row_base + r;
+                if (row >= out_dim) {
+                    dst_bsums[r] = 0;
+                    continue;
+                }
+
+                const uint8_t *row_data = weight + (size_t)row * native_row_size;
+                int32_t code_sum = 0;
+                for (int e = 0; e < 64; ++e) {
+                    int runtime_code = native_i2s_code_at(row_data, elem_base + e);
+                    dst[e] |= (uint8_t)(runtime_code << ((3 - r) * 2));
+                    code_sum += runtime_code;
+                }
+                dst_bsums[r] = code_sum - 64;
+            }
+        }
+    }
+
+    *packed_out = packed;
+    *scales_out = scales;
+    *bsums_out = bsums;
+    return 0;
+}
+
+static int build_model_tensor_i2s(bitnet_model_t *model, const gguf_tensor_t *tensor,
+                                  int out_dim, int in_dim,
+                                  uint8_t **packed_out, float **scales_out, int32_t **bsums_out) {
+    if (model == NULL || tensor == NULL) {
+        return -1;
+    }
+    if (model->weight_format == BITNET_WEIGHT_FORMAT_I2_S ||
+        tensor->type == BITNET_TARGET_TENSOR_TYPE_I2_S) {
+        return build_native_i2s_tensor(&model->gguf, tensor, out_dim, in_dim,
+                                       packed_out, scales_out, bsums_out);
+    }
+    return build_tensor_i2s(&model->gguf, tensor, out_dim, in_dim,
+                            packed_out, scales_out, bsums_out);
 }
 
 static void free_tq2_i2s_cache(bitnet_tq2_i2s_cache_t *cache, uint32_t block_count) {
@@ -2067,6 +2292,117 @@ static int BITNET_MAYBE_UNUSED build_output_q6k_cache(bitnet_model_t *model) {
 
     return 0;
 }
+
+#if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
+static int bitnet_should_use_metal_output(void) {
+    const char *env = getenv("BITNET_METAL_OUTPUT");
+    return env != NULL && env[0] != '\0' && strcmp(env, "0") != 0 &&
+           bitnet_metal_available();
+}
+
+static int bitnet_should_use_metal_i2s(void) {
+    const char *env = getenv("BITNET_METAL_I2S");
+    return env != NULL && env[0] != '\0' && strcmp(env, "0") != 0 &&
+           bitnet_metal_available();
+}
+
+static void free_metal_output_cache(bitnet_model_t *model) {
+    if (model == NULL) return;
+    bitnet_metal_output_free(model->metal_output);
+    model->metal_output = NULL;
+}
+
+static int build_metal_output_cache(bitnet_model_t *model) {
+    int emb_dim = 0;
+    int vocab_size = 0;
+
+    if (model == NULL || model->output_q8 == NULL ||
+        model->output_q8_scales_i8 == NULL || model->output_q8_d == NULL ||
+        model->output_q8_blockscale) {
+        return -1;
+    }
+
+    emb_dim = (int)model->embedding_length;
+    vocab_size = (int)model->vocab_size;
+    return bitnet_metal_output_create_q6k_compact(model->output_q8,
+                                                  model->output_q8_scales_i8,
+                                                  model->output_q8_d,
+                                                  vocab_size,
+                                                  emb_dim,
+                                                  &model->metal_output);
+}
+
+static void free_metal_i2s_cache(bitnet_model_t *model) {
+    if (model == NULL) return;
+    if (model->metal_i2s_cache.blocks != NULL) {
+        for (uint32_t i = 0; i < model->block_count; ++i) {
+            bitnet_metal_i2s_tensor_free(model->metal_i2s_cache.blocks[i].ffn_gate);
+            bitnet_metal_i2s_tensor_free(model->metal_i2s_cache.blocks[i].ffn_up);
+            bitnet_metal_i2s_tensor_free(model->metal_i2s_cache.blocks[i].ffn_down);
+        }
+        free(model->metal_i2s_cache.blocks);
+        model->metal_i2s_cache.blocks = NULL;
+    }
+    bitnet_metal_i2s_free(model->metal_i2s_cache.ctx);
+    model->metal_i2s_cache.ctx = NULL;
+}
+
+static int build_metal_i2s_cache(bitnet_model_t *model) {
+    int emb_dim = 0;
+    int ffn_dim = 0;
+
+    if (model == NULL || model->i2s_cache.blocks == NULL ||
+        model->i2s_cache.scales == NULL || model->block_count == 0) {
+        return -1;
+    }
+
+    emb_dim = (int)model->embedding_length;
+    ffn_dim = (int)model->feed_forward_length;
+    if (emb_dim <= 0 || ffn_dim <= 0) {
+        return -1;
+    }
+
+    if (bitnet_metal_i2s_create(&model->metal_i2s_cache.ctx) != 0) {
+        free_metal_i2s_cache(model);
+        return -1;
+    }
+    model->metal_i2s_cache.blocks =
+        (bitnet_block_metal_i2s_weights_t *)calloc(model->block_count,
+                                                   sizeof(*model->metal_i2s_cache.blocks));
+    if (model->metal_i2s_cache.blocks == NULL) {
+        free_metal_i2s_cache(model);
+        return -1;
+    }
+
+    for (uint32_t i = 0; i < model->block_count; ++i) {
+        const bitnet_block_i2s_weights_t *cpu = &model->i2s_cache.blocks[i];
+        bitnet_block_metal_i2s_weights_t *gpu = &model->metal_i2s_cache.blocks[i];
+        float **sc = model->i2s_cache.scales + i * 7;
+        if (bitnet_metal_i2s_tensor_create(model->metal_i2s_cache.ctx,
+                                           cpu->ffn_gate, sc[4],
+                                           ffn_dim, emb_dim, &gpu->ffn_gate) != 0 ||
+            bitnet_metal_i2s_tensor_create(model->metal_i2s_cache.ctx,
+                                           cpu->ffn_up, sc[5],
+                                           ffn_dim, emb_dim, &gpu->ffn_up) != 0 ||
+            bitnet_metal_i2s_tensor_create(model->metal_i2s_cache.ctx,
+                                           cpu->ffn_down, sc[6],
+                                           emb_dim, ffn_dim, &gpu->ffn_down) != 0) {
+            free_metal_i2s_cache(model);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+#else
+static void free_metal_output_cache(bitnet_model_t *model) {
+    (void)model;
+}
+
+static void free_metal_i2s_cache(bitnet_model_t *model) {
+    (void)model;
+}
+#endif
 
 static int BITNET_MAYBE_UNUSED build_output_f16_tied_cache(bitnet_model_t *model) {
     int emb_dim = 0;
@@ -2184,44 +2520,44 @@ static int BITNET_MAYBE_UNUSED build_tq2_i2s_cache(bitnet_model_t *model) {
         int32_t **bs = model->i2s_cache.bsums + i * 7;
 
         /* tensor 0: attn_q */
-        if (build_tensor_i2s(&model->gguf, bt->attn_q, q_dim, emb_dim,
-                              &bw->attn_q, &sc[0], &bs[0]) != 0) {
+        if (build_model_tensor_i2s(model, bt->attn_q, q_dim, emb_dim,
+                                   &bw->attn_q, &sc[0], &bs[0]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 1: attn_k */
-        if (build_tensor_i2s(&model->gguf, bt->attn_k, kv_dim, emb_dim,
-                              &bw->attn_k, &sc[1], &bs[1]) != 0) {
+        if (build_model_tensor_i2s(model, bt->attn_k, kv_dim, emb_dim,
+                                   &bw->attn_k, &sc[1], &bs[1]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 2: attn_v */
-        if (build_tensor_i2s(&model->gguf, bt->attn_v, kv_dim, emb_dim,
-                              &bw->attn_v, &sc[2], &bs[2]) != 0) {
+        if (build_model_tensor_i2s(model, bt->attn_v, kv_dim, emb_dim,
+                                   &bw->attn_v, &sc[2], &bs[2]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 3: attn_output */
-        if (build_tensor_i2s(&model->gguf, bt->attn_output, emb_dim, attn_dim,
-                              &bw->attn_output, &sc[3], &bs[3]) != 0) {
+        if (build_model_tensor_i2s(model, bt->attn_output, emb_dim, attn_dim,
+                                   &bw->attn_output, &sc[3], &bs[3]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 4: ffn_gate */
-        if (build_tensor_i2s(&model->gguf, bt->ffn_gate, ffn_dim, emb_dim,
-                              &bw->ffn_gate, &sc[4], &bs[4]) != 0) {
+        if (build_model_tensor_i2s(model, bt->ffn_gate, ffn_dim, emb_dim,
+                                   &bw->ffn_gate, &sc[4], &bs[4]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 5: ffn_up */
-        if (build_tensor_i2s(&model->gguf, bt->ffn_up, ffn_dim, emb_dim,
-                              &bw->ffn_up, &sc[5], &bs[5]) != 0) {
+        if (build_model_tensor_i2s(model, bt->ffn_up, ffn_dim, emb_dim,
+                                   &bw->ffn_up, &sc[5], &bs[5]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 6: ffn_down */
-        if (build_tensor_i2s(&model->gguf, bt->ffn_down, emb_dim, ffn_dim,
-                              &bw->ffn_down, &sc[6], &bs[6]) != 0) {
+        if (build_model_tensor_i2s(model, bt->ffn_down, emb_dim, ffn_dim,
+                                   &bw->ffn_down, &sc[6], &bs[6]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
@@ -2349,11 +2685,14 @@ int bitnet_validate_target_model(const gguf_file_t *file) {
     bitnet_model_config_t cfg;
     uint32_t q_dim = 0;
     uint32_t kv_dim = 0;
+    uint32_t weight_type = 0;
 
     if (file == NULL) return -1;
     if (model_config_prefix(file) == NULL) return -2;
-    if (!metadata_string_equals(file, "tokenizer.ggml.model", BITNET_TARGET_TOKENIZER_MODEL)) return -3;
-    if (!metadata_u32_equals(file, "general.file_type", BITNET_TARGET_FILE_TYPE)) return -4;
+    if (!model_tokenizer_supported(file)) return -3;
+    if (!model_file_type_supported(file)) return -4;
+    (void)metadata_u32_equals;
+    (void)metadata_string_equals;
 
     if (read_model_config(file, &cfg) != 0 ||
         cfg.embedding_length == 0 || cfg.block_count == 0 || cfg.feed_forward_length == 0 ||
@@ -2376,6 +2715,7 @@ int bitnet_validate_target_model(const gguf_file_t *file) {
 
     q_dim = cfg.head_count * cfg.attention_key_length;
     kv_dim = cfg.head_count_kv * cfg.attention_key_length;
+    weight_type = model_weight_tensor_type_for_file(file);
 
     {
         const gguf_tensor_t *token_embd = gguf_find_tensor(file, "token_embd.weight");
@@ -2388,6 +2728,7 @@ int bitnet_validate_target_model(const gguf_file_t *file) {
         const uint64_t attn_output_dims[] = {q_dim, cfg.embedding_length};
         const uint64_t ffn_down_dims[] = {cfg.feed_forward_length, cfg.embedding_length};
         const uint64_t ffn_up_dims[] = {cfg.embedding_length, cfg.feed_forward_length};
+        const uint64_t ffn_norm_dims[] = {cfg.feed_forward_length};
 
         if (token_embd == NULL || !gguf_tensor_has_shape(token_embd, token_dims, 2)) return -19;
         if (token_embd->type != BITNET_TARGET_TENSOR_TYPE_Q4_K &&
@@ -2401,15 +2742,19 @@ int bitnet_validate_target_model(const gguf_file_t *file) {
             if (token_embd->type != BITNET_TARGET_TENSOR_TYPE_F16) return -20;
         }
         if (!tensor_matches(file, "output_norm.weight", BITNET_TARGET_TENSOR_TYPE_F32, norm_dims, 1)) return -21;
-        if (!tensor_matches(file, "blk.0.attn_q.weight", BITNET_TARGET_TENSOR_TYPE_TQ2_0, attn_q_dims, 2)) return -22;
-        if (!tensor_matches(file, "blk.0.attn_k.weight", BITNET_TARGET_TENSOR_TYPE_TQ2_0, attn_kv_dims, 2)) return -23;
-        if (!tensor_matches(file, "blk.0.attn_v.weight", BITNET_TARGET_TENSOR_TYPE_TQ2_0, attn_kv_dims, 2)) return -24;
-        if (!tensor_matches(file, "blk.0.attn_output.weight", BITNET_TARGET_TENSOR_TYPE_TQ2_0, attn_output_dims, 2)) return -25;
-        if (!tensor_matches(file, "blk.0.ffn_down.weight", BITNET_TARGET_TENSOR_TYPE_TQ2_0, ffn_down_dims, 2)) return -26;
-        if (!tensor_matches(file, "blk.0.ffn_gate.weight", BITNET_TARGET_TENSOR_TYPE_TQ2_0, ffn_up_dims, 2)) return -27;
-        if (!tensor_matches(file, "blk.0.ffn_up.weight", BITNET_TARGET_TENSOR_TYPE_TQ2_0, ffn_up_dims, 2)) return -28;
+        if (!tensor_matches(file, "blk.0.attn_q.weight", weight_type, attn_q_dims, 2)) return -22;
+        if (!tensor_matches(file, "blk.0.attn_k.weight", weight_type, attn_kv_dims, 2)) return -23;
+        if (!tensor_matches(file, "blk.0.attn_v.weight", weight_type, attn_kv_dims, 2)) return -24;
+        if (!tensor_matches(file, "blk.0.attn_output.weight", weight_type, attn_output_dims, 2)) return -25;
+        if (!tensor_matches(file, "blk.0.ffn_down.weight", weight_type, ffn_down_dims, 2)) return -26;
+        if (!tensor_matches(file, "blk.0.ffn_gate.weight", weight_type, ffn_up_dims, 2)) return -27;
+        if (!tensor_matches(file, "blk.0.ffn_up.weight", weight_type, ffn_up_dims, 2)) return -28;
         if (!tensor_matches(file, "blk.0.attn_norm.weight", BITNET_TARGET_TENSOR_TYPE_F32, norm_dims, 1)) return -29;
         if (!tensor_matches(file, "blk.0.ffn_norm.weight", BITNET_TARGET_TENSOR_TYPE_F32, norm_dims, 1)) return -30;
+        if (cfg.use_attn_sub_norm &&
+            !tensor_matches(file, "blk.0.attn_sub_norm.weight", BITNET_TARGET_TENSOR_TYPE_F32, norm_dims, 1)) return -31;
+        if (cfg.use_ffn_sub_norm &&
+            !tensor_matches(file, "blk.0.ffn_sub_norm.weight", BITNET_TARGET_TENSOR_TYPE_F32, ffn_norm_dims, 1)) return -32;
     }
 
     return 0;
@@ -2443,6 +2788,9 @@ int bitnet_build_tensor_cache(const gguf_file_t *file, uint32_t block_count, bit
         (void)snprintf(tname, sizeof(tname), "blk.%u.attn_norm.weight", i);
         bt->attn_norm = gguf_find_tensor(file, tname);
 
+        (void)snprintf(tname, sizeof(tname), "blk.%u.attn_sub_norm.weight", i);
+        bt->attn_sub_norm = gguf_find_tensor(file, tname);
+
         (void)snprintf(tname, sizeof(tname), "blk.%u.attn_q.weight", i);
         bt->attn_q = gguf_find_tensor(file, tname);
 
@@ -2458,6 +2806,9 @@ int bitnet_build_tensor_cache(const gguf_file_t *file, uint32_t block_count, bit
         (void)snprintf(tname, sizeof(tname), "blk.%u.ffn_norm.weight", i);
         bt->ffn_norm = gguf_find_tensor(file, tname);
 
+        (void)snprintf(tname, sizeof(tname), "blk.%u.ffn_sub_norm.weight", i);
+        bt->ffn_sub_norm = gguf_find_tensor(file, tname);
+
         (void)snprintf(tname, sizeof(tname), "blk.%u.ffn_gate.weight", i);
         bt->ffn_gate = gguf_find_tensor(file, tname);
 
@@ -2470,6 +2821,11 @@ int bitnet_build_tensor_cache(const gguf_file_t *file, uint32_t block_count, bit
         if (bt->attn_norm == NULL || bt->attn_q == NULL || bt->attn_k == NULL ||
             bt->attn_v == NULL || bt->attn_output == NULL || bt->ffn_norm == NULL ||
             bt->ffn_gate == NULL || bt->ffn_up == NULL || bt->ffn_down == NULL) {
+            bitnet_free_tensor_cache(cache);
+            return -1;
+        }
+        if (model_arch_is_bitnet_b158(file) &&
+            (bt->attn_sub_norm == NULL || bt->ffn_sub_norm == NULL)) {
             bitnet_free_tensor_cache(cache);
             return -1;
         }
@@ -2546,6 +2902,13 @@ bitnet_model_t *bitnet_load_model(const char *path) {
     model->embedding_scale = cfg.embedding_scale;
     model->residual_scale = cfg.residual_scale;
     model->logit_scale = cfg.logit_scale;
+    model->rope_freq_base = cfg.rope_freq_base;
+    model->rms_norm_eps = cfg.rms_norm_eps;
+    model->ffn_activation = cfg.ffn_activation;
+    model->use_attn_sub_norm = cfg.use_attn_sub_norm;
+    model->use_ffn_sub_norm = cfg.use_ffn_sub_norm;
+    model->chat_template_kind = model_arch_is_bitnet_b158(&model->gguf) ?
+        BITNET_CHAT_TEMPLATE_BITNET_B158 : BITNET_CHAT_TEMPLATE_CHATML;
 
     if (bitnet_build_tensor_cache(&model->gguf, model->block_count, &model->tensor_cache) != 0) {
         bitnet_free_model(model);
@@ -2555,10 +2918,16 @@ bitnet_model_t *bitnet_load_model(const char *path) {
     model->output_is_tied_token_embd =
         model->tensor_cache.output == NULL &&
         model->token_embd_type == BITNET_TARGET_TENSOR_TYPE_F16;
+    model->weight_tensor_type = model_weight_tensor_type_for_file(&model->gguf);
+    model->weight_format =
+        model->weight_tensor_type == BITNET_TARGET_TENSOR_TYPE_I2_S ?
+        BITNET_WEIGHT_FORMAT_I2_S : BITNET_WEIGHT_FORMAT_TQ2_0;
 
-    if (build_tq2_scale_cache(model) != 0) {
-        bitnet_free_model(model);
-        return NULL;
+    if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
+        if (build_tq2_scale_cache(model) != 0) {
+            bitnet_free_model(model);
+            return NULL;
+        }
     }
 
 #if BITNET_USE_TQ2_TL1_LUT
@@ -2573,6 +2942,11 @@ bitnet_model_t *bitnet_load_model(const char *path) {
         bitnet_free_model(model);
         return NULL;
     }
+#if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
+    if (bitnet_should_use_metal_i2s()) {
+        (void)build_metal_i2s_cache(model);
+    }
+#endif
 #endif
 
 #if BITNET_USE_Q6K_NEON_OUTPUT
@@ -2584,6 +2958,11 @@ bitnet_model_t *bitnet_load_model(const char *path) {
     } else {
         (void)build_output_q6k_cache(model);
     }
+#if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
+    if (bitnet_should_use_metal_output()) {
+        (void)build_metal_output_cache(model);
+    }
+#endif
 #endif
 
     return model;
@@ -2674,7 +3053,7 @@ bitnet_context_t *bitnet_create_context(bitnet_model_t *model, int max_tokens) {
 
     for (int pos = 0; pos < max_tokens; ++pos) {
         for (int j = 0; j < (int)model->rope_dimension_count / 2; ++j) {
-            float theta = 1.0f / powf(10000.0f, (float)(2 * j) / (float)head_dim);
+            float theta = 1.0f / powf(model->rope_freq_base, (float)(2 * j) / (float)head_dim);
             size_t idx = (size_t)pos * (size_t)(model->rope_dimension_count / 2u) + (size_t)j;
             ctx->rope_cos[idx] = cosf((float)pos * theta);
             ctx->rope_sin[idx] = sinf((float)pos * theta);
@@ -3030,11 +3409,13 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 #if BITNET_USE_TQ2_I2S
                 if (bitnet_rms_norm_quant_tq2_i8(tmp_out, hidden, norm_w, emb_dim,
                                                   tq2_qhidden, &tq2_hidden_scale,
-                                                  NULL) != 0) {
+                                                  tq2_hidden_block_bsums,
+                                                  model->rms_norm_eps) != 0) {
                     goto cleanup;
                 }
 #else
-                bitnet_rms_norm_inplace(tmp_out, hidden, norm_w, emb_dim);
+                bitnet_rms_norm_inplace_eps(tmp_out, hidden, norm_w, emb_dim,
+                                            model->rms_norm_eps);
 #endif
                 { float *swap_tmp = hidden; hidden = tmp_out; tmp_out = swap_tmp; }
             }
@@ -3094,7 +3475,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                                    model->i2s_cache.scales[block_idx * 7 + 1],
                                                    bw->attn_v,
                                                    model->i2s_cache.scales[block_idx * 7 + 2],
-                                                   NULL,
+                                                   tq2_hidden_block_bsums,
                                                    q_dim, kv_dim, emb_dim,
                                                    tq2_qhidden, tq2_hidden_scale,
                                                    q, k, v) != 0) {
@@ -3303,9 +3684,16 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 
             /* ===== Block step 3: attn_output projection ===== */
             profile_step_start = profile_eval ? monotonic_seconds() : 0.0;
+            if (model->use_attn_sub_norm) {
+                const float *sub_norm_w =
+                    (const float *)gguf_get_tensor_ptr(&model->gguf, bt->attn_sub_norm);
+                if (sub_norm_w == NULL) goto cleanup;
+                bitnet_rms_norm_eps(attn_buffer, sub_norm_w, attn_dim, model->rms_norm_eps);
+            }
 #if BITNET_USE_TQ2_I2S
             if (bitnet_tq2_0_quantize_vec_i8(attn_buffer, attn_dim,
-                                             tq2_qhidden, &tq2_hidden_scale, NULL) != 0) {
+                                             tq2_qhidden, &tq2_hidden_scale,
+                                             tq2_hidden_block_bsums) != 0) {
                 goto cleanup;
             }
 #elif BITNET_USE_TQ2_TL1_LUT
@@ -3343,7 +3731,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 #if BITNET_USE_TQ2_I2S
                 if (bitnet_tq2_0_matmul_i2s_neon_parallel(bw->attn_output,
                                                    model->i2s_cache.scales[block_idx * 7 + 3],
-                                                   NULL,
+                                                   tq2_hidden_block_bsums,
                                                    emb_dim, attn_dim,
                                                    tq2_qhidden, tq2_hidden_scale, down) != 0) {
                     goto cleanup;
@@ -3387,11 +3775,13 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 #if BITNET_USE_TQ2_I2S
                 if (bitnet_rms_norm_quant_tq2_i8(tmp_out, hidden, norm_w, emb_dim,
                                                   tq2_qhidden, &tq2_hidden_scale,
-                                                  NULL) != 0) {
+                                                  tq2_hidden_block_bsums,
+                                                  model->rms_norm_eps) != 0) {
                     goto cleanup;
                 }
 #else
-                bitnet_rms_norm_inplace(tmp_out, hidden, norm_w, emb_dim);
+                bitnet_rms_norm_inplace_eps(tmp_out, hidden, norm_w, emb_dim,
+                                            model->rms_norm_eps);
 #endif
                 { float *swap_tmp = hidden; hidden = tmp_out; tmp_out = swap_tmp; }
             }
@@ -3401,10 +3791,23 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             {
 #if BITNET_USE_TQ2_I2S
                 /* Quantized together with FFN RMSNorm above. */
+#if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
+                if (model->metal_i2s_cache.ctx != NULL &&
+                    model->metal_i2s_cache.blocks != NULL &&
+                    model->metal_i2s_cache.blocks[block_idx].ffn_gate != NULL &&
+                    model->metal_i2s_cache.blocks[block_idx].ffn_up != NULL &&
+                    bitnet_metal_i2s_compute_pair(model->metal_i2s_cache.ctx,
+                                                  model->metal_i2s_cache.blocks[block_idx].ffn_gate,
+                                                  model->metal_i2s_cache.blocks[block_idx].ffn_up,
+                                                  tq2_qhidden, tq2_hidden_scale,
+                                                  gate, up) == 0) {
+                    /* gate/up computed on Metal */
+                } else
+#endif
                 if (ffn_dim >= 8192) {
                     if (bitnet_tq2_0_matmul_i2s_neon_parallel(bw->ffn_gate,
                                                        model->i2s_cache.scales[block_idx * 7 + 4],
-                                                       NULL,
+                                                       tq2_hidden_block_bsums,
                                                        ffn_dim, emb_dim,
                                                        tq2_qhidden, tq2_hidden_scale,
                                                        gate) != 0) {
@@ -3412,7 +3815,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                     }
                     if (bitnet_tq2_0_matmul_i2s_neon_parallel(bw->ffn_up,
                                                        model->i2s_cache.scales[block_idx * 7 + 5],
-                                                       NULL,
+                                                       tq2_hidden_block_bsums,
                                                        ffn_dim, emb_dim,
                                                        tq2_qhidden, tq2_hidden_scale,
                                                        up) != 0) {
@@ -3423,7 +3826,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                                             model->i2s_cache.scales[block_idx * 7 + 4],
                                                             bw->ffn_up,
                                                             model->i2s_cache.scales[block_idx * 7 + 5],
-                                                            NULL,
+                                                            tq2_hidden_block_bsums,
                                                             ffn_dim, emb_dim,
                                                             tq2_qhidden, tq2_hidden_scale,
                                                             gate, up) != 0) {
@@ -3493,8 +3896,23 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 profile_gate_up_sec += monotonic_seconds() - profile_step_start;
             }
 
-            /* ===== Block step 5c: SiLU(gate) and element-wise merge ===== */
-            tq2_ffn_max_abs = bitnet_silu_mul_max_abs(gate, up, ffn_dim);
+            /* ===== Block step 5c: activation(gate) and element-wise merge ===== */
+            if (model->ffn_activation == BITNET_FFN_ACTIVATION_RELU2) {
+                tq2_ffn_max_abs = bitnet_relu2_mul_max_abs(gate, up, ffn_dim);
+            } else {
+                tq2_ffn_max_abs = bitnet_silu_mul_max_abs(gate, up, ffn_dim);
+            }
+            if (model->use_ffn_sub_norm) {
+                const float *sub_norm_w =
+                    (const float *)gguf_get_tensor_ptr(&model->gguf, bt->ffn_sub_norm);
+                if (sub_norm_w == NULL) goto cleanup;
+                bitnet_rms_norm_eps(gate, sub_norm_w, ffn_dim, model->rms_norm_eps);
+                tq2_ffn_max_abs = 0.0f;
+                for (int ffn_i = 0; ffn_i < ffn_dim; ++ffn_i) {
+                    float a = fabsf(gate[ffn_i]);
+                    if (a > tq2_ffn_max_abs) tq2_ffn_max_abs = a;
+                }
+            }
 
             /* ===== Block step 5d: ffn_down projection ===== */
             profile_step_start = profile_eval ? monotonic_seconds() : 0.0;
@@ -3502,13 +3920,23 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 #if BITNET_USE_TQ2_I2S
                 if (bitnet_tq2_0_quantize_vec_i8_known_max(gate, ffn_dim,
                                                            tq2_qffn, &tq2_ffn_scale,
-                                                           NULL,
+                                                           tq2_ffn_block_bsums,
                                                            tq2_ffn_max_abs) != 0) {
                     goto cleanup;
                 }
+#if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
+                if (model->metal_i2s_cache.ctx != NULL &&
+                    model->metal_i2s_cache.blocks != NULL &&
+                    model->metal_i2s_cache.blocks[block_idx].ffn_down != NULL &&
+                    bitnet_metal_i2s_compute(model->metal_i2s_cache.ctx,
+                                             model->metal_i2s_cache.blocks[block_idx].ffn_down,
+                                             tq2_qffn, tq2_ffn_scale, down) == 0) {
+                    /* ffn_down computed on Metal */
+                } else
+#endif
                 if (bitnet_tq2_0_matmul_i2s_neon_parallel(bw->ffn_down,
                                                    model->i2s_cache.scales[block_idx * 7 + 6],
-                                                   NULL,
+                                                   tq2_ffn_block_bsums,
                                                    emb_dim, ffn_dim,
                                                    tq2_qffn, tq2_ffn_scale, down) != 0) {
                     goto cleanup;
@@ -3584,7 +4012,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     {
         const float *norm_w = (const float *)gguf_get_tensor_ptr(&model->gguf, cache->output_norm);
         if (norm_w == NULL) goto cleanup;
-        bitnet_rms_norm(hidden, norm_w, emb_dim);
+        bitnet_rms_norm_eps(hidden, norm_w, emb_dim, model->rms_norm_eps);
         if (ctx->last_hidden != NULL) {
             memcpy(ctx->last_hidden, hidden, (size_t)emb_dim * sizeof(*ctx->last_hidden));
         }
@@ -3618,12 +4046,21 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                                                       model->output_q8_d,
                                                                       (int)output_blocks_per_col,
                                                                       vocab_size, tq2_qhidden,
-                                                                      tq2_hidden_scale, ctx->logits) != 0) {
+                                                                   tq2_hidden_scale, ctx->logits) != 0) {
                 goto cleanup;
             }
         } else if (model->output_q8 != NULL &&
             model->output_q8_scales_i8 != NULL &&
             model->output_q8_d != NULL) {
+#if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
+            if (model->metal_output != NULL &&
+                bitnet_metal_output_compute_q6k_compact(model->metal_output,
+                                                        tq2_qhidden,
+                                                        tq2_hidden_scale,
+                                                        ctx->logits) == 0) {
+                /* logits computed on Metal */
+            } else
+#endif
             if (bitnet_output_projection_q8_compact_neon_parallel(model->output_q8,
                                                                    model->output_q8_scales_i8,
                                                                    model->output_q8_d,
@@ -3765,6 +4202,8 @@ void bitnet_free_context(bitnet_context_t *ctx) {
 
 void bitnet_free_model(bitnet_model_t *model) {
     if (model == NULL) return;
+    free_metal_i2s_cache(model);
+    free_metal_output_cache(model);
     free_output_q6k_cache(model);
     free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
     free_tq2_scale_cache(&model->scale_cache, model->block_count);

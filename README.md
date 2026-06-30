@@ -515,8 +515,3 @@ Multi-turn KV-cache profiling:
 ```sh
 adb -s 192.168.210.10:5555 shell 'ps -A | grep openai_server || true'
 ```
----
-
-## License
-
-MIT License — see LICENSE file.

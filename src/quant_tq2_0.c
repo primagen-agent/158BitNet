@@ -1474,8 +1474,9 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
             /* Packed data: QK_I2S bytes for this sub-block */
             uint8_t *dst = packed + (size_t)grp * (size_t)sub_blocks_per_group * (size_t)QK_I2S
                          + (size_t)sb * (size_t)QK_I2S;
-            /* Scales: 4 floats for this sub-block (one per row) */
-            float *dst_scales = packed_scales + ((size_t)grp * (size_t)sub_blocks_per_group + (size_t)sb) * 4u;
+            /* Scales: 4 floats per TQ2_0 block (one per row). */
+            float *dst_scales = packed_scales + ((size_t)grp * (size_t)blocks_per_row +
+                                                 (size_t)(elem_base / BITNET_TQ2_0_QK)) * 4u;
             /* Bsums: 4 int32 for this sub-block (one per row) */
             int32_t *dst_bsums = packed_bsums + ((size_t)grp * (size_t)sub_blocks_per_group + (size_t)sb) * 4u;
 
@@ -1622,7 +1623,7 @@ static void i2s_matmul_4rows_neon(
         }
 
         /* Get scale for this TQ2_0 block (same for all 4 sub-blocks within it) */
-        const float *sb_scales = scales_grp + (size_t)(blk * 4) * 4;
+        const float *sb_scales = scales_grp + (size_t)blk * 4u;
         float s0 = sb_scales[0], s1 = sb_scales[1], s2 = sb_scales[2], s3 = sb_scales[3];
 
         /* Combine dual accumulators and apply the per-block row scales. */
@@ -1722,8 +1723,8 @@ static void i2s_matmul_8rows_neon(
             }
         }
 
-        const float *sb_scales0 = scales_grp0 + (size_t)(blk * 4) * 4;
-        const float *sb_scales1 = scales_grp1 + (size_t)(blk * 4) * 4;
+        const float *sb_scales0 = scales_grp0 + (size_t)blk * 4u;
+        const float *sb_scales1 = scales_grp1 + (size_t)blk * 4u;
         int32_t dot_0 = vaddvq_s32(vaddq_s32(acc_0_lo, acc_0_hi));
         int32_t dot_1 = vaddvq_s32(vaddq_s32(acc_1_lo, acc_1_hi));
         int32_t dot_2 = vaddvq_s32(vaddq_s32(acc_2_lo, acc_2_hi));
@@ -1789,8 +1790,8 @@ int bitnet_tq2_0_matmul_i2s_neon(const uint8_t *packed, const float *scales,
         int row_base = grp * 4;
         const uint8_t *packed_grp0 = packed + (size_t)grp * (size_t)sub_blocks_per_group * (size_t)QK_I2S;
         const uint8_t *packed_grp1 = packed_grp0 + (size_t)sub_blocks_per_group * (size_t)QK_I2S;
-        const float *scales_grp0 = scales + (size_t)grp * (size_t)sub_blocks_per_group * 4;
-        const float *scales_grp1 = scales_grp0 + (size_t)sub_blocks_per_group * 4;
+        const float *scales_grp0 = scales + (size_t)grp * (size_t)blocks_per_row * 4u;
+        const float *scales_grp1 = scales_grp0 + (size_t)blocks_per_row * 4u;
         float r[8];
 
         i2s_matmul_8rows_neon(packed_grp0, packed_grp1,
@@ -1805,7 +1806,7 @@ int bitnet_tq2_0_matmul_i2s_neon(const uint8_t *packed, const float *scales,
     for (; grp < n_groups; ++grp) {
         int row_base = grp * 4;
         const uint8_t *packed_grp = packed + (size_t)grp * (size_t)sub_blocks_per_group * (size_t)QK_I2S;
-        const float *scales_grp = scales + (size_t)grp * (size_t)sub_blocks_per_group * 4;
+        const float *scales_grp = scales + (size_t)grp * (size_t)blocks_per_row * 4u;
 
         float r0, r1, r2, r3;
         i2s_matmul_4rows_neon(packed_grp, scales_grp,
@@ -1861,8 +1862,8 @@ int bitnet_tq2_0_matmul_i2s_neon_pair(const uint8_t *packed_a, const float *scal
         int row_base = grp * 4;
         const uint8_t *pg_a = packed_a + (size_t)grp * (size_t)sub_blocks_per_group * (size_t)QK_I2S;
         const uint8_t *pg_b = packed_b + (size_t)grp * (size_t)sub_blocks_per_group * (size_t)QK_I2S;
-        const float *sc_a = scales_a + (size_t)grp * (size_t)sub_blocks_per_group * 4u;
-        const float *sc_b = scales_b + (size_t)grp * (size_t)sub_blocks_per_group * 4u;
+        const float *sc_a = scales_a + (size_t)grp * (size_t)blocks_per_row * 4u;
+        const float *sc_b = scales_b + (size_t)grp * (size_t)blocks_per_row * 4u;
 
         float sa0 = 0.0f, sa1 = 0.0f, sa2 = 0.0f, sa3 = 0.0f;
         float sb0 = 0.0f, sb1 = 0.0f, sb2 = 0.0f, sb3 = 0.0f;
@@ -1934,8 +1935,8 @@ int bitnet_tq2_0_matmul_i2s_neon_pair(const uint8_t *packed_a, const float *scal
                 }
             }
 
-            const float *bsc_a = sc_a + (size_t)(blk * 4) * 4;
-            const float *bsc_b = sc_b + (size_t)(blk * 4) * 4;
+            const float *bsc_a = sc_a + (size_t)blk * 4u;
+            const float *bsc_b = sc_b + (size_t)blk * 4u;
 
             int32_t da0 = vaddvq_s32(vaddq_s32(aa0_lo, aa0_hi));
             int32_t da1 = vaddvq_s32(vaddq_s32(aa1_lo, aa1_hi));
@@ -2494,7 +2495,7 @@ static tq2_lut_thread_pool_t g_lut_pool = {
 static pthread_once_t g_lut_pool_once = PTHREAD_ONCE_INIT;
 
 #define BITNET_TQ2_SPIN_ITERS 50000
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(__APPLE__)
 #define BITNET_TQ2_PARK_USLEEP 1
 #else
 #define BITNET_TQ2_PARK_USLEEP 100
@@ -2686,8 +2687,8 @@ static void tq2_lut_pool_run_chunks(void) {
                         if (grp + 1 < grp_end && grp + 1 < g_lut_pool.i2s_q_groups) {
                             const uint8_t *packed_grp0 = g_lut_pool.i2s_packed + (size_t)grp * (size_t)sbpg * (size_t)QK_I2S;
                             const uint8_t *packed_grp1 = packed_grp0 + (size_t)sbpg * (size_t)QK_I2S;
-                            const float *scales_grp0 = g_lut_pool.i2s_scales + (size_t)grp * (size_t)sbpg * 4;
-                            const float *scales_grp1 = scales_grp0 + (size_t)sbpg * 4;
+                            const float *scales_grp0 = g_lut_pool.i2s_scales + (size_t)grp * (size_t)bpr * 4u;
+                            const float *scales_grp1 = scales_grp0 + (size_t)bpr * 4u;
                             float r[8];
 
                             i2s_matmul_8rows_neon(packed_grp0, packed_grp1,
@@ -2700,7 +2701,7 @@ static void tq2_lut_pool_run_chunks(void) {
                             grp += 2;
                         } else {
                             const uint8_t *packed_grp = g_lut_pool.i2s_packed + (size_t)grp * (size_t)sbpg * (size_t)QK_I2S;
-                            const float *scales_grp = g_lut_pool.i2s_scales + (size_t)grp * (size_t)sbpg * 4;
+                            const float *scales_grp = g_lut_pool.i2s_scales + (size_t)grp * (size_t)bpr * 4u;
                             float r0, r1, r2, r3;
 
                             i2s_matmul_4rows_neon(packed_grp, scales_grp,
@@ -2718,8 +2719,8 @@ static void tq2_lut_pool_run_chunks(void) {
                         const int row_base = kv_grp * 4;
                         const uint8_t *packed_k = g_lut_pool.i2s_packed_b + (size_t)kv_grp * (size_t)sbpg * (size_t)QK_I2S;
                         const uint8_t *packed_v = g_lut_pool.i2s_packed_c + (size_t)kv_grp * (size_t)sbpg * (size_t)QK_I2S;
-                        const float *scales_k = g_lut_pool.i2s_scales_b + (size_t)kv_grp * (size_t)sbpg * 4;
-                        const float *scales_v = g_lut_pool.i2s_scales_c + (size_t)kv_grp * (size_t)sbpg * 4;
+                        const float *scales_k = g_lut_pool.i2s_scales_b + (size_t)kv_grp * (size_t)bpr * 4u;
+                        const float *scales_v = g_lut_pool.i2s_scales_c + (size_t)kv_grp * (size_t)bpr * 4u;
                         float k0, k1, k2, k3;
                         float v0, v1, v2, v3;
 
@@ -2758,10 +2759,10 @@ static void tq2_lut_pool_run_chunks(void) {
                     const uint8_t *pg_a1 = pg_a0 + (size_t)sbpg * (size_t)QK_I2S;
                     const uint8_t *pg_b0 = g_lut_pool.i2s_packed_b + (size_t)grp * (size_t)sbpg * (size_t)QK_I2S;
                     const uint8_t *pg_b1 = pg_b0 + (size_t)sbpg * (size_t)QK_I2S;
-                    const float *sc_a0 = g_lut_pool.i2s_scales + (size_t)grp * (size_t)sbpg * 4u;
-                    const float *sc_a1 = sc_a0 + (size_t)sbpg * 4u;
-                    const float *sc_b0 = g_lut_pool.i2s_scales_b + (size_t)grp * (size_t)sbpg * 4u;
-                    const float *sc_b1 = sc_b0 + (size_t)sbpg * 4u;
+                    const float *sc_a0 = g_lut_pool.i2s_scales + (size_t)grp * (size_t)bpr * 4u;
+                    const float *sc_a1 = sc_a0 + (size_t)bpr * 4u;
+                    const float *sc_b0 = g_lut_pool.i2s_scales_b + (size_t)grp * (size_t)bpr * 4u;
+                    const float *sc_b1 = sc_b0 + (size_t)bpr * 4u;
                     float ra[8];
                     float rb[8];
 
@@ -2779,8 +2780,8 @@ static void tq2_lut_pool_run_chunks(void) {
                     int row_base = grp * 4;
                     const uint8_t *pg_a = g_lut_pool.i2s_packed + (size_t)grp * (size_t)sbpg * (size_t)QK_I2S;
                     const uint8_t *pg_b = g_lut_pool.i2s_packed_b + (size_t)grp * (size_t)sbpg * (size_t)QK_I2S;
-                    const float *sc_a = g_lut_pool.i2s_scales + (size_t)grp * (size_t)sbpg * 4u;
-                    const float *sc_b = g_lut_pool.i2s_scales_b + (size_t)grp * (size_t)sbpg * 4u;
+                    const float *sc_a = g_lut_pool.i2s_scales + (size_t)grp * (size_t)bpr * 4u;
+                    const float *sc_b = g_lut_pool.i2s_scales_b + (size_t)grp * (size_t)bpr * 4u;
                     float a0, a1, a2, a3;
                     float b0, b1, b2, b3;
 
@@ -2813,8 +2814,8 @@ static void tq2_lut_pool_run_chunks(void) {
                     int row_base = grp * 4;
                     const uint8_t *packed_grp0 = g_lut_pool.i2s_packed + (size_t)grp * (size_t)sbpg * (size_t)QK_I2S;
                     const uint8_t *packed_grp1 = packed_grp0 + (size_t)sbpg * (size_t)QK_I2S;
-                    const float *scales_grp0 = g_lut_pool.i2s_scales + (size_t)grp * (size_t)sbpg * 4;
-                    const float *scales_grp1 = scales_grp0 + (size_t)sbpg * 4;
+                    const float *scales_grp0 = g_lut_pool.i2s_scales + (size_t)grp * (size_t)bpr * 4u;
+                    const float *scales_grp1 = scales_grp0 + (size_t)bpr * 4u;
                     float r[8];
 
                     i2s_matmul_8rows_neon(packed_grp0, packed_grp1,
@@ -2828,7 +2829,7 @@ static void tq2_lut_pool_run_chunks(void) {
                 for (; grp < grp_end; ++grp) {
                     int row_base = grp * 4;
                     const uint8_t *packed_grp = g_lut_pool.i2s_packed + (size_t)grp * (size_t)sbpg * (size_t)QK_I2S;
-                    const float *scales_grp = g_lut_pool.i2s_scales + (size_t)grp * (size_t)sbpg * 4;
+                    const float *scales_grp = g_lut_pool.i2s_scales + (size_t)grp * (size_t)bpr * 4u;
 
                     float r0, r1, r2, r3;
                     i2s_matmul_4rows_neon(packed_grp, scales_grp,
@@ -3013,7 +3014,11 @@ static void *tq2_lut_pool_worker_main(void *ptr) {
                 return NULL;
             }
             if (atomic_load_explicit(&g_lut_pool.park, memory_order_acquire)) {
+#if defined(__APPLE__)
+                usleep(g_lut_pool.n_threads > 3 ? 100 : BITNET_TQ2_PARK_USLEEP);
+#else
                 usleep(BITNET_TQ2_PARK_USLEEP);
+#endif
                 spin_count = 0;
                 continue;
             }

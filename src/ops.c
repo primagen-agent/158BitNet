@@ -10,7 +10,7 @@
 /* ========== RMSNorm ========== */
 
 #if defined(__ARM_NEON)
-void bitnet_rms_norm(float *x, const float *weight, int n) {
+void bitnet_rms_norm_eps(float *x, const float *weight, int n, float eps) {
     /* Pass 1: sum of squares using NEON */
     float sum = 0.0f;
     int i = 0;
@@ -24,7 +24,7 @@ void bitnet_rms_norm(float *x, const float *weight, int n) {
         sum += x[i] * x[i];
     }
 
-    float inv_rms = 1.0f / sqrtf(sum / (float)n + 1e-6f);
+    float inv_rms = 1.0f / sqrtf(sum / (float)n + eps);
 
     /* Pass 2: normalize and scale using NEON */
     i = 0;
@@ -40,7 +40,7 @@ void bitnet_rms_norm(float *x, const float *weight, int n) {
     }
 }
 #else
-void bitnet_rms_norm(float *x, const float *weight, int n) {
+void bitnet_rms_norm_eps(float *x, const float *weight, int n, float eps) {
     int i = 0;
     float sum = 0.0f;
     float inv_rms = 0.0f;
@@ -49,7 +49,7 @@ void bitnet_rms_norm(float *x, const float *weight, int n) {
         sum += x[i] * x[i];
     }
 
-    inv_rms = 1.0f / sqrtf(sum / (float)n + 1e-6f);
+    inv_rms = 1.0f / sqrtf(sum / (float)n + eps);
 
     for (i = 0; i < n; ++i) {
         x[i] = x[i] * inv_rms * weight[i];
@@ -57,10 +57,14 @@ void bitnet_rms_norm(float *x, const float *weight, int n) {
 }
 #endif
 
+void bitnet_rms_norm(float *x, const float *weight, int n) {
+    bitnet_rms_norm_eps(x, weight, n, 1e-6f);
+}
+
 /* ========== RMSNorm (src/dst separated) ========== */
 
 #if defined(__ARM_NEON)
-void bitnet_rms_norm_inplace(float *dst, const float *src, const float *weight, int n) {
+void bitnet_rms_norm_inplace_eps(float *dst, const float *src, const float *weight, int n, float eps) {
     /* Pass 1: sum of squares using NEON */
     float sum = 0.0f;
     int i = 0;
@@ -74,7 +78,7 @@ void bitnet_rms_norm_inplace(float *dst, const float *src, const float *weight, 
         sum += src[i] * src[i];
     }
 
-    float inv_rms = 1.0f / sqrtf(sum / (float)n + 1e-6f);
+    float inv_rms = 1.0f / sqrtf(sum / (float)n + eps);
 
     /* Pass 2: normalize and scale using NEON, write to dst */
     i = 0;
@@ -90,7 +94,7 @@ void bitnet_rms_norm_inplace(float *dst, const float *src, const float *weight, 
     }
 }
 #else
-void bitnet_rms_norm_inplace(float *dst, const float *src, const float *weight, int n) {
+void bitnet_rms_norm_inplace_eps(float *dst, const float *src, const float *weight, int n, float eps) {
     int i = 0;
     float sum = 0.0f;
     float inv_rms = 0.0f;
@@ -99,13 +103,17 @@ void bitnet_rms_norm_inplace(float *dst, const float *src, const float *weight, 
         sum += src[i] * src[i];
     }
 
-    inv_rms = 1.0f / sqrtf(sum / (float)n + 1e-6f);
+    inv_rms = 1.0f / sqrtf(sum / (float)n + eps);
 
     for (i = 0; i < n; ++i) {
         dst[i] = src[i] * inv_rms * weight[i];
     }
 }
 #endif
+
+void bitnet_rms_norm_inplace(float *dst, const float *src, const float *weight, int n) {
+    bitnet_rms_norm_inplace_eps(dst, src, weight, n, 1e-6f);
+}
 
 /* ========== MatMul F32 (reference, not performance-critical) ========== */
 
@@ -223,6 +231,30 @@ float bitnet_silu_mul_max_abs(float *gate, const float *up, int n) {
     }
     return max_abs;
 }
+
+float bitnet_relu2_mul_max_abs(float *gate, const float *up, int n) {
+    int i = 0;
+    float max_abs = 0.0f;
+    float32x4_t max_vec = vdupq_n_f32(0.0f);
+    float32x4_t zero = vdupq_n_f32(0.0f);
+
+    for (; i + 3 < n; i += 4) {
+        float32x4_t gv = vmaxq_f32(vld1q_f32(gate + i), zero);
+        float32x4_t uv = vld1q_f32(up + i);
+        float32x4_t result = vmulq_f32(vmulq_f32(gv, gv), uv);
+        vst1q_f32(gate + i, result);
+        max_vec = vmaxq_f32(max_vec, vabsq_f32(result));
+    }
+    max_abs = vmaxvq_f32(max_vec);
+    for (; i < n; ++i) {
+        float g = gate[i] > 0.0f ? gate[i] : 0.0f;
+        float result = g * g * up[i];
+        float a = fabsf(result);
+        gate[i] = result;
+        if (a > max_abs) max_abs = a;
+    }
+    return max_abs;
+}
 #else
 void bitnet_silu(float *x, int n) {
     int i = 0;
@@ -245,6 +277,18 @@ float bitnet_silu_mul_max_abs(float *gate, const float *up, int n) {
     for (int i = 0; i < n; ++i) {
         float sig = 1.0f / (1.0f + expf(-gate[i]));
         float result = gate[i] * sig * up[i];
+        float a = fabsf(result);
+        gate[i] = result;
+        if (a > max_abs) max_abs = a;
+    }
+    return max_abs;
+}
+
+float bitnet_relu2_mul_max_abs(float *gate, const float *up, int n) {
+    float max_abs = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        float g = gate[i] > 0.0f ? gate[i] : 0.0f;
+        float result = g * g * up[i];
         float a = fabsf(result);
         gate[i] = result;
         if (a > max_abs) max_abs = a;

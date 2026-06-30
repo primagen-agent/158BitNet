@@ -1,8 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 project(bitnet_c_infer C)
 
+option(BITNET_ENABLE_METAL "Build experimental Apple Metal acceleration" OFF)
+
 if(APPLE)
     set(CMAKE_OSX_ARCHITECTURES arm64)
+    if(BITNET_ENABLE_METAL)
+        enable_language(OBJCXX)
+    endif()
 endif()
 
 set(CMAKE_C_STANDARD 11)
@@ -53,8 +58,17 @@ add_library(bitnet STATIC
     src/sampler.c
 )
 
+if(APPLE AND BITNET_ENABLE_METAL)
+    target_sources(bitnet PRIVATE src/bitnet_metal.mm)
+    target_compile_definitions(bitnet PUBLIC BITNET_ENABLE_METAL=1)
+    set_source_files_properties(src/bitnet_metal.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+endif()
+
 target_include_directories(bitnet PUBLIC include PRIVATE src)
 target_link_libraries(bitnet PUBLIC Threads::Threads)
+if(APPLE AND BITNET_ENABLE_METAL)
+    target_link_libraries(bitnet PUBLIC "-framework Foundation" "-framework Metal")
+endif()
 
 add_executable(gguf_inspect tools/gguf_inspect.c)
 target_include_directories(gguf_inspect PRIVATE src)
@@ -188,6 +202,22 @@ add_executable(test_i2s_correctness tests/test_i2s_correctness.c)
 target_include_directories(test_i2s_correctness PRIVATE src)
 target_link_libraries(test_i2s_correctness PRIVATE bitnet)
 add_test(NAME test_i2s_correctness COMMAND test_i2s_correctness)
+
+add_executable(test_openai_server_utf8
+    tests/test_openai_server_utf8.c
+    src/third_party/mongoose/mongoose.c
+    src/third_party/cJSON/cJSON.c
+)
+target_include_directories(test_openai_server_utf8 PRIVATE src)
+target_link_libraries(test_openai_server_utf8 PRIVATE bitnet)
+add_test(NAME test_openai_server_utf8 COMMAND test_openai_server_utf8)
+
+if(APPLE AND BITNET_ENABLE_METAL)
+add_executable(test_metal_i2s_correctness tests/test_metal_i2s_correctness.c)
+target_include_directories(test_metal_i2s_correctness PRIVATE src)
+target_link_libraries(test_metal_i2s_correctness PRIVATE bitnet)
+add_test(NAME test_metal_i2s_correctness COMMAND test_metal_i2s_correctness)
+endif()
 
 add_executable(test_i2s_bench tests/test_i2s_bench.c)
 target_include_directories(test_i2s_bench PRIVATE src)

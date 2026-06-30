@@ -7,6 +7,7 @@
 #define BITNET_TARGET_ARCHITECTURE "llama"
 #define BITNET_TARGET_TOKENIZER_MODEL "llama"
 #define BITNET_TARGET_FILE_TYPE 37u
+#define BITNET_BITNET_B158_FILE_TYPE_I2_S 40u
 #define BITNET_TARGET_EMBEDDING_LENGTH 2048u
 #define BITNET_TARGET_BLOCK_COUNT 28u
 #define BITNET_TARGET_CONTEXT_LENGTH 32768u
@@ -16,6 +17,7 @@
 #define BITNET_TARGET_VOCAB_SIZE 73448u
 #define BITNET_TARGET_ROPE_DIMENSION_COUNT 128u
 #define BITNET_TARGET_TENSOR_TYPE_TQ2_0 35u
+#define BITNET_TARGET_TENSOR_TYPE_I2_S 36u
 #define BITNET_TARGET_TENSOR_TYPE_Q6_K 14u
 #define BITNET_TARGET_TENSOR_TYPE_Q4_K 12u
 #define BITNET_TARGET_TENSOR_TYPE_F16 1u
@@ -23,11 +25,13 @@
 
 typedef struct bitnet_block_tensors {
     const gguf_tensor_t *attn_norm;
+    const gguf_tensor_t *attn_sub_norm;
     const gguf_tensor_t *attn_q;
     const gguf_tensor_t *attn_k;
     const gguf_tensor_t *attn_v;
     const gguf_tensor_t *attn_output;
     const gguf_tensor_t *ffn_norm;
+    const gguf_tensor_t *ffn_sub_norm;
     const gguf_tensor_t *ffn_gate;
     const gguf_tensor_t *ffn_up;
     const gguf_tensor_t *ffn_down;

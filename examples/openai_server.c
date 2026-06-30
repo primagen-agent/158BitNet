@@ -82,6 +82,9 @@ typedef struct generation_state {
     int max_tokens;
     int emitted;
     int finish_reason_length;
+    char utf8_pending[4];
+    int utf8_pending_len;
+    int utf8_pending_expected;
     double total_start;
     double prefill_sec;
     double decode_sec;
@@ -201,6 +204,98 @@ static int token_prefix_equal(const int *tokens, const int *prefix, int n) {
     return 1;
 }
 
+static int utf8_expected_len(unsigned char b) {
+    if (b < 0x80u) return 1;
+    if (b >= 0xC2u && b <= 0xDFu) return 2;
+    if (b >= 0xE0u && b <= 0xEFu) return 3;
+    if (b >= 0xF0u && b <= 0xF4u) return 4;
+    return 0;
+}
+
+static int utf8_is_cont(unsigned char b) {
+    return (b & 0xC0u) == 0x80u;
+}
+
+static int generation_append_decoded_utf8(generation_state_t *gen,
+                                          const char *bytes,
+                                          int byte_len,
+                                          char *out,
+                                          size_t out_size,
+                                          char *error,
+                                          size_t error_size) {
+    char stack_copy[256];
+    char *heap_copy = NULL;
+    const char *input = bytes;
+    size_t out_len = 0;
+
+    if (gen == NULL || bytes == NULL || byte_len <= 0) return 0;
+
+    if (byte_len <= (int)sizeof(stack_copy)) {
+        memcpy(stack_copy, bytes, (size_t)byte_len);
+        input = stack_copy;
+    } else {
+        heap_copy = (char *)malloc((size_t)byte_len);
+        if (heap_copy == NULL) {
+            snprintf(error, error_size, "failed to allocate utf8 buffer");
+            return -1;
+        }
+        memcpy(heap_copy, bytes, (size_t)byte_len);
+        input = heap_copy;
+    }
+    if (out != NULL && out_size > 0) out[0] = '\0';
+
+    for (int i = 0; i < byte_len; ++i) {
+        unsigned char b = (unsigned char)input[i];
+        char complete[4];
+        int complete_len = 0;
+
+        if (gen->utf8_pending_len == 0) {
+            int expected = utf8_expected_len(b);
+            if (expected == 1) {
+                complete[0] = (char)b;
+                complete_len = 1;
+            } else if (expected > 1) {
+                gen->utf8_pending[0] = (char)b;
+                gen->utf8_pending_len = 1;
+                gen->utf8_pending_expected = expected;
+                continue;
+            } else {
+                continue;
+            }
+        } else if (utf8_is_cont(b)) {
+            gen->utf8_pending[gen->utf8_pending_len++] = (char)b;
+            if (gen->utf8_pending_len < gen->utf8_pending_expected) {
+                continue;
+            }
+            memcpy(complete, gen->utf8_pending, (size_t)gen->utf8_pending_expected);
+            complete_len = gen->utf8_pending_expected;
+            gen->utf8_pending_len = 0;
+            gen->utf8_pending_expected = 0;
+        } else {
+            gen->utf8_pending_len = 0;
+            gen->utf8_pending_expected = 0;
+            --i;
+            continue;
+        }
+
+        if (append_bytes(&gen->text, &gen->text_len, &gen->text_cap,
+                         complete, (size_t)complete_len) != 0) {
+            snprintf(error, error_size, "failed to append decoded text");
+            free(heap_copy);
+            return -1;
+        }
+        if (out != NULL && out_size > 0 &&
+            out_len + (size_t)complete_len < out_size) {
+            memcpy(out + out_len, complete, (size_t)complete_len);
+            out_len += (size_t)complete_len;
+            out[out_len] = '\0';
+        }
+    }
+
+    free(heap_copy);
+    return 0;
+}
+
 static cached_session_t *find_session(server_state_t *state, const char *session_id) {
     if (state == NULL || session_id == NULL || session_id[0] == '\0') return NULL;
     for (cached_session_t *session = state->sessions; session != NULL; session = session->next) {
@@ -255,7 +350,7 @@ static void free_sessions(server_state_t *state) {
     if (state != NULL) state->sessions = NULL;
 }
 
-static char *build_chat_prompt(cJSON *root) {
+static char *build_chat_prompt_chatml(cJSON *root) {
     cJSON *messages = json_get_array(root, "messages");
     char *prompt = NULL;
     size_t len = 0;
@@ -284,6 +379,77 @@ static char *build_chat_prompt(cJSON *root) {
         return NULL;
     }
     return prompt;
+}
+
+static char *build_chat_prompt_bitnet_b158(cJSON *root) {
+    cJSON *messages = json_get_array(root, "messages");
+    char *prompt = NULL;
+    size_t len = 0;
+    size_t cap = 0;
+    char *system_text = NULL;
+    size_t system_len = 0;
+    size_t system_cap = 0;
+    int n_messages = messages == NULL ? 0 : cJSON_GetArraySize(messages);
+
+    if (messages == NULL || n_messages <= 0) return NULL;
+    for (int i = 0; i < n_messages; ++i) {
+        cJSON *msg = cJSON_GetArrayItem(messages, i);
+        const char *role = NULL;
+        const char *content = NULL;
+        if (msg == NULL || !cJSON_IsObject(msg)) continue;
+        role = json_get_string(msg, "role", "user");
+        content = json_get_string(msg, "content", "");
+        if (strcmp(role, "assistant") == 0) {
+            if (append_cstr(&prompt, &len, &cap, content) != 0 ||
+                append_cstr(&prompt, &len, &cap, "<|end_of_text|>") != 0) {
+                free(prompt);
+                free(system_text);
+                return NULL;
+            }
+        } else if (strcmp(role, "system") == 0) {
+            if (system_len > 0 &&
+                append_cstr(&system_text, &system_len, &system_cap, "\n\n") != 0) {
+                free(prompt);
+                free(system_text);
+                return NULL;
+            }
+            if (append_cstr(&system_text, &system_len, &system_cap, content) != 0) {
+                free(prompt);
+                free(system_text);
+                return NULL;
+            }
+        } else {
+            if (append_cstr(&prompt, &len, &cap, "Human: ") != 0) {
+                free(prompt);
+                free(system_text);
+                return NULL;
+            }
+            if (system_len > 0 &&
+                (append_bytes(&prompt, &len, &cap, system_text, system_len) != 0 ||
+                 append_cstr(&prompt, &len, &cap, "\n\n") != 0)) {
+                free(prompt);
+                free(system_text);
+                return NULL;
+            }
+            if (append_cstr(&prompt, &len, &cap, content) != 0 ||
+                append_cstr(&prompt, &len, &cap, "\n\nBITNETAssistant: ") != 0) {
+                free(prompt);
+                free(system_text);
+                return NULL;
+            }
+            system_len = 0;
+            if (system_text != NULL) system_text[0] = '\0';
+        }
+    }
+    free(system_text);
+    return prompt;
+}
+
+static char *build_chat_prompt(server_state_t *state, cJSON *root) {
+    if (state != NULL && bitnet_chat_template_kind(state->model) == 1) {
+        return build_chat_prompt_bitnet_b158(root);
+    }
+    return build_chat_prompt_chatml(root);
 }
 
 static char *build_completion_prompt(cJSON *root) {
@@ -539,8 +705,9 @@ static int generation_step(server_state_t *state,
         int decoded_len = bitnet_decode_token(state->model, next_token,
                                               decoded, (int)decoded_size);
         if (decoded_len <= 0) decoded[0] = '\0';
-        if (append_cstr(&gen->text, &gen->text_len, &gen->text_cap, decoded) != 0) {
-            snprintf(error, error_size, "failed to append decoded text");
+        if (generation_append_decoded_utf8(gen, decoded, decoded_len,
+                                           decoded, decoded_size,
+                                           error, error_size) != 0) {
             return -1;
         }
     }
@@ -892,7 +1059,7 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     cJSON *choice = NULL;
     cJSON *message = NULL;
 
-    prompt = build_chat_prompt(request);
+    prompt = build_chat_prompt(state, request);
     if (prompt == NULL) {
         send_error(c, 400, "invalid_request_error", "messages must be a non-empty array");
         return;
