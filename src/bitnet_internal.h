@@ -1,6 +1,7 @@
 #ifndef BITNET_INTERNAL_H
 #define BITNET_INTERNAL_H
 
+#include <stdint.h>
 #include "gguf.h"
 
 #define BITNET_TARGET_MODEL_FILE "bitcpm4-1b-tq2_0.gguf"
@@ -47,5 +48,29 @@ typedef struct bitnet_tensor_cache {
 int bitnet_validate_target_model(const gguf_file_t *file);
 int bitnet_build_tensor_cache(const gguf_file_t *file, uint32_t block_count, bitnet_tensor_cache_t *cache);
 void bitnet_free_tensor_cache(bitnet_tensor_cache_t *cache);
+
+/* Phase 4.2 — promoted bitnet.c hot-path helpers. The `_impl` symbols hold
+ * the original scalar/NEON body (selected by __ARM_NEON inside bitnet.c);
+ * dispatch-table shims call them directly. The public names (without
+ * `_impl`) are trampolines in bitnet.c that route through g_bitnet_dispatch. */
+float bitnet_quantize_f32_to_i8_impl(const float *src, int n, int8_t *dst);
+int   bitnet_rms_norm_quant_tq2_i8_impl(float *dst, const float *src, const float *weight,
+                                        int n, int8_t *qvec, float *scale,
+                                        int32_t *block_bsums, float eps);
+void  bitnet_residual_add_scaled_impl(float *out, const float *a, const float *b,
+                                      float b_scale, int n);
+int   bitnet_dot_i8_impl(const int8_t *a, const int8_t *b, int n);
+void  bitnet_accum_i8_scaled_impl(float *dst, const int8_t *src, float scale, int n);
+
+/* Public trampolines — declared here so the in-file call sites in bitnet.c
+ * see them before the trampoline definitions at the bottom of the file. */
+float bitnet_quantize_f32_to_i8(const float *src, int n, int8_t *dst);
+int   bitnet_rms_norm_quant_tq2_i8(float *dst, const float *src, const float *weight,
+                                   int n, int8_t *qvec, float *scale,
+                                   int32_t *block_bsums, float eps);
+void  bitnet_residual_add_scaled(float *out, const float *a, const float *b,
+                                 float b_scale, int n);
+int   bitnet_dot_i8(const int8_t *a, const int8_t *b, int n);
+void  bitnet_accum_i8_scaled(float *dst, const int8_t *src, float scale, int n);
 
 #endif

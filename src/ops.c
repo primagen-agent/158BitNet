@@ -10,7 +10,7 @@
 /* ========== RMSNorm ========== */
 
 #if defined(__ARM_NEON)
-void bitnet_rms_norm_eps(float *x, const float *weight, int n, float eps) {
+void bitnet_rms_norm_eps_impl(float *x, const float *weight, int n, float eps) {
     /* Pass 1: sum of squares using NEON */
     float sum = 0.0f;
     int i = 0;
@@ -40,7 +40,7 @@ void bitnet_rms_norm_eps(float *x, const float *weight, int n, float eps) {
     }
 }
 #else
-void bitnet_rms_norm_eps(float *x, const float *weight, int n, float eps) {
+void bitnet_rms_norm_eps_impl(float *x, const float *weight, int n, float eps) {
     int i = 0;
     float sum = 0.0f;
     float inv_rms = 0.0f;
@@ -64,7 +64,7 @@ void bitnet_rms_norm(float *x, const float *weight, int n) {
 /* ========== RMSNorm (src/dst separated) ========== */
 
 #if defined(__ARM_NEON)
-void bitnet_rms_norm_inplace_eps(float *dst, const float *src, const float *weight, int n, float eps) {
+void bitnet_rms_norm_inplace_eps_impl(float *dst, const float *src, const float *weight, int n, float eps) {
     /* Pass 1: sum of squares using NEON */
     float sum = 0.0f;
     int i = 0;
@@ -94,7 +94,7 @@ void bitnet_rms_norm_inplace_eps(float *dst, const float *src, const float *weig
     }
 }
 #else
-void bitnet_rms_norm_inplace_eps(float *dst, const float *src, const float *weight, int n, float eps) {
+void bitnet_rms_norm_inplace_eps_impl(float *dst, const float *src, const float *weight, int n, float eps) {
     int i = 0;
     float sum = 0.0f;
     float inv_rms = 0.0f;
@@ -172,7 +172,7 @@ static inline float32x4_t neon_exp_approx_f32(float32x4_t x) {
     return vmulq_f32(pf, scale);
 }
 
-void bitnet_silu(float *x, int n) {
+void bitnet_silu_impl(float *x, int n) {
     int i = 0;
     for (; i + 3 < n; i += 4) {
         float32x4_t v = vld1q_f32(x + i);
@@ -190,7 +190,7 @@ void bitnet_silu(float *x, int n) {
     }
 }
 
-void bitnet_silu_mul(float *gate, const float *up, int n) {
+void bitnet_silu_mul_impl(float *gate, const float *up, int n) {
     int i = 0;
     for (; i + 3 < n; i += 4) {
         float32x4_t gv = vld1q_f32(gate + i);
@@ -206,7 +206,7 @@ void bitnet_silu_mul(float *gate, const float *up, int n) {
     }
 }
 
-float bitnet_silu_mul_max_abs(float *gate, const float *up, int n) {
+float bitnet_silu_mul_max_abs_impl(float *gate, const float *up, int n) {
     int i = 0;
     float max_abs = 0.0f;
     float32x4_t max_vec = vdupq_n_f32(0.0f);
@@ -232,7 +232,7 @@ float bitnet_silu_mul_max_abs(float *gate, const float *up, int n) {
     return max_abs;
 }
 
-float bitnet_relu2_mul_max_abs(float *gate, const float *up, int n) {
+float bitnet_relu2_mul_max_abs_impl(float *gate, const float *up, int n) {
     int i = 0;
     float max_abs = 0.0f;
     float32x4_t max_vec = vdupq_n_f32(0.0f);
@@ -255,8 +255,20 @@ float bitnet_relu2_mul_max_abs(float *gate, const float *up, int n) {
     }
     return max_abs;
 }
+
+void bitnet_residual_add_impl(float *out, const float *a, const float *b, int n) {
+    int i = 0;
+    for (; i + 3 < n; i += 4) {
+        float32x4_t va = vld1q_f32(a + i);
+        float32x4_t vb = vld1q_f32(b + i);
+        vst1q_f32(out + i, vaddq_f32(va, vb));
+    }
+    for (; i < n; ++i) {
+        out[i] = a[i] + b[i];
+    }
+}
 #else
-void bitnet_silu(float *x, int n) {
+void bitnet_silu_impl(float *x, int n) {
     int i = 0;
     for (i = 0; i < n; ++i) {
         float sig = 1.0f / (1.0f + expf(-x[i]));
@@ -264,7 +276,7 @@ void bitnet_silu(float *x, int n) {
     }
 }
 
-void bitnet_silu_mul(float *gate, const float *up, int n) {
+void bitnet_silu_mul_impl(float *gate, const float *up, int n) {
     int i = 0;
     for (i = 0; i < n; ++i) {
         float sig = 1.0f / (1.0f + expf(-gate[i]));
@@ -272,7 +284,7 @@ void bitnet_silu_mul(float *gate, const float *up, int n) {
     }
 }
 
-float bitnet_silu_mul_max_abs(float *gate, const float *up, int n) {
+float bitnet_silu_mul_max_abs_impl(float *gate, const float *up, int n) {
     float max_abs = 0.0f;
     for (int i = 0; i < n; ++i) {
         float sig = 1.0f / (1.0f + expf(-gate[i]));
@@ -284,7 +296,7 @@ float bitnet_silu_mul_max_abs(float *gate, const float *up, int n) {
     return max_abs;
 }
 
-float bitnet_relu2_mul_max_abs(float *gate, const float *up, int n) {
+float bitnet_relu2_mul_max_abs_impl(float *gate, const float *up, int n) {
     float max_abs = 0.0f;
     for (int i = 0; i < n; ++i) {
         float g = gate[i] > 0.0f ? gate[i] : 0.0f;
@@ -295,12 +307,18 @@ float bitnet_relu2_mul_max_abs(float *gate, const float *up, int n) {
     }
     return max_abs;
 }
+
+void bitnet_residual_add_impl(float *out, const float *a, const float *b, int n) {
+    for (int i = 0; i < n; ++i) {
+        out[i] = a[i] + b[i];
+    }
+}
 #endif
 
 /* ========== Softmax ========== */
 
 #if defined(__ARM_NEON)
-void bitnet_softmax(float *x, int n) {
+void bitnet_softmax_impl(float *x, int n) {
     /* Find max using NEON */
     int i = 0;
     float32x4_t max_vec = vdupq_n_f32(-1e30f);
@@ -358,7 +376,7 @@ void bitnet_softmax(float *x, int n) {
     }
 }
 #else
-void bitnet_softmax(float *x, int n) {
+void bitnet_softmax_impl(float *x, int n) {
     int i = 0;
     float max_val = x[0];
     float sum = 0.0f;
@@ -380,32 +398,14 @@ void bitnet_softmax(float *x, int n) {
 #endif
 
 /* ========== Residual Add ========== */
-
-#if defined(__ARM_NEON)
-void bitnet_residual_add(float *out, const float *a, const float *b, int n) {
-    int i = 0;
-    for (; i + 3 < n; i += 4) {
-        float32x4_t va = vld1q_f32(a + i);
-        float32x4_t vb = vld1q_f32(b + i);
-        vst1q_f32(out + i, vaddq_f32(va, vb));
-    }
-    for (; i < n; ++i) {
-        out[i] = a[i] + b[i];
-    }
-}
-#else
-void bitnet_residual_add(float *out, const float *a, const float *b, int n) {
-    for (int i = 0; i < n; ++i) {
-        out[i] = a[i] + b[i];
-    }
-}
-#endif
+/* NEON + scalar residual_add definitions live with the SiLU family above
+ * (renamed to _impl, dispatched via trampoline at the bottom of this file). */
 
 /* ========== RoPE ========== */
 
 #if defined(__ARM_NEON)
-void bitnet_rope_apply(float *x, int n_heads, int head_dim, int rope_dim,
-                       const float *rope_cos, const float *rope_sin) {
+void bitnet_rope_apply_impl(float *x, int n_heads, int head_dim, int rope_dim,
+                            const float *rope_cos, const float *rope_sin) {
     if (x == NULL || rope_cos == NULL || rope_sin == NULL ||
         n_heads <= 0 || head_dim <= 0 || rope_dim <= 0) {
         return;
@@ -446,8 +446,8 @@ void bitnet_rope_apply(float *x, int n_heads, int head_dim, int rope_dim,
     }
 }
 #else
-void bitnet_rope_apply(float *x, int n_heads, int head_dim, int rope_dim,
-                       const float *rope_cos, const float *rope_sin) {
+void bitnet_rope_apply_impl(float *x, int n_heads, int head_dim, int rope_dim,
+                            const float *rope_cos, const float *rope_sin) {
     if (x == NULL || rope_cos == NULL || rope_sin == NULL ||
         n_heads <= 0 || head_dim <= 0 || rope_dim <= 0) {
         return;
@@ -467,3 +467,54 @@ void bitnet_rope_apply(float *x, int n_heads, int head_dim, int rope_dim,
     }
 }
 #endif
+
+/* ========== Dispatch trampolines ========== */
+
+#include "bitnet_dispatch.h"
+
+void bitnet_rms_norm_eps(float *x, const float *weight, int n, float eps) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->rms_norm_eps(x, weight, n, eps);
+}
+
+void bitnet_rms_norm_inplace_eps(float *dst, const float *src,
+                                  const float *weight, int n, float eps) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->rms_norm_inplace_eps(dst, src, weight, n, eps);
+}
+
+void bitnet_silu(float *x, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->silu(x, n);
+}
+
+void bitnet_silu_mul(float *gate, const float *up, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->silu_mul(gate, up, n);
+}
+
+float bitnet_silu_mul_max_abs(float *gate, const float *up, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->silu_mul_max_abs(gate, up, n);
+}
+
+float bitnet_relu2_mul_max_abs(float *gate, const float *up, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->relu2_mul_max_abs(gate, up, n);
+}
+
+void bitnet_residual_add(float *out, const float *a, const float *b, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->residual_add(out, a, b, n);
+}
+
+void bitnet_softmax(float *x, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->softmax(x, n);
+}
+
+void bitnet_rope_apply(float *x, int n_heads, int head_dim, int rope_dim,
+                       const float *rope_cos, const float *rope_sin) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->rope_apply(x, n_heads, head_dim, rope_dim, rope_cos, rope_sin);
+}

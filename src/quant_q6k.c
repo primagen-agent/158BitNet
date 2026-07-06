@@ -165,8 +165,8 @@ static int32_t q6k_neon_dot_i8_16(int8x16_t coeff, int8x16_t values) {
               vdupq_n_s8(32))
 #endif
 
-int bitnet_q6k_dot_product_i8_neon(const bitnet_q6k_block_t *block, const int8_t *qvec,
-                                   float vec_scale, size_t len, float *out) {
+int bitnet_q6k_dot_product_i8_neon_impl(const bitnet_q6k_block_t *block, const int8_t *qvec,
+                                       float vec_scale, size_t len, float *out) {
     int n = 0;
     float sum = 0.0f;
 
@@ -346,9 +346,9 @@ int bitnet_q6k_expand_to_q8_compact(const void *weight, int rows, int cols,
     return 0;
 }
 
-int bitnet_q6k_dot_product_q8_neon(const int8_t *q8, const float *scales,
-                                   int blocks_per_row, const int8_t *qvec,
-                                   float vec_scale, float *out) {
+int bitnet_q6k_dot_product_q8_neon_impl(const int8_t *q8, const float *scales,
+                                        int blocks_per_row, const int8_t *qvec,
+                                        float vec_scale, float *out) {
 #if defined(__ARM_NEON) && defined(__ARM_FEATURE_DOTPROD)
     float32x4_t sum_v = vdupq_n_f32(0.0f);
 #else
@@ -388,10 +388,10 @@ int bitnet_q6k_dot_product_q8_neon(const int8_t *q8, const float *scales,
     return 0;
 }
 
-int bitnet_q6k_dot_product_q8_4_neon(const int8_t *q8, const float *scales,
-                                     int row_stride, int scale_stride,
-                                     int blocks_per_row, const int8_t *qvec,
-                                     float vec_scale, float out[4]) {
+int bitnet_q6k_dot_product_q8_4_neon_impl(const int8_t *q8, const float *scales,
+                                          int row_stride, int scale_stride,
+                                          int blocks_per_row, const int8_t *qvec,
+                                          float vec_scale, float out[4]) {
 #if defined(__ARM_NEON) && defined(__ARM_FEATURE_DOTPROD)
     float32x4_t sum0_v = vdupq_n_f32(0.0f);
     float32x4_t sum1_v = vdupq_n_f32(0.0f);
@@ -469,10 +469,10 @@ int bitnet_q6k_dot_product_q8_4_neon(const int8_t *q8, const float *scales,
     return 0;
 }
 
-int bitnet_q6k_dot_product_q8_8_neon(const int8_t *q8, const float *scales,
-                                     int row_stride, int scale_stride,
-                                     int blocks_per_row, const int8_t *qvec,
-                                     float vec_scale, float out[8]) {
+int bitnet_q6k_dot_product_q8_8_neon_impl(const int8_t *q8, const float *scales,
+                                          int row_stride, int scale_stride,
+                                          int blocks_per_row, const int8_t *qvec,
+                                          float vec_scale, float out[8]) {
     if (q8 == NULL || scales == NULL || qvec == NULL || out == NULL ||
         row_stride <= 0 || scale_stride <= 0 || blocks_per_row <= 0) {
         return -1;
@@ -545,11 +545,11 @@ int bitnet_q6k_dot_product_q8_8_neon(const int8_t *q8, const float *scales,
     out[6] = vaddvq_f32(sum6_v) * vec_scale;
     out[7] = vaddvq_f32(sum7_v) * vec_scale;
 #else
-    if (bitnet_q6k_dot_product_q8_4_neon(q8, scales, row_stride, scale_stride,
+    if (bitnet_q6k_dot_product_q8_4_neon_impl(q8, scales, row_stride, scale_stride,
                                          blocks_per_row, qvec, vec_scale, out) != 0) {
         return -1;
     }
-    if (bitnet_q6k_dot_product_q8_4_neon(q8 + 4 * (size_t)row_stride,
+    if (bitnet_q6k_dot_product_q8_4_neon_impl(q8 + 4 * (size_t)row_stride,
                                          scales + 4 * (size_t)scale_stride,
                                          row_stride, scale_stride,
                                          blocks_per_row, qvec, vec_scale, out + 4) != 0) {
@@ -560,9 +560,9 @@ int bitnet_q6k_dot_product_q8_8_neon(const int8_t *q8, const float *scales,
     return 0;
 }
 
-int bitnet_q6k_dot_product_q8_compact_neon(const int8_t *q8, const int8_t *scales,
-                                           const float *d, int blocks_per_row,
-                                           const int8_t *qvec, float vec_scale, float *out) {
+int bitnet_q6k_dot_product_q8_compact_neon_impl(const int8_t *q8, const int8_t *scales,
+                                                const float *d, int blocks_per_row,
+                                                const int8_t *qvec, float vec_scale, float *out) {
     if (q8 == NULL || scales == NULL || d == NULL || qvec == NULL || out == NULL ||
         blocks_per_row <= 0) {
         return -1;
@@ -605,11 +605,11 @@ int bitnet_q6k_dot_product_q8_compact_neon(const int8_t *q8, const int8_t *scale
     return 0;
 }
 
-int bitnet_q6k_dot_product_q8_compact_4_neon(const int8_t *q8, const int8_t *scales,
-                                             const float *d, int row_stride,
-                                             int scale_stride, int d_stride,
-                                             int blocks_per_row, const int8_t *qvec,
-                                             float vec_scale, float out[4]) {
+int bitnet_q6k_dot_product_q8_compact_4_neon_impl(const int8_t *q8, const int8_t *scales,
+                                                  const float *d, int row_stride,
+                                                  int scale_stride, int d_stride,
+                                                  int blocks_per_row, const int8_t *qvec,
+                                                  float vec_scale, float out[4]) {
     if (q8 == NULL || scales == NULL || d == NULL || qvec == NULL || out == NULL ||
         row_stride <= 0 || scale_stride <= 0 || d_stride <= 0 || blocks_per_row <= 0) {
         return -1;
@@ -690,11 +690,11 @@ int bitnet_q6k_dot_product_q8_compact_4_neon(const int8_t *q8, const int8_t *sca
     return 0;
 }
 
-int bitnet_q6k_dot_product_q8_compact_8_neon(const int8_t *q8, const int8_t *scales,
-                                             const float *d, int row_stride,
-                                             int scale_stride, int d_stride,
-                                             int blocks_per_row, const int8_t *qvec,
-                                             float vec_scale, float out[8]) {
+int bitnet_q6k_dot_product_q8_compact_8_neon_impl(const int8_t *q8, const int8_t *scales,
+                                                  const float *d, int row_stride,
+                                                  int scale_stride, int d_stride,
+                                                  int blocks_per_row, const int8_t *qvec,
+                                                  float vec_scale, float out[8]) {
 #if defined(__ARM_NEON) && defined(__ARM_FEATURE_DOTPROD)
     if (q8 == NULL || scales == NULL || d == NULL || qvec == NULL || out == NULL ||
         row_stride <= 0 || scale_stride <= 0 || d_stride <= 0 || blocks_per_row <= 0) {
@@ -794,16 +794,81 @@ int bitnet_q6k_dot_product_q8_compact_8_neon(const int8_t *q8, const int8_t *sca
     out[7] = vaddvq_f32(sum7_v) * vec_scale;
     return 0;
 #else
-    if (bitnet_q6k_dot_product_q8_compact_4_neon(q8, scales, d,
+    if (bitnet_q6k_dot_product_q8_compact_4_neon_impl(q8, scales, d,
                                                  row_stride, scale_stride, d_stride,
                                                  blocks_per_row, qvec, vec_scale, out) != 0) {
         return -1;
     }
-    return bitnet_q6k_dot_product_q8_compact_4_neon(
+    return bitnet_q6k_dot_product_q8_compact_4_neon_impl(
         q8 + 4 * (size_t)row_stride,
         scales + 4 * (size_t)scale_stride,
         d + 4 * (size_t)d_stride,
         row_stride, scale_stride, d_stride,
         blocks_per_row, qvec, vec_scale, out + 4);
 #endif
+}
+
+/* ========== Dispatch trampolines ========== */
+
+#include "bitnet_dispatch.h"
+
+int bitnet_q6k_dot_product_i8_neon(const bitnet_q6k_block_t *block, const int8_t *qvec,
+                                   float vec_scale, size_t len, float *out) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->q6k_dot_product_i8(block, qvec, vec_scale, len, out);
+}
+
+int bitnet_q6k_dot_product_q8_neon(const int8_t *q8, const float *scales,
+                                   int blocks_per_row, const int8_t *qvec,
+                                   float vec_scale, float *out) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->q6k_dot_product_q8(q8, scales, blocks_per_row, qvec, vec_scale, out);
+}
+
+int bitnet_q6k_dot_product_q8_4_neon(const int8_t *q8, const float *scales,
+                                     int row_stride, int scale_stride,
+                                     int blocks_per_row, const int8_t *qvec,
+                                     float vec_scale, float out[4]) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->q6k_dot_product_q8_4(q8, scales, row_stride, scale_stride,
+                                                      blocks_per_row, qvec, vec_scale, out);
+}
+
+int bitnet_q6k_dot_product_q8_8_neon(const int8_t *q8, const float *scales,
+                                     int row_stride, int scale_stride,
+                                     int blocks_per_row, const int8_t *qvec,
+                                     float vec_scale, float out[8]) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->q6k_dot_product_q8_8(q8, scales, row_stride, scale_stride,
+                                                      blocks_per_row, qvec, vec_scale, out);
+}
+
+int bitnet_q6k_dot_product_q8_compact_neon(const int8_t *q8, const int8_t *scales,
+                                           const float *d, int blocks_per_row,
+                                           const int8_t *qvec, float vec_scale, float *out) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->q6k_dot_product_q8_compact(q8, scales, d, blocks_per_row,
+                                                            qvec, vec_scale, out);
+}
+
+int bitnet_q6k_dot_product_q8_compact_4_neon(const int8_t *q8, const int8_t *scales,
+                                             const float *d, int row_stride,
+                                             int scale_stride, int d_stride,
+                                             int blocks_per_row, const int8_t *qvec,
+                                             float vec_scale, float out[4]) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->q6k_dot_product_q8_compact_4(q8, scales, d, row_stride,
+                                                              scale_stride, d_stride,
+                                                              blocks_per_row, qvec, vec_scale, out);
+}
+
+int bitnet_q6k_dot_product_q8_compact_8_neon(const int8_t *q8, const int8_t *scales,
+                                             const float *d, int row_stride,
+                                             int scale_stride, int d_stride,
+                                             int blocks_per_row, const int8_t *qvec,
+                                             float vec_scale, float out[8]) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->q6k_dot_product_q8_compact_8(q8, scales, d, row_stride,
+                                                              scale_stride, d_stride,
+                                                              blocks_per_row, qvec, vec_scale, out);
 }

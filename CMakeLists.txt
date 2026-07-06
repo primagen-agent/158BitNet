@@ -3,6 +3,8 @@ project(bitnet_c_infer C)
 
 option(BITNET_ENABLE_METAL "Build experimental Apple Metal acceleration" OFF)
 
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" BITNET_ARCH)
+
 if(APPLE)
     set(CMAKE_OSX_ARCHITECTURES arm64)
     if(BITNET_ENABLE_METAL)
@@ -43,6 +45,23 @@ elseif(ANDROID AND ANDROID_ABI STREQUAL "arm64-v8a")
     endif()
 endif()
 
+if(UNIX AND NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64")
+    # x86 Linux: enable glibc feature macros (clock_gettime, usleep) via _GNU_SOURCE
+    # and establish an x86-64-v2 baseline (SSE3/SSE4.1/SSSE3) so un-attributed
+    # inline helpers that use SSE3 intrinsics compile. Per-function target()
+    # attributes still drive runtime dispatch (AVX2 / AVX-VNNI / AVX512_VNNI).
+    add_compile_definitions(_GNU_SOURCE)
+    check_c_compiler_flag("-march=x86-64-v2" BITNET_HAS_X86_64_V2)
+    if(BITNET_HAS_X86_64_V2)
+        add_compile_options(-march=x86-64-v2)
+    endif()
+    # OpenMP parallelises the x86 I2S matmul group loop (src/x86/quant_tq2_0_x86.c).
+    find_package(OpenMP)
+    if(OpenMP_C_FOUND)
+        link_libraries(OpenMP::OpenMP_C)
+    endif()
+endif()
+
 add_compile_options(-Wall -Wextra -Wpedantic -O3 -fno-math-errno -ffp-contract=fast)
 find_package(Threads REQUIRED)
 
@@ -56,6 +75,13 @@ add_library(bitnet STATIC
     src/quant_q6k.c
     src/ops.c
     src/sampler.c
+    src/cpu_detect.c
+    src/bitnet_dispatch.c
+    src/x86/kernel_registry.c
+    src/x86/ops_x86.c
+    src/x86/bitnet_hotpath_x86.c
+    src/x86/quant_tq2_0_x86.c
+    src/x86/quant_q6k_x86.c
 )
 
 if(APPLE AND BITNET_ENABLE_METAL)
@@ -68,6 +94,10 @@ target_include_directories(bitnet PUBLIC include PRIVATE src)
 target_link_libraries(bitnet PUBLIC Threads::Threads)
 if(APPLE AND BITNET_ENABLE_METAL)
     target_link_libraries(bitnet PUBLIC "-framework Foundation" "-framework Metal")
+endif()
+if(UNIX AND NOT APPLE AND NOT ANDROID)
+    # glibc keeps libm separate; needed for expf/powf/sincosf.
+    target_link_libraries(bitnet PUBLIC m)
 endif()
 
 add_executable(gguf_inspect tools/gguf_inspect.c)
@@ -227,4 +257,14 @@ add_executable(test_q6k_output_bench tests/test_q6k_output_bench.c)
 target_include_directories(test_q6k_output_bench PRIVATE src)
 target_compile_definitions(test_q6k_output_bench PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_link_libraries(test_q6k_output_bench PRIVATE bitnet)
+
+add_executable(test_cpu_detect tests/test_cpu_detect.c)
+target_include_directories(test_cpu_detect PRIVATE src)
+target_link_libraries(test_cpu_detect PRIVATE bitnet)
+add_test(NAME test_cpu_detect COMMAND test_cpu_detect)
+
+add_executable(test_dispatch_init tests/test_dispatch_init.c)
+target_include_directories(test_dispatch_init PRIVATE src)
+target_link_libraries(test_dispatch_init PRIVATE bitnet)
+add_test(NAME test_dispatch_init COMMAND test_dispatch_init)
 endif()

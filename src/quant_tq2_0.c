@@ -20,7 +20,15 @@
 #define BITNET_TQ2_HAS_NEON_DOTPROD 0
 #endif
 
-static float fp16_to_fp32(uint16_t h) {
+#if defined(__x86_64__) || defined(_M_X64)
+#define BITNET_SPIN_HINT() __asm__ __volatile__("pause" ::: "memory")
+#elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
+#define BITNET_SPIN_HINT() __asm__ __volatile__("yield" ::: "memory")
+#else
+#define BITNET_SPIN_HINT() ((void)0)
+#endif
+
+float bitnet_fp16_to_fp32(uint16_t h) {
     uint32_t sign = (uint32_t)(h >> 15) & 1u;
     uint32_t exp = (uint32_t)(h >> 10) & 0x1Fu;
     uint32_t mant = (uint32_t)h & 0x3FFu;
@@ -87,7 +95,7 @@ int bitnet_tq2_0_dequantize_block(const bitnet_tq2_0_block_t *block, float *out,
         return -1;
     }
 
-    float d = fp16_to_fp32(block->d);
+    float d = bitnet_fp16_to_fp32(block->d);
 
     /* Interleaved layout matching llama.cpp dequantize_row_tq2_0 */
     for (int j = 0; j < BITNET_TQ2_0_QS_SIZE; j += 32) {
@@ -107,7 +115,7 @@ int bitnet_tq2_0_dot_product(const bitnet_tq2_0_block_t *block, const float *vec
         return -1;
     }
 
-    float d = fp16_to_fp32(block->d);
+    float d = bitnet_fp16_to_fp32(block->d);
     float sum = 0.0f;
 
     /* Interleaved layout matching llama.cpp dequantize_row_tq2_0 */
@@ -143,7 +151,7 @@ static void tq2_0_matmul_row(const uint8_t *weight, int blocks_per_row,
     for (int k = 0; k < blocks_per_row; ++k) {
         size_t block_offset = (size_t)k * BITNET_TQ2_0_BLOCK_SIZE;
         const bitnet_tq2_0_block_t *block = (const bitnet_tq2_0_block_t *)(weight + block_offset);
-        float d = fp16_to_fp32(block->d);
+        float d = bitnet_fp16_to_fp32(block->d);
         float block_sum = 0.0f;
         int vec_base = k * BITNET_TQ2_0_QK;
 
@@ -246,14 +254,14 @@ int bitnet_tq2_0_build_scales(const void *weight, int out_dim, int in_dim,
             const bitnet_tq2_0_block_t *block =
                 (const bitnet_tq2_0_block_t *)(bytes + row_offset +
                     (size_t)k * BITNET_TQ2_0_BLOCK_SIZE);
-            scales[(size_t)row * (size_t)blocks_per_row + (size_t)k] = fp16_to_fp32(block->d);
+            scales[(size_t)row * (size_t)blocks_per_row + (size_t)k] = bitnet_fp16_to_fp32(block->d);
         }
     }
 
     return 0;
 }
 
-int bitnet_tq2_0_quantize_vec_i8(const float *vec, int in_dim, int8_t *qvec, float *scale, int32_t *block_bsums) {
+int bitnet_tq2_0_quantize_vec_i8_impl(const float *vec, int in_dim, int8_t *qvec, float *scale, int32_t *block_bsums) {
     float max_abs = 0.0f;
     int bsums_computed = 0;
 
@@ -1496,7 +1504,7 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
                     const bitnet_tq2_0_block_t *block =
                         (const bitnet_tq2_0_block_t *)(bytes + row_offset +
                             (size_t)tq2_blk * BITNET_TQ2_0_BLOCK_SIZE);
-                    row_scale = fp16_to_fp32(block->d);
+                    row_scale = bitnet_fp16_to_fp32(block->d);
 
                     /* Decode all 64 codes for this row in this sub-block and pack */
                     int32_t code_sum = 0;
@@ -2025,10 +2033,13 @@ static int i2s_matmul_qkv_parallel(const uint8_t *packed_q, const float *scales_
                                    float *out_q, float *out_k, float *out_v);
 #endif
 
-/* Public parallel I2S wrappers — dispatch to thread pool */
-int bitnet_tq2_0_matmul_i2s_neon_parallel(const uint8_t *packed, const float *scales,
-                                            const int32_t *bsums, int out_dim, int in_dim,
-                                            const int8_t *qvec, float vec_scale, float *out) {
+/* Public parallel I2S wrappers — dispatch through g_bitnet_dispatch.
+ * _impl suffix is the actual implementation (thread-pool dispatch + fallback
+ * to single-threaded). The non-suffix symbol is the dispatch trampoline at
+ * the bottom of this file, allowing per-tier overrides on x86. */
+int bitnet_tq2_0_matmul_i2s_neon_parallel_impl(const uint8_t *packed, const float *scales,
+                                                 const int32_t *bsums, int out_dim, int in_dim,
+                                                 const int8_t *qvec, float vec_scale, float *out) {
 #if BITNET_TQ2_HAS_NEON_DOTPROD
     return i2s_matmul_parallel(packed, scales, bsums, out_dim, in_dim, qvec, vec_scale, out);
 #else
@@ -2038,11 +2049,11 @@ int bitnet_tq2_0_matmul_i2s_neon_parallel(const uint8_t *packed, const float *sc
 #endif
 }
 
-int bitnet_tq2_0_matmul_i2s_neon_pair_parallel(const uint8_t *packed_a, const float *scales_a,
-                                                  const uint8_t *packed_b, const float *scales_b,
-                                                  const int32_t *bsums, int out_dim, int in_dim,
-                                                  const int8_t *qvec, float vec_scale,
-                                                  float *out_a, float *out_b) {
+int bitnet_tq2_0_matmul_i2s_neon_pair_parallel_impl(const uint8_t *packed_a, const float *scales_a,
+                                                      const uint8_t *packed_b, const float *scales_b,
+                                                      const int32_t *bsums, int out_dim, int in_dim,
+                                                      const int8_t *qvec, float vec_scale,
+                                                      float *out_a, float *out_b) {
 #if BITNET_TQ2_HAS_NEON_DOTPROD
     return i2s_matmul_pair_parallel(packed_a, scales_a, packed_b, scales_b,
                                      bsums, out_dim, in_dim, qvec, vec_scale, out_a, out_b);
@@ -2054,13 +2065,13 @@ int bitnet_tq2_0_matmul_i2s_neon_pair_parallel(const uint8_t *packed_a, const fl
 #endif
 }
 
-int bitnet_tq2_0_matmul_i2s_qkv_parallel(const uint8_t *packed_q, const float *scales_q,
-                                          const uint8_t *packed_k, const float *scales_k,
-                                          const uint8_t *packed_v, const float *scales_v,
-                                          const int32_t *bsums,
-                                          int q_dim, int kv_dim, int in_dim,
-                                          const int8_t *qvec, float vec_scale,
-                                          float *out_q, float *out_k, float *out_v) {
+int bitnet_tq2_0_matmul_i2s_qkv_parallel_impl(const uint8_t *packed_q, const float *scales_q,
+                                                const uint8_t *packed_k, const float *scales_k,
+                                                const uint8_t *packed_v, const float *scales_v,
+                                                const int32_t *bsums,
+                                                int q_dim, int kv_dim, int in_dim,
+                                                const int8_t *qvec, float vec_scale,
+                                                float *out_q, float *out_k, float *out_v) {
 #if BITNET_TQ2_HAS_NEON_DOTPROD
     return i2s_matmul_qkv_parallel(packed_q, scales_q,
                                    packed_k, scales_k,
@@ -2179,6 +2190,195 @@ int bitnet_tq2_0_matmul_vqtbl1q_lut_pair(const void *weight_a, const float *scal
 }
 
 #endif /* __ARM_NEON */
+
+#if !defined(__ARM_NEON)
+#ifndef QK_I2S
+#define QK_I2S 64
+#endif
+/* Scalar I2S matmul for non-NEON builds. The dispatch scalar tier points its
+ * I2S slots here (via the kernel_registry shims); avx2/avx_vnni/avx512 tiers
+ * route directly to the SIMD kernels in src/x86/quant_tq2_0_x86.c. This reads
+ * the same 4-row packed layout the reorder builds (each byte holds 4 rows' 2-bit
+ * codes: row r at bits [(3-r)*2+1:(3-r)*2]) and computes the dot product
+ * directly as (code-1)*qvec, which equals the SIMD path's unsigned-code minus
+ * bsums. */
+static int tq2_i2s_matmul_scalar(const uint8_t *packed, const float *scales,
+                                   int out_dim, int in_dim,
+                                   const int8_t *qvec, float vec_scale, float *out) {
+    int blocks_per_row, n_groups, sub_blocks_per_group;
+
+    if (packed == NULL || scales == NULL || qvec == NULL || out == NULL ||
+        out_dim <= 0 || in_dim <= 0 || in_dim % BITNET_TQ2_0_QK != 0) {
+        return -1;
+    }
+    blocks_per_row = in_dim / BITNET_TQ2_0_QK;
+    if (blocks_per_row <= 0) return -1;
+    n_groups = ((out_dim + 3) & ~3) / 4;
+    sub_blocks_per_group = in_dim / QK_I2S;
+
+    for (int grp = 0; grp < n_groups; ++grp) {
+        int row_base = grp * 4;
+        for (int r = 0; r < 4; ++r) {
+            int row = row_base + r;
+            if (row >= out_dim) continue;
+            float sum = 0.0f;
+            for (int tb = 0; tb < blocks_per_row; ++tb) {
+                int32_t dot = 0;
+                for (int e = 0; e < BITNET_TQ2_0_QK; ++e) {
+                    int p = tb * BITNET_TQ2_0_QK + e;
+                    int sb = p / QK_I2S, pe = p % QK_I2S;
+                    uint8_t byte = packed[(size_t)grp * sub_blocks_per_group * QK_I2S
+                                          + (size_t)sb * QK_I2S + pe];
+                    int code = (byte >> ((3 - r) * 2)) & 3;
+                    dot += (code - 1) * (int)qvec[p];
+                }
+                sum += (float)dot * scales[(size_t)(grp * blocks_per_row + tb) * 4u + r];
+            }
+            out[row] = sum * vec_scale;
+        }
+    }
+    return 0;
+}
+
+int bitnet_tq2_0_matmul_i2s_neon_parallel_impl(const uint8_t *packed, const float *scales,
+                                                 const int32_t *bsums, int out_dim, int in_dim,
+                                                 const int8_t *qvec, float vec_scale, float *out) {
+    (void)bsums;
+    return tq2_i2s_matmul_scalar(packed, scales, out_dim, in_dim, qvec, vec_scale, out);
+}
+
+int bitnet_tq2_0_matmul_i2s_neon_pair_parallel_impl(const uint8_t *packed_a, const float *scales_a,
+                                                      const uint8_t *packed_b, const float *scales_b,
+                                                      const int32_t *bsums, int out_dim, int in_dim,
+                                                      const int8_t *qvec, float vec_scale,
+                                                      float *out_a, float *out_b) {
+    int rc;
+    (void)bsums;
+    rc = tq2_i2s_matmul_scalar(packed_a, scales_a, out_dim, in_dim, qvec, vec_scale, out_a);
+    if (rc != 0) return rc;
+    return tq2_i2s_matmul_scalar(packed_b, scales_b, out_dim, in_dim, qvec, vec_scale, out_b);
+}
+
+int bitnet_tq2_0_matmul_i2s_qkv_parallel_impl(const uint8_t *packed_q, const float *scales_q,
+                                                const uint8_t *packed_k, const float *scales_k,
+                                                const uint8_t *packed_v, const float *scales_v,
+                                                const int32_t *bsums,
+                                                int q_dim, int kv_dim, int in_dim,
+                                                const int8_t *qvec, float vec_scale,
+                                                float *out_q, float *out_k, float *out_v) {
+    int rc;
+    (void)bsums;
+    rc = tq2_i2s_matmul_scalar(packed_q, scales_q, q_dim, in_dim, qvec, vec_scale, out_q);
+    if (rc != 0) return rc;
+    rc = tq2_i2s_matmul_scalar(packed_k, scales_k, kv_dim, in_dim, qvec, vec_scale, out_k);
+    if (rc != 0) return rc;
+    return tq2_i2s_matmul_scalar(packed_v, scales_v, kv_dim, in_dim, qvec, vec_scale, out_v);
+}
+
+/* I2S layout helpers — portable C. On x86 these build the 4-row packed layout
+ * that bitnet_tq2_0_matmul_i2s_neon_parallel_avx2 (src/x86/quant_tq2_0_x86.c)
+ * consumes; the dispatch table routes the I2S slots to the x86 kernel when
+ * BITNET_USE_TQ2_I2S is enabled. Byte-identical to the ARM versions in the
+ * __ARM_NEON block above (which use the same packing). */
+#ifndef QK_I2S
+#define QK_I2S 64
+#endif
+
+static inline uint8_t tq2_0_extract_code_nonneon(const uint8_t *qs, int pos) {
+    int g = pos / 128;
+    int l = (pos % 128) / 32;
+    int m = pos % 32;
+    return (qs[g * 32 + m] >> (l * 2)) & 3;
+}
+
+size_t bitnet_tq2_0_i2s_packed_size(int out_dim, int in_dim) {
+    if (out_dim <= 0 || in_dim <= 0 || in_dim % BITNET_TQ2_0_QK != 0) {
+        return 0;
+    }
+    int out_dim_padded = (out_dim + 3) & ~3;
+    int n_groups = out_dim_padded / 4;
+    int sub_blocks_per_group = in_dim / QK_I2S;
+    return (size_t)n_groups * (size_t)sub_blocks_per_group * (size_t)QK_I2S;
+}
+
+int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
+                                  uint8_t *packed, float *packed_scales, int32_t *packed_bsums) {
+    const uint8_t *bytes = (const uint8_t *)weight;
+    int blocks_per_row, out_dim_padded, n_groups, sub_blocks_per_group;
+
+    if (weight == NULL || packed == NULL || packed_scales == NULL ||
+        packed_bsums == NULL || out_dim <= 0 || in_dim <= 0 ||
+        in_dim % BITNET_TQ2_0_QK != 0) {
+        return -1;
+    }
+    blocks_per_row = in_dim / BITNET_TQ2_0_QK;
+    if (blocks_per_row <= 0) return -1;
+    out_dim_padded = (out_dim + 3) & ~3;
+    n_groups = out_dim_padded / 4;
+    sub_blocks_per_group = in_dim / QK_I2S;
+
+    for (int grp = 0; grp < n_groups; ++grp) {
+        int row_base = grp * 4;
+        for (int sb = 0; sb < sub_blocks_per_group; ++sb) {
+            int elem_base = sb * QK_I2S;
+            uint8_t *dst = packed + (size_t)grp * (size_t)sub_blocks_per_group * (size_t)QK_I2S
+                         + (size_t)sb * (size_t)QK_I2S;
+            float *dst_scales = packed_scales + ((size_t)grp * (size_t)blocks_per_row +
+                                                 (size_t)(elem_base / BITNET_TQ2_0_QK)) * 4u;
+            int32_t *dst_bsums = packed_bsums + ((size_t)grp * (size_t)sub_blocks_per_group + (size_t)sb) * 4u;
+            memset(dst, 0, QK_I2S);
+            for (int r = 0; r < 4; ++r) {
+                int row = row_base + r;
+                float row_scale = 0.0f;
+                int32_t row_bsum = 0;
+                if (row < out_dim) {
+                    size_t row_offset = (size_t)row * (size_t)blocks_per_row * BITNET_TQ2_0_BLOCK_SIZE;
+                    int tq2_blk = elem_base / BITNET_TQ2_0_QK;
+                    const bitnet_tq2_0_block_t *block =
+                        (const bitnet_tq2_0_block_t *)(bytes + row_offset +
+                            (size_t)tq2_blk * BITNET_TQ2_0_BLOCK_SIZE);
+                    row_scale = bitnet_fp16_to_fp32(block->d);
+                    int32_t code_sum = 0;
+                    for (int e = 0; e < QK_I2S; ++e) {
+                        int global_pos = elem_base + e;
+                        int blk = global_pos / BITNET_TQ2_0_QK;
+                        int pos_in_blk = global_pos % BITNET_TQ2_0_QK;
+                        const bitnet_tq2_0_block_t *blk_ptr =
+                            (const bitnet_tq2_0_block_t *)(bytes + row_offset +
+                                (size_t)blk * BITNET_TQ2_0_BLOCK_SIZE);
+                        uint8_t code = tq2_0_extract_code_nonneon(blk_ptr->qs, pos_in_blk);
+                        dst[e] |= (uint8_t)(code << ((3 - r) * 2));
+                        code_sum += (int32_t)code;
+                    }
+                    row_bsum = code_sum - QK_I2S;
+                }
+                dst_scales[r] = row_scale;
+                dst_bsums[r] = row_bsum;
+            }
+        }
+    }
+    return 0;
+}
+
+int bitnet_tq2_0_matmul_i2s_neon(const uint8_t *packed, const float *scales,
+                                   const int32_t *bsums, int out_dim, int in_dim,
+                                   const int8_t *qvec, float vec_scale, float *out) {
+    (void)packed; (void)scales; (void)bsums; (void)out_dim; (void)in_dim;
+    (void)qvec; (void)vec_scale; (void)out;
+    return -1;
+}
+
+int bitnet_tq2_0_matmul_i2s_neon_pair(const uint8_t *packed_a, const float *scales_a,
+                                        const uint8_t *packed_b, const float *scales_b,
+                                        const int32_t *bsums, int out_dim, int in_dim,
+                                        const int8_t *qvec, float vec_scale,
+                                        float *out_a, float *out_b) {
+    (void)packed_a; (void)scales_a; (void)packed_b; (void)scales_b;
+    (void)bsums; (void)out_dim; (void)in_dim; (void)qvec; (void)vec_scale;
+    (void)out_a; (void)out_b;
+    return -1;
+}
+#endif /* !__ARM_NEON */
 
 static int tq2_0_matmul_rows_i8_parallel(const uint8_t *bytes, const uint8_t *bytes_b,
                                          const float *scales, const float *scales_b,
@@ -2316,7 +2516,7 @@ static void tq2_0_matmul_row_lut(const uint8_t *weight, int blocks_per_row,
     for (int k = 0; k < blocks_per_row; ++k) {
         size_t block_offset = (size_t)k * BITNET_TQ2_0_BLOCK_SIZE;
         const bitnet_tq2_0_block_t *block = (const bitnet_tq2_0_block_t *)(weight + block_offset);
-        const float d = fp16_to_fp32(block->d);
+        const float d = bitnet_fp16_to_fp32(block->d);
         float block_sum = 0.0f;
 
         for (int g = 0; g < 2; ++g) {
@@ -2343,8 +2543,8 @@ static void tq2_0_matmul_row_lut_pair(const uint8_t *weight_a, const uint8_t *we
         size_t block_offset = (size_t)k * BITNET_TQ2_0_BLOCK_SIZE;
         const bitnet_tq2_0_block_t *block_a = (const bitnet_tq2_0_block_t *)(weight_a + block_offset);
         const bitnet_tq2_0_block_t *block_b = (const bitnet_tq2_0_block_t *)(weight_b + block_offset);
-        const float d_a = fp16_to_fp32(block_a->d);
-        const float d_b = fp16_to_fp32(block_b->d);
+        const float d_a = bitnet_fp16_to_fp32(block_a->d);
+        const float d_b = bitnet_fp16_to_fp32(block_b->d);
         float block_sum_a = 0.0f;
         float block_sum_b = 0.0f;
 
@@ -3023,7 +3223,7 @@ static void *tq2_lut_pool_worker_main(void *ptr) {
                 continue;
             }
             if (++spin_count < BITNET_TQ2_SPIN_ITERS) {
-                __asm__ __volatile__("yield" ::: "memory");
+                BITNET_SPIN_HINT();
             } else {
                 /* Back off to avoid burning CPU while idle */
                 usleep(1);
@@ -3071,7 +3271,7 @@ static void init_lut_pool_once(void) {
     int _spin = 0; \
     while (!(cond)) { \
         if (++_spin < BITNET_TQ2_SPIN_ITERS) { \
-            __asm__ __volatile__("yield" ::: "memory"); \
+            BITNET_SPIN_HINT(); \
         } else { \
             usleep(1); \
             _spin = 0; \
@@ -3473,7 +3673,7 @@ static int i2s_matmul_qkv_parallel(const uint8_t *packed_q, const float *scales_
 }
 #endif
 
-int bitnet_tq2_0_matmul_vector_lut(const void *weight, int out_dim, int in_dim, const float *lut, float *out) {
+int bitnet_tq2_0_matmul_vector_lut_impl(const void *weight, int out_dim, int in_dim, const float *lut, float *out) {
     const uint8_t *bytes = (const uint8_t *)weight;
     int blocks_per_row = 0;
 
@@ -3490,7 +3690,7 @@ int bitnet_tq2_0_matmul_vector_lut(const void *weight, int out_dim, int in_dim, 
                                           blocks_per_row, 0, out_dim, lut, out, NULL);
 }
 
-int bitnet_tq2_0_matmul_vector_lut_scales(const void *weight, const float *scales,
+int bitnet_tq2_0_matmul_vector_lut_scales_impl(const void *weight, const float *scales,
                                           int out_dim, int in_dim, const float *lut,
                                           float *out) {
     const uint8_t *bytes = (const uint8_t *)weight;
@@ -3510,7 +3710,7 @@ int bitnet_tq2_0_matmul_vector_lut_scales(const void *weight, const float *scale
                                           blocks_per_row, 0, out_dim, lut, out, NULL);
 }
 
-int bitnet_tq2_0_matmul_vector_lut_pair(const void *weight_a, const void *weight_b,
+int bitnet_tq2_0_matmul_vector_lut_pair_impl(const void *weight_a, const void *weight_b,
                                         int out_dim, int in_dim, const float *lut,
                                         float *out_a, float *out_b) {
     const uint8_t *bytes_a = (const uint8_t *)weight_a;
@@ -3531,7 +3731,7 @@ int bitnet_tq2_0_matmul_vector_lut_pair(const void *weight_a, const void *weight
                                           0, out_dim, lut, out_a, out_b);
 }
 
-int bitnet_tq2_0_matmul_vector_lut_pair_scales(const void *weight_a, const float *scales_a,
+int bitnet_tq2_0_matmul_vector_lut_pair_scales_impl(const void *weight_a, const float *scales_a,
                                                const void *weight_b, const float *scales_b,
                                                int out_dim, int in_dim, const float *lut,
                                                float *out_a, float *out_b) {
@@ -3592,4 +3792,77 @@ int bitnet_tq2_0_matmul_vector_partial(const void *weight, int in_dim, int out_s
     }
 
     return 0;
+}
+
+/* ========== Dispatch trampoline ========== */
+
+#include "bitnet_dispatch.h"
+
+int bitnet_tq2_0_quantize_vec_i8(const float *vec, int in_dim, int8_t *qvec,
+                                  float *scale, int32_t *block_bsums) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->tq2_quantize_vec_i8(vec, in_dim, qvec, scale, block_bsums);
+}
+
+int bitnet_tq2_0_matmul_vector_lut(const void *weight, int out_dim, int in_dim,
+                                    const float *lut, float *out) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->tq2_matmul_vector_lut(weight, out_dim, in_dim, lut, out);
+}
+
+int bitnet_tq2_0_matmul_vector_lut_scales(const void *weight, const float *scales,
+                                           int out_dim, int in_dim,
+                                           const float *lut, float *out) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->tq2_matmul_vector_lut_scales(weight, scales, out_dim, in_dim,
+                                                            lut, out);
+}
+
+int bitnet_tq2_0_matmul_vector_lut_pair(const void *weight_a, const void *weight_b,
+                                         int out_dim, int in_dim, const float *lut,
+                                         float *out_a, float *out_b) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->tq2_matmul_vector_lut_pair(weight_a, weight_b, out_dim, in_dim,
+                                                          lut, out_a, out_b);
+}
+
+int bitnet_tq2_0_matmul_vector_lut_pair_scales(const void *weight_a, const float *scales_a,
+                                                const void *weight_b, const float *scales_b,
+                                                int out_dim, int in_dim, const float *lut,
+                                                float *out_a, float *out_b) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->tq2_matmul_vector_lut_pair_scales(
+        weight_a, scales_a, weight_b, scales_b, out_dim, in_dim, lut, out_a, out_b);
+}
+
+int bitnet_tq2_0_matmul_i2s_neon_parallel(const uint8_t *packed, const float *scales,
+                                            const int32_t *bsums, int out_dim, int in_dim,
+                                            const int8_t *qvec, float vec_scale, float *out) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->tq2_matmul_i2s_neon_parallel(packed, scales, bsums,
+                                                              out_dim, in_dim, qvec, vec_scale, out);
+}
+
+int bitnet_tq2_0_matmul_i2s_neon_pair_parallel(const uint8_t *packed_a, const float *scales_a,
+                                                  const uint8_t *packed_b, const float *scales_b,
+                                                  const int32_t *bsums, int out_dim, int in_dim,
+                                                  const int8_t *qvec, float vec_scale,
+                                                  float *out_a, float *out_b) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->tq2_matmul_i2s_neon_pair_parallel(
+        packed_a, scales_a, packed_b, scales_b, bsums, out_dim, in_dim,
+        qvec, vec_scale, out_a, out_b);
+}
+
+int bitnet_tq2_0_matmul_i2s_qkv_parallel(const uint8_t *packed_q, const float *scales_q,
+                                          const uint8_t *packed_k, const float *scales_k,
+                                          const uint8_t *packed_v, const float *scales_v,
+                                          const int32_t *bsums,
+                                          int q_dim, int kv_dim, int in_dim,
+                                          const int8_t *qvec, float vec_scale,
+                                          float *out_q, float *out_k, float *out_v) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->tq2_matmul_i2s_qkv_parallel(
+        packed_q, scales_q, packed_k, scales_k, packed_v, scales_v,
+        bsums, q_dim, kv_dim, in_dim, qvec, vec_scale, out_q, out_k, out_v);
 }

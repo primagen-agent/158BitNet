@@ -50,4 +50,34 @@ int bitnet_q6k_dot_product_q8_compact_8_neon(const int8_t *q8, const int8_t *sca
                                              int blocks_per_row, const int8_t *qvec,
                                              float vec_scale, float out[8]);
 
+/* Internal _impl entry points — called by per-tier dispatch trampolines.
+ * The public symbols (without _impl) are dispatch trampolines that route
+ * through g_bitnet_dispatch. */
+int bitnet_q6k_dot_product_i8_neon_impl(const bitnet_q6k_block_t *block, const int8_t *qvec,
+                                        float vec_scale, size_t len, float *out);
+int bitnet_q6k_dot_product_q8_neon_impl(const int8_t *q8, const float *scales,
+                                        int blocks_per_row, const int8_t *qvec,
+                                        float vec_scale, float *out);
+int bitnet_q6k_dot_product_q8_4_neon_impl(const int8_t *q8, const float *scales,
+                                          int row_stride, int scale_stride,
+                                          int blocks_per_row, const int8_t *qvec,
+                                          float vec_scale, float out[4]);
+int bitnet_q6k_dot_product_q8_8_neon_impl(const int8_t *q8, const float *scales,
+                                          int row_stride, int scale_stride,
+                                          int blocks_per_row, const int8_t *qvec,
+                                          float vec_scale, float out[8]);
+int bitnet_q6k_dot_product_q8_compact_neon_impl(const int8_t *q8, const int8_t *scales,
+                                                const float *d, int blocks_per_row,
+                                                const int8_t *qvec, float vec_scale, float *out);
+int bitnet_q6k_dot_product_q8_compact_4_neon_impl(const int8_t *q8, const int8_t *scales,
+                                                  const float *d, int row_stride,
+                                                  int scale_stride, int d_stride,
+                                                  int blocks_per_row, const int8_t *qvec,
+                                                  float vec_scale, float out[4]);
+int bitnet_q6k_dot_product_q8_compact_8_neon_impl(const int8_t *q8, const int8_t *scales,
+                                                  const float *d, int row_stride,
+                                                  int scale_stride, int d_stride,
+                                                  int blocks_per_row, const int8_t *qvec,
+                                                  float vec_scale, float out[8]);
+
 #endif

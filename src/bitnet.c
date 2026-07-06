@@ -1,5 +1,6 @@
 #include "bitnet.h"
 
+#include "bitnet_dispatch.h"
 #include "bitnet_internal.h"
 #include "gguf.h"
 #include "ops.h"
@@ -240,6 +241,17 @@ struct bitnet_context {
 #define BITNET_USE_Q6K_NEON_OUTPUT 1
 #define BITNET_USE_TQ2_TL1_LUT 0
 #define BITNET_USE_TQ2_I2S 1
+#elif defined(__x86_64__) || defined(_M_X64)
+/* x86: I2S path. Dispatch routes the I2S matmul slots to the AVX2/AVX-VNNI/
+ * AVX512-VNNI shuffle+maddubs kernels in src/x86/quant_tq2_0_x86.c (no slow
+ * AVX2 gather like the LUT path); the scalar tier uses a portable scalar I2S
+ * matmul. The load-time reorder is the portable C version in quant_tq2_0.c
+ * (same 4-row packed layout as ARM). */
+#define BITNET_USE_TQ2_NEON_ATTN 0
+#define BITNET_USE_TQ2_NEON_FFN 0
+#define BITNET_USE_Q6K_NEON_OUTPUT 0
+#define BITNET_USE_TQ2_TL1_LUT 0
+#define BITNET_USE_TQ2_I2S 1
 #else
 #define BITNET_USE_TQ2_NEON_ATTN 0
 #define BITNET_USE_TQ2_NEON_FFN 0
@@ -261,42 +273,6 @@ static float read_config_f32_default(const gguf_file_t *file, const char *key, f
         return (float)entry->value.f64;
     }
     return default_value;
-}
-
-static float bitnet_fp16_to_fp32(uint16_t h) {
-    uint32_t sign = (uint32_t)(h >> 15) & 1u;
-    uint32_t exp = (uint32_t)(h >> 10) & 0x1Fu;
-    uint32_t mant = (uint32_t)h & 0x3FFu;
-
-    if (exp == 0) {
-        if (mant == 0) {
-            uint32_t raw = sign << 31;
-            float f;
-            memcpy(&f, &raw, sizeof(f));
-            return f;
-        }
-        {
-            float value = ldexpf((float)mant / 1024.0f, -14);
-            return sign ? -value : value;
-        }
-    }
-
-    if (exp == 31) {
-        uint32_t raw = (sign << 31) | 0x7F800000u | (mant << 13);
-        float f;
-        memcpy(&f, &raw, sizeof(f));
-        return f;
-    }
-
-    exp = exp - 15u + 127u;
-    mant <<= 13;
-
-    {
-        uint32_t raw = (sign << 31) | (exp << 23) | mant;
-        float f;
-        memcpy(&f, &raw, sizeof(f));
-        return f;
-    }
 }
 
 static int bitnet_f16_embedding_lookup(const void *data, int token_id,
@@ -338,7 +314,7 @@ static int bitnet_choose_thread_count(void) {
         n = 3;
     }
     if (n < 1) n = 1;
-    if (n > 8) n = 8;
+    if (n > 16) n = 16;
     return (int)n;
 }
 
@@ -806,7 +782,7 @@ static size_t bitnet_kv_scale_count(const bitnet_context_t *ctx) {
            (size_t)ctx->model->head_count_kv;
 }
 
-static float bitnet_quantize_f32_to_i8(const float *src, int n, int8_t *dst) {
+float bitnet_quantize_f32_to_i8_impl(const float *src, int n, int8_t *dst) {
     float max_abs = 0.0f;
 
     for (int i = 0; i < n; ++i) {
@@ -835,9 +811,9 @@ static float bitnet_quantize_f32_to_i8(const float *src, int n, int8_t *dst) {
     }
 }
 
-static int bitnet_rms_norm_quant_tq2_i8(float *dst, const float *src, const float *weight,
-                                        int n, int8_t *qvec, float *scale,
-                                        int32_t *block_bsums, float eps) {
+int bitnet_rms_norm_quant_tq2_i8_impl(float *dst, const float *src, const float *weight,
+                                       int n, int8_t *qvec, float *scale,
+                                       int32_t *block_bsums, float eps) {
     float sum = 0.0f;
     float max_abs = 0.0f;
     int i = 0;
@@ -905,8 +881,8 @@ static void bitnet_scale_vector(float *x, float scale, int n) {
     }
 }
 
-static void bitnet_residual_add_scaled(float *out, const float *a, const float *b,
-                                       float b_scale, int n) {
+void bitnet_residual_add_scaled_impl(float *out, const float *a, const float *b,
+                                     float b_scale, int n) {
     int i = 0;
     if (b_scale == 1.0f) {
         bitnet_residual_add(out, a, b, n);
@@ -927,7 +903,7 @@ static void bitnet_residual_add_scaled(float *out, const float *a, const float *
     }
 }
 
-static int bitnet_dot_i8(const int8_t *a, const int8_t *b, int n) {
+int bitnet_dot_i8_impl(const int8_t *a, const int8_t *b, int n) {
     int sum = 0;
     int i = 0;
 
@@ -949,7 +925,7 @@ static int bitnet_dot_i8(const int8_t *a, const int8_t *b, int n) {
     return sum;
 }
 
-static void bitnet_accum_i8_scaled(float *dst, const int8_t *src, float scale, int n) {
+void bitnet_accum_i8_scaled_impl(float *dst, const int8_t *src, float scale, int n) {
     int i = 0;
 
 #if defined(__ARM_NEON)
@@ -1097,11 +1073,19 @@ static pthread_once_t g_output_pool_once = PTHREAD_ONCE_INIT;
 #define BITNET_DISPATCHER_RUNS_WORK 1
 #endif
 
+#if defined(__x86_64__) || defined(_M_X64)
+#define BITNET_SPIN_HINT() __asm__ __volatile__("pause" ::: "memory")
+#elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
+#define BITNET_SPIN_HINT() __asm__ __volatile__("yield" ::: "memory")
+#else
+#define BITNET_SPIN_HINT() ((void)0)
+#endif
+
 #define BITNET_OUTPUT_SPIN_WAIT(cond) do { \
     int _spin = 0; \
     while (!(cond)) { \
         if (++_spin < BITNET_OUTPUT_SPIN_ITERS) { \
-            __asm__ __volatile__("yield" ::: "memory"); \
+            BITNET_SPIN_HINT(); \
         } else { \
             usleep(1); \
             _spin = 0; \
@@ -1525,7 +1509,7 @@ static void *bitnet_output_pool_worker_main(void *ptr) {
                 continue;
             }
             if (++spin_count < BITNET_OUTPUT_SPIN_ITERS) {
-                __asm__ __volatile__("yield" ::: "memory");
+                BITNET_SPIN_HINT();
             } else {
                 usleep(1);
                 spin_count = 0;
@@ -2963,6 +2947,17 @@ bitnet_model_t *bitnet_load_model(const char *path) {
         (void)build_metal_output_cache(model);
     }
 #endif
+#else
+    /* Non-NEON builds (x86) still need the F16-tied output_q8 cache for models
+     * that ship without an explicit output.weight tensor (e.g. MiniCPM4 0.5B,
+     * which ties output to a F16 token_embd). The cache is consumed by the
+     * #else output-projection branch in bitnet_eval. */
+    if (model->output_is_tied_token_embd) {
+        if (build_output_f16_tied_cache(model) != 0) {
+            bitnet_free_model(model);
+            return NULL;
+        }
+    }
 #endif
 
     return model;
@@ -4087,11 +4082,36 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
         }
 #else
-        if (output_data == NULL) goto cleanup;
-        if (bitnet_output_projection_parallel(output_data, output_col_size,
-                                              (int)output_blocks_per_col,
-                                              vocab_size, hidden, ctx->logits) != 0) {
-            goto cleanup;
+        if (output_data == NULL) {
+            /* Tied-embedding model (e.g. MiniCPM4 0.5B): no explicit
+             * output.weight. Fall back to the F16-tied output_q8 cache built
+             * at load time. ARM handles this in the Q6K_NEON_OUTPUT branch
+             * above; mirror it here for non-NEON builds. */
+            if (model->output_q8 != NULL && model->output_q8_d != NULL &&
+                model->output_q8_blockscale) {
+                if (bitnet_tq2_0_quantize_vec_i8(hidden, emb_dim,
+                                                  tq2_qhidden, &tq2_hidden_scale,
+                                                  NULL) != 0) {
+                    goto cleanup;
+                }
+                if (model->is_minicpm && model->logit_scale != 0.0f) {
+                    tq2_hidden_scale /= model->logit_scale;
+                }
+                if (bitnet_output_projection_q8_blockscale_neon_parallel(
+                        model->output_q8, model->output_q8_d,
+                        (int)output_blocks_per_col, vocab_size,
+                        tq2_qhidden, tq2_hidden_scale, ctx->logits) != 0) {
+                    goto cleanup;
+                }
+            } else {
+                goto cleanup;
+            }
+        } else {
+            if (bitnet_output_projection_parallel(output_data, output_col_size,
+                                                  (int)output_blocks_per_col,
+                                                  vocab_size, hidden, ctx->logits) != 0) {
+                goto cleanup;
+            }
         }
 #endif
     }
@@ -4214,4 +4234,37 @@ void bitnet_free_model(bitnet_model_t *model) {
     bitnet_tokenizer_free(model->tokenizer);
     free(model->model_path);
     free(model);
+}
+
+/* Phase 4.2 trampolines — route the promoted bitnet.c hot-path helpers
+ * through the dispatch table so x86 tiers can supply SIMD variants. Callers
+ * inside this file keep using the public names; the `_impl` symbols hold
+ * the original scalar/NEON body. */
+float bitnet_quantize_f32_to_i8(const float *src, int n, int8_t *dst) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->quantize_f32_to_i8(src, n, dst);
+}
+
+int bitnet_rms_norm_quant_tq2_i8(float *dst, const float *src, const float *weight,
+                                 int n, int8_t *qvec, float *scale,
+                                 int32_t *block_bsums, float eps) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->rms_norm_quant_tq2_i8(dst, src, weight, n,
+                                                     qvec, scale, block_bsums, eps);
+}
+
+void bitnet_residual_add_scaled(float *out, const float *a, const float *b,
+                                float b_scale, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->residual_add_scaled(out, a, b, b_scale, n);
+}
+
+int bitnet_dot_i8(const int8_t *a, const int8_t *b, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->dot_i8(a, b, n);
+}
+
+void bitnet_accum_i8_scaled(float *dst, const int8_t *src, float scale, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->accum_i8_scaled(dst, src, scale, n);
 }

@@ -13,6 +13,10 @@ typedef struct bitnet_tq2_0_block {
     uint16_t d;
 } bitnet_tq2_0_block_t;
 
+/* fp16 -> fp32 conversion (matches scalar reference). Public so per-arch
+ * translation units can share a single implementation. */
+float bitnet_fp16_to_fp32(uint16_t h);
+
 int bitnet_tq2_0_dequantize_block(const bitnet_tq2_0_block_t *block, float *out, size_t out_len);
 int bitnet_tq2_0_dot_product(const bitnet_tq2_0_block_t *block, const float *vec, size_t len, float *out);
 size_t bitnet_tq2_0_lut_float_count(int in_dim);
@@ -21,6 +25,11 @@ size_t bitnet_tq2_0_scale_float_count(int out_dim, int in_dim);
 int bitnet_tq2_0_build_scales(const void *weight, int out_dim, int in_dim,
                               float *scales, size_t scale_count);
 int bitnet_tq2_0_quantize_vec_i8(const float *vec, int in_dim, int8_t *qvec, float *scale, int32_t *block_bsums);
+/* Internal _impl entry point — the per-tier dispatch trampolines in
+ * kernel_registry.c (scalar / arm_neon shims) call this directly to avoid
+ * infinite recursion through g_bitnet_dispatch. */
+int bitnet_tq2_0_quantize_vec_i8_impl(const float *vec, int in_dim, int8_t *qvec,
+                                      float *scale, int32_t *block_bsums);
 int bitnet_tq2_0_quantize_vec_i8_known_max(const float *vec, int in_dim, int8_t *qvec,
                                            float *scale, int32_t *block_bsums,
                                            float max_abs);
@@ -73,6 +82,19 @@ int bitnet_tq2_0_matmul_vector_lut_pair_scales(const void *weight_a, const float
                                                const void *weight_b, const float *scales_b,
                                                int out_dim, int in_dim, const float *lut,
                                                float *out_a, float *out_b);
+/* Internal _impl entry points — called by per-tier dispatch trampolines. */
+int bitnet_tq2_0_matmul_vector_lut_impl(const void *weight, int out_dim, int in_dim,
+                                         const float *lut, float *out);
+int bitnet_tq2_0_matmul_vector_lut_scales_impl(const void *weight, const float *scales,
+                                                int out_dim, int in_dim,
+                                                const float *lut, float *out);
+int bitnet_tq2_0_matmul_vector_lut_pair_impl(const void *weight_a, const void *weight_b,
+                                              int out_dim, int in_dim, const float *lut,
+                                              float *out_a, float *out_b);
+int bitnet_tq2_0_matmul_vector_lut_pair_scales_impl(const void *weight_a, const float *scales_a,
+                                                     const void *weight_b, const float *scales_b,
+                                                     int out_dim, int in_dim, const float *lut,
+                                                     float *out_a, float *out_b);
 int bitnet_tq2_0_matmul_vector(const void *weight, int out_dim, int in_dim, const float *vec, float *out);
 int bitnet_tq2_0_matmul_vector_partial(const void *weight, int in_dim, int out_start, int out_count, const float *vec, float *out);
 
@@ -121,6 +143,22 @@ int bitnet_tq2_0_matmul_i2s_qkv_parallel(const uint8_t *packed_q, const float *s
                                           int q_dim, int kv_dim, int in_dim,
                                           const int8_t *qvec, float vec_scale,
                                           float *out_q, float *out_k, float *out_v);
+/* Internal _impl entry points — called by per-tier dispatch trampolines. */
+int bitnet_tq2_0_matmul_i2s_neon_parallel_impl(const uint8_t *packed, const float *scales,
+                                                 const int32_t *bsums, int out_dim, int in_dim,
+                                                 const int8_t *qvec, float vec_scale, float *out);
+int bitnet_tq2_0_matmul_i2s_neon_pair_parallel_impl(const uint8_t *packed_a, const float *scales_a,
+                                                      const uint8_t *packed_b, const float *scales_b,
+                                                      const int32_t *bsums, int out_dim, int in_dim,
+                                                      const int8_t *qvec, float vec_scale,
+                                                      float *out_a, float *out_b);
+int bitnet_tq2_0_matmul_i2s_qkv_parallel_impl(const uint8_t *packed_q, const float *scales_q,
+                                                const uint8_t *packed_k, const float *scales_k,
+                                                const uint8_t *packed_v, const float *scales_v,
+                                                const int32_t *bsums,
+                                                int q_dim, int kv_dim, int in_dim,
+                                                const int8_t *qvec, float vec_scale,
+                                                float *out_q, float *out_k, float *out_v);
 void bitnet_tq2_0_park_workers(void);
 
 /* Deprecated TL1 API (kept for backward compatibility, returns -1) */
