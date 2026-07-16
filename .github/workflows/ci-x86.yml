@@ -1,0 +1,62 @@
+name: ci-x86
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  linux-x86-gcc:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_C_COMPILER=gcc-11
+      - run: cmake --build build -j 4
+      - run: ctest --test-dir build --output-on-failure
+
+  linux-x86-clang:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_C_COMPILER=clang-14
+      - run: cmake --build build -j 4
+      - run: ctest --test-dir build --output-on-failure
+
+  linux-x86-newer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build
+      - run: cmake --build build -j 4
+      - run: ctest --test-dir build --output-on-failure
+
+  macos-intel:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build
+      - run: cmake --build build -j 4
+      - run: ctest --test-dir build --output-on-failure
+
+  windows-msvc:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+        with: { arch: x64 }
+      - run: cmake -S . -B build -G "Ninja" -DCMAKE_C_COMPILER=cl
+      - run: cmake --build build -j 4
+      - run: ctest --test-dir build --output-on-failure
+
+  qemu-avx512:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y qemu-user
+      - run: cmake -S . -B build -DCMAKE_C_COMPILER=gcc-11
+      - run: cmake --build build -j 4
+      - run: |
+          for t in test_cpu_detect test_ops test_quant_tq2_0 test_q6k_layout; do
+            qemu-x86_64 -cpu max ./build/$t || exit 1
+          done

@@ -320,7 +320,12 @@ BITNET_NUM_THREADS=3
 BITNET_MAX_CONTEXT=2048
 BITNET_REPEAT_LAST_N=64
 BITNET_REPEAT_PENALTY=1.1
+# Set to 0 to avoid the faster, additional-memory compact Q8 output cache.
+BITNET_OUTPUT_Q8_CACHE=1
 ```
+
+`BITNET_NUM_THREADS` controls both the persistent pthread workers and x86
+OpenMP projection kernels.  The runtime clamps it to each pool's capacity.
 
 ## OpenAI-Compatible HTTP Server
 
@@ -475,6 +480,13 @@ Run unit tests:
 
 ```sh
 ctest --test-dir build --output-on-failure
+```
+
+Cross-build Android tests by opting in explicitly:
+
+```sh
+BITNET_BUILD_TESTS=ON ANDROID_NDK=/path/to/android-ndk \
+  ./scripts/build_android.sh test_ops test_i2s_correctness test_quant_tq2_0 test_q6k_layout
 ```
 
 Run HTTP API tests:

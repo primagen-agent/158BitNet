@@ -9,6 +9,7 @@
 #include "quant_tq2_0.h"
 #include "sampler.h"
 #include "tensor.h"
+#include "thread_config.h"
 
 #if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
 #include "bitnet_metal.h"
@@ -45,6 +46,8 @@
 #endif
 
 #define BITNET_MAX_TQ2_BLOCKS 128
+#define BITNET_MAX_OUTPUT_THREADS 16
+#define BITNET_MAX_GQA_RATIO 32
 #define BITNET_LORA_MAX_RANK 256
 #define BITNET_LORA_OUTPUT_BLOCK_INDEX UINT32_MAX
 
@@ -189,6 +192,9 @@ struct bitnet_model {
     float residual_scale;
     float logit_scale;
     float rope_freq_base;
+    const float *rope_factors_short;
+    const float *rope_factors_long;
+    size_t rope_factor_count;
     float rms_norm_eps;
     bitnet_ffn_activation_t ffn_activation;
     int use_attn_sub_norm;
@@ -231,6 +237,8 @@ struct bitnet_context {
     int8_t *tq2_tl1_lut;
     float *rope_cos;
     float *rope_sin;
+    float *prefill_hidden;
+    size_t prefill_hidden_count;
     size_t tq2_lut_count;
     size_t tq2_tl1_lut_size;
 };
@@ -299,23 +307,7 @@ static double monotonic_seconds(void) {
 }
 
 static int bitnet_choose_thread_count(void) {
-    const char *env = getenv("BITNET_NUM_THREADS");
-    long n = 0;
-
-    if (env != NULL && env[0] != '\0') {
-        char *end = NULL;
-        long parsed = strtol(env, &end, 10);
-        if (end != env && parsed > 0) {
-            n = parsed;
-        }
-    }
-
-    if (n <= 0) {
-        n = 3;
-    }
-    if (n < 1) n = 1;
-    if (n > 16) n = 16;
-    return (int)n;
+    return bitnet_thread_count(BITNET_MAX_OUTPUT_THREADS);
 }
 
 #if defined(__ANDROID__)
@@ -782,6 +774,21 @@ static size_t bitnet_kv_scale_count(const bitnet_context_t *ctx) {
            (size_t)ctx->model->head_count_kv;
 }
 
+/* KV storage is head-major so a fixed head's complete history is contiguous:
+ * [layer][kv_head][position][head_dim]. */
+static size_t bitnet_kv_cache_offset(const bitnet_context_t *ctx, int block,
+                                     int kv_head, int position) {
+    const size_t head_dim = (size_t)ctx->model->attention_key_length;
+    return ((((size_t)block * (size_t)ctx->model->head_count_kv + (size_t)kv_head) *
+             (size_t)ctx->max_tokens + (size_t)position) * head_dim);
+}
+
+static size_t bitnet_kv_scale_offset(const bitnet_context_t *ctx, int block,
+                                     int kv_head, int position) {
+    return (((size_t)block * (size_t)ctx->model->head_count_kv + (size_t)kv_head) *
+            (size_t)ctx->max_tokens + (size_t)position);
+}
+
 float bitnet_quantize_f32_to_i8_impl(const float *src, int n, int8_t *dst) {
     float max_abs = 0.0f;
 
@@ -1012,7 +1019,7 @@ static void bitnet_free_q8_kv_cache(bitnet_context_t *ctx) {
 }
 
 typedef struct {
-    pthread_t threads[8];
+    pthread_t threads[BITNET_MAX_OUTPUT_THREADS];
     int n_threads;
     int initialized;
     atomic_uint generation;
@@ -1062,6 +1069,11 @@ static bitnet_output_pool_t g_output_pool = {
     NULL,
 };
 static pthread_once_t g_output_pool_once = PTHREAD_ONCE_INIT;
+/* Both persistent worker pools carry process-global task descriptors.  Keep a
+ * complete eval atomic so independent contexts cannot overwrite in-flight
+ * tasks.  This can later be replaced by an executor object without changing
+ * the public context API. */
+static pthread_mutex_t g_eval_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define BITNET_OUTPUT_SPIN_ITERS 5000
 #if defined(__ANDROID__) || defined(__APPLE__)
@@ -1525,6 +1537,10 @@ static void *bitnet_output_pool_worker_main(void *ptr) {
 
 static void init_output_pool_once(void) {
     int n_threads = bitnet_choose_thread_count();
+
+    if (n_threads > BITNET_MAX_OUTPUT_THREADS) {
+        n_threads = BITNET_MAX_OUTPUT_THREADS;
+    }
 
     if (n_threads <= 1) {
         g_output_pool.initialized = 1;
@@ -2277,6 +2293,12 @@ static int BITNET_MAYBE_UNUSED build_output_q6k_cache(bitnet_model_t *model) {
     return 0;
 }
 
+static int BITNET_MAYBE_UNUSED bitnet_output_q8_cache_enabled(void) {
+    const char *env = getenv("BITNET_OUTPUT_Q8_CACHE");
+    return env == NULL || (strcmp(env, "0") != 0 && strcmp(env, "off") != 0 &&
+                           strcmp(env, "false") != 0);
+}
+
 #if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
 static int bitnet_should_use_metal_output(void) {
     const char *env = getenv("BITNET_METAL_OUTPUT");
@@ -2894,6 +2916,24 @@ bitnet_model_t *bitnet_load_model(const char *path) {
     model->chat_template_kind = model_arch_is_bitnet_b158(&model->gguf) ?
         BITNET_CHAT_TEMPLATE_BITNET_B158 : BITNET_CHAT_TEMPLATE_CHATML;
 
+    {
+        const gguf_metadata_t *scaling = gguf_find_metadata(&model->gguf, "minicpm.rope.scaling.type");
+        const gguf_tensor_t *short_tensor = gguf_find_tensor(&model->gguf, "rope_factors_short.weight");
+        const gguf_tensor_t *long_tensor = gguf_find_tensor(&model->gguf, "rope_factors_long.weight");
+        size_t needed = (size_t)model->rope_dimension_count / 2u;
+        if (scaling != NULL && scaling->type == GGUF_TYPE_STRING &&
+            scaling->string_value != NULL && strcmp(scaling->string_value, "longrope") == 0 &&
+            short_tensor != NULL && long_tensor != NULL &&
+            short_tensor->type == BITNET_TARGET_TENSOR_TYPE_F32 &&
+            long_tensor->type == BITNET_TARGET_TENSOR_TYPE_F32 &&
+            short_tensor->n_dims == 1 && long_tensor->n_dims == 1 &&
+            short_tensor->dims[0] >= needed && long_tensor->dims[0] >= needed) {
+            model->rope_factors_short = (const float *)gguf_get_tensor_ptr(&model->gguf, short_tensor);
+            model->rope_factors_long = (const float *)gguf_get_tensor_ptr(&model->gguf, long_tensor);
+            model->rope_factor_count = needed;
+        }
+    }
+
     if (bitnet_build_tensor_cache(&model->gguf, model->block_count, &model->tensor_cache) != 0) {
         bitnet_free_model(model);
         return NULL;
@@ -2933,25 +2973,24 @@ bitnet_model_t *bitnet_load_model(const char *path) {
 #endif
 #endif
 
-#if BITNET_USE_Q6K_NEON_OUTPUT
+#if BITNET_USE_TQ2_I2S
     if (model->output_is_tied_token_embd) {
         if (build_output_f16_tied_cache(model) != 0) {
             bitnet_free_model(model);
             return NULL;
         }
     } else {
-        (void)build_output_q6k_cache(model);
+        if (bitnet_output_q8_cache_enabled()) {
+            (void)build_output_q6k_cache(model);
+        }
     }
+#endif
 #if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
     if (bitnet_should_use_metal_output()) {
         (void)build_metal_output_cache(model);
     }
 #endif
-#else
-    /* Non-NEON builds (x86) still need the F16-tied output_q8 cache for models
-     * that ship without an explicit output.weight tensor (e.g. MiniCPM4 0.5B,
-     * which ties output to a F16 token_embd). The cache is consumed by the
-     * #else output-projection branch in bitnet_eval. */
+#if !BITNET_USE_TQ2_I2S
     if (model->output_is_tied_token_embd) {
         if (build_output_f16_tied_cache(model) != 0) {
             bitnet_free_model(model);
@@ -3017,7 +3056,7 @@ bitnet_context_t *bitnet_create_context(bitnet_model_t *model, int max_tokens) {
     ctx->attn_buffer = (float *)calloc((size_t)attn_dim, sizeof(float));
     ctx->gate = (float *)calloc((size_t)ffn_dim, sizeof(float));
     ctx->up = (float *)calloc((size_t)ffn_dim, sizeof(float));
-    ctx->down = (float *)calloc((size_t)ffn_dim, sizeof(float));
+    ctx->down = (float *)calloc((size_t)emb_dim, sizeof(float));
     ctx->scores = (float *)calloc((size_t)max_tokens * (size_t)model->head_count, sizeof(float));
     ctx->tmp_out = (float *)calloc((size_t)emb_dim, sizeof(float));
     ctx->tq2_lut = (float *)calloc(tq2_lut_count, sizeof(float));
@@ -3047,8 +3086,13 @@ bitnet_context_t *bitnet_create_context(bitnet_model_t *model, int max_tokens) {
     }
 
     for (int pos = 0; pos < max_tokens; ++pos) {
+        const float *rope_factors = max_tokens > (int)model->context_length ?
+                                    model->rope_factors_long : model->rope_factors_short;
         for (int j = 0; j < (int)model->rope_dimension_count / 2; ++j) {
             float theta = 1.0f / powf(model->rope_freq_base, (float)(2 * j) / (float)head_dim);
+            if (rope_factors != NULL && (size_t)j < model->rope_factor_count && rope_factors[j] > 0.0f) {
+                theta /= rope_factors[j];
+            }
             size_t idx = (size_t)pos * (size_t)(model->rope_dimension_count / 2u) + (size_t)j;
             ctx->rope_cos[idx] = cosf((float)pos * theta);
             ctx->rope_sin[idx] = sinf((float)pos * theta);
@@ -3289,6 +3333,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     int rope_dim = 0;
     int token_idx = 0;
     int block_idx = 0;
+    int eval_start_pos = 0;
     int profile_eval = 0;
     double profile_start = 0.0;
     double profile_output_start = 0.0;
@@ -3318,6 +3363,10 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
         return -1;
     }
 
+    if (pthread_mutex_lock(&g_eval_mutex) != 0) {
+        return -1;
+    }
+
     profile_eval = getenv("BITNET_PROFILE_EVAL") != NULL;
     if (profile_eval) {
         profile_start = monotonic_seconds();
@@ -3336,6 +3385,17 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     q_dim = (int)bitnet_attention_dim_for_model(model);
     kv_dim = (int)bitnet_kv_dim_for_model(model);
     attn_dim = q_dim;
+    eval_start_pos = ctx->n_pos;
+
+    if (n_tokens > 1) {
+        size_t needed = (size_t)n_tokens * (size_t)emb_dim;
+        if (ctx->prefill_hidden_count < needed) {
+            float *grown = (float *)realloc(ctx->prefill_hidden, needed * sizeof(float));
+            if (grown == NULL) goto cleanup;
+            ctx->prefill_hidden = grown;
+            ctx->prefill_hidden_count = needed;
+        }
+    }
 
     /* use pre-allocated buffers */
     hidden = ctx->hidden;
@@ -3355,9 +3415,13 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     int32_t tq2_hidden_block_bsums[BITNET_MAX_TQ2_BLOCKS] BITNET_MAYBE_UNUSED;
     int32_t tq2_ffn_block_bsums[BITNET_MAX_TQ2_BLOCKS] BITNET_MAYBE_UNUSED;
 
-    /* ---- process tokens sequentially ---- */
+    /* Decode stays single-vector.  Prefill stores all token states and walks
+     * blocks outermost, so each weight matrix is reused across the whole
+     * prompt before moving to the next layer. */
     for (token_idx = 0; token_idx < n_tokens; ++token_idx) {
         int token = tokens[token_idx];
+        hidden = n_tokens > 1 ?
+                 ctx->prefill_hidden + (size_t)token_idx * (size_t)emb_dim : ctx->hidden;
 
         /* --- embedding lookup via mmap --- */
         {
@@ -3386,8 +3450,15 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
         }
 
-        /* --- run through all 28 blocks --- */
-        for (block_idx = 0; block_idx < (int)model->block_count; ++block_idx) {
+    }
+
+    /* --- run through all transformer blocks, retaining per-token state --- */
+    for (block_idx = 0; block_idx < (int)model->block_count; ++block_idx) {
+        for (token_idx = 0; token_idx < n_tokens; ++token_idx) {
+            int current_pos = eval_start_pos + token_idx;
+            hidden = n_tokens > 1 ?
+                     ctx->prefill_hidden + (size_t)token_idx * (size_t)emb_dim : ctx->hidden;
+            tmp_out = ctx->tmp_out;
             const bitnet_block_tensors_t *bt = &cache->blocks[block_idx];
 #if !BITNET_USE_TQ2_I2S
             const bitnet_block_scale_cache_t *bs = &model->scale_cache.blocks[block_idx];
@@ -3548,7 +3619,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 
             /* ===== Block step 2d: RoPE on q and k ===== */
             {
-                size_t rope_offset = (size_t)ctx->n_pos * (size_t)(rope_dim / 2);
+                size_t rope_offset = (size_t)current_pos * (size_t)(rope_dim / 2);
                 bitnet_rope_apply(q, n_heads, head_dim, rope_dim,
                                   ctx->rope_cos + rope_offset,
                                   ctx->rope_sin + rope_offset);
@@ -3559,29 +3630,30 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 
             /* ===== Block step 2e: KV cache store ===== */
             {
-                size_t cache_offset = ((size_t)block_idx * (size_t)ctx->max_tokens + (size_t)ctx->n_pos) * (size_t)kv_dim;
-                if (ctx->kv_cache_type == BITNET_KV_CACHE_Q8) {
-                    size_t scale_offset = ((size_t)block_idx * (size_t)ctx->max_tokens + (size_t)ctx->n_pos) *
-                                          (size_t)n_kv_heads;
-                    for (int kv_h = 0; kv_h < n_kv_heads; ++kv_h) {
-                        size_t head_offset = (size_t)kv_h * (size_t)head_dim;
-                        ctx->key_cache_scales[scale_offset + (size_t)kv_h] =
+                for (int kv_h = 0; kv_h < n_kv_heads; ++kv_h) {
+                    size_t head_offset = (size_t)kv_h * (size_t)head_dim;
+                    size_t cache_offset = bitnet_kv_cache_offset(ctx, block_idx, kv_h, current_pos);
+                    if (ctx->kv_cache_type == BITNET_KV_CACHE_Q8) {
+                        size_t scale_offset = bitnet_kv_scale_offset(ctx, block_idx, kv_h, current_pos);
+                        ctx->key_cache_scales[scale_offset] =
                             bitnet_quantize_f32_to_i8(k + head_offset, head_dim,
-                                                       ctx->key_cache_q8 + cache_offset + head_offset);
-                        ctx->value_cache_scales[scale_offset + (size_t)kv_h] =
+                                                       ctx->key_cache_q8 + cache_offset);
+                        ctx->value_cache_scales[scale_offset] =
                             bitnet_quantize_f32_to_i8(v + head_offset, head_dim,
-                                                       ctx->value_cache_q8 + cache_offset + head_offset);
+                                                       ctx->value_cache_q8 + cache_offset);
+                    } else {
+                        memcpy(ctx->key_cache + cache_offset, k + head_offset,
+                               (size_t)head_dim * sizeof(float));
+                        memcpy(ctx->value_cache + cache_offset, v + head_offset,
+                               (size_t)head_dim * sizeof(float));
                     }
-                } else {
-                    memcpy(ctx->key_cache + cache_offset, k, kv_dim * sizeof(float));
-                    memcpy(ctx->value_cache + cache_offset, v, kv_dim * sizeof(float));
                 }
             }
 
             /* ===== Block step 2f: attention (GQA: reuse scores for shared kv heads) ===== */
             profile_step_start = profile_eval ? monotonic_seconds() : 0.0;
             {
-                int n_positions = ctx->n_pos + 1;
+                int n_positions = current_pos + 1;
                 float inv_sqrt_head_dim = 1.0f / sqrtf((float)head_dim);
                 int gqa_ratio = n_heads / n_kv_heads;
 
@@ -3595,10 +3667,9 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 
                     for (int kv_h = 0; kv_h < n_kv_heads; ++kv_h) {
                         for (int past_pos = 0; past_pos < n_positions; ++past_pos) {
-                            size_t pos_base = (size_t)block_idx * (size_t)ctx->max_tokens + (size_t)past_pos;
-                            size_t k_offset = pos_base * (size_t)kv_dim +
-                                              (size_t)kv_h * (size_t)head_dim;
-                            float k_scale = ctx->key_cache_scales[pos_base * (size_t)n_kv_heads + (size_t)kv_h];
+                            size_t k_offset = bitnet_kv_cache_offset(ctx, block_idx, kv_h, past_pos);
+                            float k_scale = ctx->key_cache_scales[
+                                bitnet_kv_scale_offset(ctx, block_idx, kv_h, past_pos)];
 
                             for (int q_in_group = 0; q_in_group < gqa_ratio; ++q_in_group) {
                                 int query_head = kv_h * gqa_ratio + q_in_group;
@@ -3613,62 +3684,84 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 } else {
                     for (int kv_h = 0; kv_h < n_kv_heads; ++kv_h) {
                         for (int past_pos = 0; past_pos < n_positions; ++past_pos) {
-                            size_t k_offset = ((size_t)block_idx * (size_t)ctx->max_tokens + (size_t)past_pos) * (size_t)kv_dim +
-                                              (size_t)kv_h * (size_t)head_dim;
-
-                            for (int q_in_group = 0; q_in_group < gqa_ratio; ++q_in_group) {
-                                int query_head = kv_h * gqa_ratio + q_in_group;
-                                float *q_head = q + query_head * head_dim;
-                                float dot = 0.0f;
-                                int d = 0;
+                            size_t k_offset = bitnet_kv_cache_offset(ctx, block_idx, kv_h, past_pos);
+                            float dot[BITNET_MAX_GQA_RATIO] = {0};
+                            int d = 0;
+                            if (gqa_ratio > BITNET_MAX_GQA_RATIO) goto cleanup;
 #if defined(__ARM_NEON)
-                                float32x4_t acc = vdupq_n_f32(0.0f);
-                                for (d = 0; d + 3 < head_dim; d += 4) {
-                                    float32x4_t qv = vld1q_f32(q_head + d);
-                                    float32x4_t kv = vld1q_f32(ctx->key_cache + k_offset + d);
-                                    acc = vfmaq_f32(acc, qv, kv);
+                            float32x4_t acc[BITNET_MAX_GQA_RATIO];
+                            for (int qg = 0; qg < gqa_ratio; ++qg) acc[qg] = vdupq_n_f32(0.0f);
+                            for (d = 0; d + 3 < head_dim; d += 4) {
+                                float32x4_t kv = vld1q_f32(ctx->key_cache + k_offset + d);
+                                for (int qg = 0; qg < gqa_ratio; ++qg) {
+                                    const float *q_head = q + (size_t)(kv_h * gqa_ratio + qg) * (size_t)head_dim;
+                                    acc[qg] = vfmaq_f32(acc[qg], vld1q_f32(q_head + d), kv);
                                 }
-                                dot = vaddvq_f32(acc);
+                            }
+                            for (int qg = 0; qg < gqa_ratio; ++qg) dot[qg] = vaddvq_f32(acc[qg]);
 #endif
-                                for (; d < head_dim; ++d) {
-                                    dot += q_head[d] * ctx->key_cache[k_offset + d];
+                            for (; d < head_dim; ++d) {
+                                float kval = ctx->key_cache[k_offset + (size_t)d];
+                                for (int qg = 0; qg < gqa_ratio; ++qg) {
+                                    dot[qg] += q[(size_t)(kv_h * gqa_ratio + qg) * (size_t)head_dim + (size_t)d] * kval;
                                 }
-                                scores[query_head * n_positions + past_pos] = dot * inv_sqrt_head_dim;
+                            }
+                            for (int qg = 0; qg < gqa_ratio; ++qg) {
+                                int query_head = kv_h * gqa_ratio + qg;
+                                scores[query_head * n_positions + past_pos] = dot[qg] * inv_sqrt_head_dim;
                             }
                         }
                     }
                 }
 
                 /* Softmax per query head + weighted sum of values */
-                for (int query_head = 0; query_head < n_heads; ++query_head) {
-                    int kv_h = query_head / gqa_ratio;
-                    float *head_scores = scores + query_head * n_positions;
-                    bitnet_softmax(head_scores, n_positions);
-
-                    float *attn_head = attn_buffer + query_head * head_dim;
-                    memset(attn_head, 0, (size_t)head_dim * sizeof(float));
-                    for (int past_pos = 0; past_pos < n_positions; ++past_pos) {
-                        float w = head_scores[past_pos];
-                        size_t v_offset = ((size_t)block_idx * (size_t)ctx->max_tokens + (size_t)past_pos) * (size_t)kv_dim +
-                                          (size_t)kv_h * (size_t)head_dim;
-                        int d = 0;
-                        if (ctx->kv_cache_type == BITNET_KV_CACHE_Q8) {
-                            size_t pos_base = (size_t)block_idx * (size_t)ctx->max_tokens + (size_t)past_pos;
-                            float ws = w * ctx->value_cache_scales[pos_base * (size_t)n_kv_heads + (size_t)kv_h];
+                if (ctx->kv_cache_type == BITNET_KV_CACHE_Q8) {
+                    for (int query_head = 0; query_head < n_heads; ++query_head) {
+                        int kv_h = query_head / gqa_ratio;
+                        float *head_scores = scores + query_head * n_positions;
+                        float *attn_head = attn_buffer + query_head * head_dim;
+                        bitnet_softmax(head_scores, n_positions);
+                        memset(attn_head, 0, (size_t)head_dim * sizeof(float));
+                        for (int past_pos = 0; past_pos < n_positions; ++past_pos) {
+                            float w = head_scores[past_pos];
+                            size_t v_offset = bitnet_kv_cache_offset(ctx, block_idx, kv_h, past_pos);
+                            float ws = w * ctx->value_cache_scales[
+                                bitnet_kv_scale_offset(ctx, block_idx, kv_h, past_pos)];
                             const int8_t *v_q8 = ctx->value_cache_q8 + v_offset;
                             bitnet_accum_i8_scaled(attn_head, v_q8, ws, head_dim);
-                            continue;
                         }
+                    }
+                } else {
+                    for (int kv_h = 0; kv_h < n_kv_heads; ++kv_h) {
+                        for (int qg = 0; qg < gqa_ratio; ++qg) {
+                            int query_head = kv_h * gqa_ratio + qg;
+                            bitnet_softmax(scores + query_head * n_positions, n_positions);
+                            memset(attn_buffer + query_head * head_dim, 0,
+                                   (size_t)head_dim * sizeof(float));
+                        }
+                        for (int past_pos = 0; past_pos < n_positions; ++past_pos) {
+                            size_t v_offset = bitnet_kv_cache_offset(ctx, block_idx, kv_h, past_pos);
+                            int d = 0;
 #if defined(__ARM_NEON)
-                        float32x4_t wv = vdupq_n_f32(w);
-                        for (d = 0; d + 3 < head_dim; d += 4) {
-                            float32x4_t vv = vld1q_f32(ctx->value_cache + v_offset + d);
-                            float32x4_t av = vld1q_f32(attn_head + d);
-                            vst1q_f32(attn_head + d, vfmaq_f32(av, wv, vv));
-                        }
+                            for (d = 0; d + 3 < head_dim; d += 4) {
+                                float32x4_t vv = vld1q_f32(ctx->value_cache + v_offset + d);
+                                for (int qg = 0; qg < gqa_ratio; ++qg) {
+                                    int query_head = kv_h * gqa_ratio + qg;
+                                    float *attn_head = attn_buffer + query_head * head_dim;
+                                    float w = scores[query_head * n_positions + past_pos];
+                                    vst1q_f32(attn_head + d,
+                                              vfmaq_n_f32(vld1q_f32(attn_head + d), vv, w));
+                                }
+                            }
 #endif
-                        for (; d < head_dim; ++d) {
-                            attn_head[d] += w * ctx->value_cache[v_offset + d];
+                            for (; d < head_dim; ++d) {
+                                float vval = ctx->value_cache[v_offset + (size_t)d];
+                                for (int qg = 0; qg < gqa_ratio; ++qg) {
+                                    int query_head = kv_h * gqa_ratio + qg;
+                                    attn_buffer[(size_t)query_head * (size_t)head_dim + (size_t)d] +=
+                                        scores[query_head * n_positions + past_pos] * vval;
+                                }
+                            }
                         }
                     }
                 }
@@ -3998,10 +4091,10 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                        emb_dim);
 
         }
-
-        /* advance position for next token */
-        ++ctx->n_pos;
     }
+    ctx->n_pos = eval_start_pos + n_tokens;
+    hidden = n_tokens > 1 ?
+             ctx->prefill_hidden + (size_t)(n_tokens - 1) * (size_t)emb_dim : ctx->hidden;
 
     /* ---- final output_norm RMSNorm ---- */
     {
@@ -4026,7 +4119,6 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
         const uint8_t *output_data = cache->output != NULL ?
             (const uint8_t *)gguf_get_tensor_ptr(&model->gguf, cache->output) : NULL;
 
-#if BITNET_USE_Q6K_NEON_OUTPUT
         if (bitnet_tq2_0_quantize_vec_i8(hidden, emb_dim,
                                          tq2_qhidden, &tq2_hidden_scale, NULL) != 0) {
             goto cleanup;
@@ -4074,46 +4166,12 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
         } else {
             if (output_data == NULL) goto cleanup;
-            if (bitnet_output_projection_i8_neon_parallel(output_data, output_col_size,
-                                                          (int)output_blocks_per_col,
-                                                          vocab_size, tq2_qhidden,
-                                                          tq2_hidden_scale, ctx->logits) != 0) {
+            if (bitnet_output_projection_i8_neon_parallel(
+                    output_data, output_col_size, (int)output_blocks_per_col,
+                    vocab_size, tq2_qhidden, tq2_hidden_scale, ctx->logits) != 0) {
                 goto cleanup;
             }
         }
-#else
-        if (output_data == NULL) {
-            /* Tied-embedding model (e.g. MiniCPM4 0.5B): no explicit
-             * output.weight. Fall back to the F16-tied output_q8 cache built
-             * at load time. ARM handles this in the Q6K_NEON_OUTPUT branch
-             * above; mirror it here for non-NEON builds. */
-            if (model->output_q8 != NULL && model->output_q8_d != NULL &&
-                model->output_q8_blockscale) {
-                if (bitnet_tq2_0_quantize_vec_i8(hidden, emb_dim,
-                                                  tq2_qhidden, &tq2_hidden_scale,
-                                                  NULL) != 0) {
-                    goto cleanup;
-                }
-                if (model->is_minicpm && model->logit_scale != 0.0f) {
-                    tq2_hidden_scale /= model->logit_scale;
-                }
-                if (bitnet_output_projection_q8_blockscale_neon_parallel(
-                        model->output_q8, model->output_q8_d,
-                        (int)output_blocks_per_col, vocab_size,
-                        tq2_qhidden, tq2_hidden_scale, ctx->logits) != 0) {
-                    goto cleanup;
-                }
-            } else {
-                goto cleanup;
-            }
-        } else {
-            if (bitnet_output_projection_parallel(output_data, output_col_size,
-                                                  (int)output_blocks_per_col,
-                                                  vocab_size, hidden, ctx->logits) != 0) {
-                goto cleanup;
-            }
-        }
-#endif
     }
     if (bitnet_apply_lora(model, -1, BITNET_LORA_LAYER_OUTPUT, hidden, ctx->logits) != 0) {
         goto cleanup;
@@ -4146,6 +4204,7 @@ cleanup:
             ctx->logits[i] = 0.0f;
         }
     }
+    (void)pthread_mutex_unlock(&g_eval_mutex);
     return error_ret;
 }
 
@@ -4217,6 +4276,7 @@ void bitnet_free_context(bitnet_context_t *ctx) {
     free(ctx->tq2_tl1_lut);
     free(ctx->rope_cos);
     free(ctx->rope_sin);
+    free(ctx->prefill_hidden);
     free(ctx);
 }
 

@@ -1,5 +1,6 @@
 #include "quant_tq2_0_x86.h"
 #include "../quant_tq2_0.h"
+#include "../thread_config.h"
 
 #if defined(__x86_64__) || defined(_M_X64)
 
@@ -658,7 +659,7 @@ int bitnet_tq2_0_matmul_i2s_neon_parallel_avx2(const uint8_t *packed, const floa
     n_groups = out_dim_padded / 4;
     sub_blocks_per_group = in_dim / QK_I2S;
 
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(static) num_threads(bitnet_thread_count(16))
     for (int grp = 0; grp < n_groups; ++grp) {
         int row_base = grp * 4;
         const uint8_t *packed_grp = packed + (size_t)grp * (size_t)sub_blocks_per_group * (size_t)QK_I2S;
@@ -697,6 +698,7 @@ int bitnet_tq2_0_matmul_i2s_neon_pair_parallel_avx2(const uint8_t *packed_a, con
     n_groups = out_dim_padded / 4;
     sub_blocks_per_group = in_dim / QK_I2S;
 
+    #pragma omp parallel for schedule(static) num_threads(bitnet_thread_count(16))
     for (int grp = 0; grp < n_groups; ++grp) {
         int row_base = grp * 4;
         const uint8_t *pg_a = packed_a + (size_t)grp * (size_t)sub_blocks_per_group * (size_t)QK_I2S;
@@ -727,14 +729,52 @@ int bitnet_tq2_0_matmul_i2s_qkv_parallel_avx2(const uint8_t *packed_q, const flo
                                                  int q_dim, int kv_dim, int in_dim,
                                                  const int8_t *qvec, float vec_scale,
                                                  float *out_q, float *out_k, float *out_v) {
-    if (bitnet_tq2_0_matmul_i2s_neon_parallel_avx2(packed_q, scales_q, bsums,
-                                                      q_dim, in_dim, qvec, vec_scale, out_q) != 0) {
+    int blocks_per_row, sub_blocks_per_group, q_groups, kv_groups;
+    if (packed_q == NULL || scales_q == NULL || packed_k == NULL || scales_k == NULL ||
+        packed_v == NULL || scales_v == NULL || qvec == NULL ||
+        out_q == NULL || out_k == NULL || out_v == NULL ||
+        q_dim <= 0 || kv_dim <= 0 || in_dim <= 0 || in_dim % BITNET_TQ2_0_QK != 0) {
         return -1;
     }
-    return bitnet_tq2_0_matmul_i2s_neon_pair_parallel_avx2(packed_k, scales_k,
-                                                              packed_v, scales_v,
-                                                              bsums, kv_dim, in_dim,
-                                                              qvec, vec_scale, out_k, out_v);
+    blocks_per_row = in_dim / BITNET_TQ2_0_QK;
+    sub_blocks_per_group = in_dim / QK_I2S;
+    q_groups = ((q_dim + 3) & ~3) / 4;
+    kv_groups = ((kv_dim + 3) & ~3) / 4;
+
+    /* One team handles all three projections.  K and V share a task so the
+     * activation vector remains hot and no second OpenMP region is started. */
+    #pragma omp parallel for schedule(static) num_threads(bitnet_thread_count(16))
+    for (int task = 0; task < q_groups + kv_groups; ++task) {
+        if (task < q_groups) {
+            int row = task * 4;
+            const uint8_t *pg = packed_q + (size_t)task * (size_t)sub_blocks_per_group * QK_I2S;
+            const float *sc = scales_q + (size_t)task * (size_t)blocks_per_row * 4u;
+            float r0, r1, r2, r3;
+            i2s_matmul_4rows_avx2(pg, sc, blocks_per_row, qvec, bsums, vec_scale,
+                                  &r0, &r1, &r2, &r3);
+            if (row + 0 < q_dim) out_q[row + 0] = r0;
+            if (row + 1 < q_dim) out_q[row + 1] = r1;
+            if (row + 2 < q_dim) out_q[row + 2] = r2;
+            if (row + 3 < q_dim) out_q[row + 3] = r3;
+        } else {
+            int grp = task - q_groups;
+            int row = grp * 4;
+            const uint8_t *pg_k = packed_k + (size_t)grp * (size_t)sub_blocks_per_group * QK_I2S;
+            const uint8_t *pg_v = packed_v + (size_t)grp * (size_t)sub_blocks_per_group * QK_I2S;
+            const float *sc_k = scales_k + (size_t)grp * (size_t)blocks_per_row * 4u;
+            const float *sc_v = scales_v + (size_t)grp * (size_t)blocks_per_row * 4u;
+            float k0, k1, k2, k3, v0, v1, v2, v3;
+            i2s_matmul_4rows_avx2(pg_k, sc_k, blocks_per_row, qvec, bsums, vec_scale,
+                                  &k0, &k1, &k2, &k3);
+            i2s_matmul_4rows_avx2(pg_v, sc_v, blocks_per_row, qvec, bsums, vec_scale,
+                                  &v0, &v1, &v2, &v3);
+            if (row + 0 < kv_dim) { out_k[row + 0] = k0; out_v[row + 0] = v0; }
+            if (row + 1 < kv_dim) { out_k[row + 1] = k1; out_v[row + 1] = v1; }
+            if (row + 2 < kv_dim) { out_k[row + 2] = k2; out_v[row + 2] = v2; }
+            if (row + 3 < kv_dim) { out_k[row + 3] = k3; out_v[row + 3] = v3; }
+        }
+    }
+    return 0;
 }
 
 /* VNNI / AVX512 delegate to AVX2 in Phase 3. */
@@ -897,7 +937,7 @@ int bitnet_tq2_0_matmul_i2s_neon_parallel_avx512_vnni(const uint8_t *packed, con
     out_dim_padded = (out_dim + 3) & ~3;
     n_groups = out_dim_padded / 4;
     sub_blocks_per_group = in_dim / QK_I2S;
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(static) num_threads(bitnet_thread_count(16))
     for (int grp = 0; grp < n_groups; ++grp) {
         int row_base = grp * 4;
         const uint8_t *packed_grp = packed + (size_t)grp * (size_t)sub_blocks_per_group * (size_t)QK_I2S;
@@ -915,9 +955,31 @@ int bitnet_tq2_0_matmul_i2s_neon_pair_parallel_avx512_vnni(const uint8_t *packed
                                                               const int32_t *bsums, int out_dim, int in_dim,
                                                               const int8_t *qvec, float vec_scale,
                                                               float *out_a, float *out_b) {
-    int rc = bitnet_tq2_0_matmul_i2s_neon_parallel_avx512_vnni(packed_a,scales_a,bsums,out_dim,in_dim,qvec,vec_scale,out_a);
-    if (rc != 0) return rc;
-    return bitnet_tq2_0_matmul_i2s_neon_parallel_avx512_vnni(packed_b,scales_b,bsums,out_dim,in_dim,qvec,vec_scale,out_b);
+    int blocks_per_row, sub_blocks_per_group, n_groups;
+    if (packed_a == NULL || scales_a == NULL || packed_b == NULL || scales_b == NULL ||
+        qvec == NULL || out_a == NULL || out_b == NULL || out_dim <= 0 || in_dim <= 0 ||
+        in_dim % BITNET_TQ2_0_QK != 0) return -1;
+    blocks_per_row = in_dim / BITNET_TQ2_0_QK;
+    sub_blocks_per_group = in_dim / QK_I2S;
+    n_groups = ((out_dim + 3) & ~3) / 4;
+    #pragma omp parallel for schedule(static) num_threads(bitnet_thread_count(16))
+    for (int grp = 0; grp < n_groups; ++grp) {
+        int row = grp * 4;
+        const uint8_t *pg_a = packed_a + (size_t)grp * (size_t)sub_blocks_per_group * QK_I2S;
+        const uint8_t *pg_b = packed_b + (size_t)grp * (size_t)sub_blocks_per_group * QK_I2S;
+        const float *sc_a = scales_a + (size_t)grp * (size_t)blocks_per_row * 4u;
+        const float *sc_b = scales_b + (size_t)grp * (size_t)blocks_per_row * 4u;
+        float a0, a1, a2, a3, b0, b1, b2, b3;
+        i2s_matmul_4rows_avx512_vnni(pg_a, sc_a, blocks_per_row, qvec, bsums, vec_scale,
+                                     &a0, &a1, &a2, &a3);
+        i2s_matmul_4rows_avx512_vnni(pg_b, sc_b, blocks_per_row, qvec, bsums, vec_scale,
+                                     &b0, &b1, &b2, &b3);
+        if (row + 0 < out_dim) { out_a[row + 0] = a0; out_b[row + 0] = b0; }
+        if (row + 1 < out_dim) { out_a[row + 1] = a1; out_b[row + 1] = b1; }
+        if (row + 2 < out_dim) { out_a[row + 2] = a2; out_b[row + 2] = b2; }
+        if (row + 3 < out_dim) { out_a[row + 3] = a3; out_b[row + 3] = b3; }
+    }
+    return 0;
 }
 BITNET_TARGET_AVX512_VNNI
 int bitnet_tq2_0_matmul_i2s_qkv_parallel_avx512_vnni(const uint8_t *packed_q, const float *scales_q,
@@ -927,10 +989,47 @@ int bitnet_tq2_0_matmul_i2s_qkv_parallel_avx512_vnni(const uint8_t *packed_q, co
                                                         int q_dim, int kv_dim, int in_dim,
                                                         const int8_t *qvec, float vec_scale,
                                                         float *out_q, float *out_k, float *out_v) {
-    int rc = bitnet_tq2_0_matmul_i2s_neon_parallel_avx512_vnni(packed_q,scales_q,bsums,q_dim,in_dim,qvec,vec_scale,out_q);
-    if (rc != 0) return rc;
-    rc = bitnet_tq2_0_matmul_i2s_neon_pair_parallel_avx512_vnni(packed_k,scales_k,packed_v,scales_v,bsums,kv_dim,in_dim,qvec,vec_scale,out_k,out_v);
-    return rc;
+    int blocks_per_row, sub_blocks_per_group, q_groups, kv_groups;
+    if (packed_q == NULL || scales_q == NULL || packed_k == NULL || scales_k == NULL ||
+        packed_v == NULL || scales_v == NULL || qvec == NULL || out_q == NULL ||
+        out_k == NULL || out_v == NULL || q_dim <= 0 || kv_dim <= 0 || in_dim <= 0 ||
+        in_dim % BITNET_TQ2_0_QK != 0) return -1;
+    blocks_per_row = in_dim / BITNET_TQ2_0_QK;
+    sub_blocks_per_group = in_dim / QK_I2S;
+    q_groups = ((q_dim + 3) & ~3) / 4;
+    kv_groups = ((kv_dim + 3) & ~3) / 4;
+    #pragma omp parallel for schedule(static) num_threads(bitnet_thread_count(16))
+    for (int task = 0; task < q_groups + kv_groups; ++task) {
+        if (task < q_groups) {
+            int row = task * 4;
+            const uint8_t *pg = packed_q + (size_t)task * (size_t)sub_blocks_per_group * QK_I2S;
+            const float *sc = scales_q + (size_t)task * (size_t)blocks_per_row * 4u;
+            float r0, r1, r2, r3;
+            i2s_matmul_4rows_avx512_vnni(pg, sc, blocks_per_row, qvec, bsums, vec_scale,
+                                         &r0, &r1, &r2, &r3);
+            if (row + 0 < q_dim) out_q[row + 0] = r0;
+            if (row + 1 < q_dim) out_q[row + 1] = r1;
+            if (row + 2 < q_dim) out_q[row + 2] = r2;
+            if (row + 3 < q_dim) out_q[row + 3] = r3;
+        } else {
+            int grp = task - q_groups;
+            int row = grp * 4;
+            const uint8_t *pg_k = packed_k + (size_t)grp * (size_t)sub_blocks_per_group * QK_I2S;
+            const uint8_t *pg_v = packed_v + (size_t)grp * (size_t)sub_blocks_per_group * QK_I2S;
+            const float *sc_k = scales_k + (size_t)grp * (size_t)blocks_per_row * 4u;
+            const float *sc_v = scales_v + (size_t)grp * (size_t)blocks_per_row * 4u;
+            float k0, k1, k2, k3, v0, v1, v2, v3;
+            i2s_matmul_4rows_avx512_vnni(pg_k, sc_k, blocks_per_row, qvec, bsums, vec_scale,
+                                         &k0, &k1, &k2, &k3);
+            i2s_matmul_4rows_avx512_vnni(pg_v, sc_v, blocks_per_row, qvec, bsums, vec_scale,
+                                         &v0, &v1, &v2, &v3);
+            if (row + 0 < kv_dim) { out_k[row + 0] = k0; out_v[row + 0] = v0; }
+            if (row + 1 < kv_dim) { out_k[row + 1] = k1; out_v[row + 1] = v1; }
+            if (row + 2 < kv_dim) { out_k[row + 2] = k2; out_v[row + 2] = v2; }
+            if (row + 3 < kv_dim) { out_k[row + 3] = k3; out_v[row + 3] = v3; }
+        }
+    }
+    return 0;
 }
 
 #else  /* !defined(__x86_64__) && !defined(_M_X64) */

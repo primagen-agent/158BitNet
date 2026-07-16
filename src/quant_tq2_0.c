@@ -1,4 +1,5 @@
 #include "quant_tq2_0.h"
+#include "thread_config.h"
 
 #include <math.h>
 #include <pthread.h>
@@ -2707,23 +2708,7 @@ static pthread_once_t g_lut_pool_once = PTHREAD_ONCE_INIT;
 static void init_lut_pool_once(void);
 
 static int choose_thread_count(void) {
-    const char *env = getenv("BITNET_NUM_THREADS");
-    long n = 0;
-
-    if (env != NULL && env[0] != '\0') {
-        char *end = NULL;
-        long parsed = strtol(env, &end, 10);
-        if (end != env && parsed > 0) {
-            n = parsed;
-        }
-    }
-
-    if (n <= 0) {
-        n = 3;
-    }
-    if (n < 1) n = 1;
-    if (n > 8) n = 8;
-    return (int)n;
+    return bitnet_thread_count(8);
 }
 
 static int choose_i2s_chunk_groups(void) {

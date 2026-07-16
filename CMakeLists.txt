@@ -75,6 +75,7 @@ add_library(bitnet STATIC
     src/quant_q6k.c
     src/ops.c
     src/sampler.c
+    src/thread_config.c
     src/cpu_detect.c
     src/bitnet_dispatch.c
     src/x86/kernel_registry.c
@@ -267,4 +268,15 @@ add_executable(test_dispatch_init tests/test_dispatch_init.c)
 target_include_directories(test_dispatch_init PRIVATE src)
 target_link_libraries(test_dispatch_init PRIVATE bitnet)
 add_test(NAME test_dispatch_init COMMAND test_dispatch_init)
+
+add_executable(test_thread_config tests/test_thread_config.c)
+target_include_directories(test_thread_config PRIVATE src)
+target_link_libraries(test_thread_config PRIVATE bitnet)
+add_test(NAME test_thread_config COMMAND test_thread_config)
+set_tests_properties(test_thread_config PROPERTIES ENVIRONMENT "BITNET_NUM_THREADS=99")
+
+add_executable(test_concurrent_eval tests/test_concurrent_eval.c)
+target_compile_definitions(test_concurrent_eval PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_link_libraries(test_concurrent_eval PRIVATE bitnet)
+add_test(NAME test_concurrent_eval COMMAND test_concurrent_eval)
 endif()

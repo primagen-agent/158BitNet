@@ -1,7 +1,10 @@
 build/
+build-arm64/
+build-strict/
 models/
 *.log
 *.tmp
 tests/*.bin
 .DS_Store
 .worktrees/
+.superpowers/

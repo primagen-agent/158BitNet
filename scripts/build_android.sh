@@ -16,6 +16,7 @@ fi
 ANDROID_ABI="${ANDROID_ABI:-arm64-v8a}"
 ANDROID_API="${ANDROID_API:-24}"
 BUILD_DIR="${BUILD_DIR:-build/android-$ANDROID_ABI}"
+BITNET_BUILD_TESTS="${BITNET_BUILD_TESTS:-OFF}"
 
 if [ "$#" -gt 0 ]; then
     TARGETS="$*"
@@ -27,7 +28,7 @@ cmake -S . -B "$BUILD_DIR" \
     -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_FILE" \
     -DANDROID_ABI="$ANDROID_ABI" \
     -DANDROID_PLATFORM="android-$ANDROID_API" \
-    -DBITNET_BUILD_TESTS=OFF
+    -DBITNET_BUILD_TESTS="$BITNET_BUILD_TESTS"
 
 for target in $TARGETS; do
     cmake --build "$BUILD_DIR" --target "$target"

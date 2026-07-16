@@ -26,6 +26,22 @@ int main(void) {
     rc = bitnet_tokenizer_decode(tokenizer, tokens[0], buf, sizeof(buf));
     if (rc <= 0) return 4;
 
+    /* An unmatched raw byte must use the SentencePiece <0xHH> fallback token,
+     * not collapse to <unk>.  The leading-space token may also be emitted. */
+    {
+        const char raw_byte[] = { 1, 0 };
+        int found_raw_byte = 0;
+        n_tokens = bitnet_tokenizer_encode(tokenizer, raw_byte, tokens, 64);
+        if (n_tokens <= 0) return 11;
+        for (int i = 0; i < n_tokens; ++i) {
+            rc = bitnet_tokenizer_decode(tokenizer, tokens[i], buf, sizeof(buf));
+            if (rc == 1 && (unsigned char)buf[0] == 1u) {
+                found_raw_byte = 1;
+            }
+        }
+        if (!found_raw_byte) return 12;
+    }
+
     bitnet_tokenizer_free(tokenizer);
 
     if (bitnet_tokenizer_load(&tokenizer, i2s_model_path) == 0) {

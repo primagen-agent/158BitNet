@@ -391,9 +391,9 @@ static int find_token_id(const bitnet_tokenizer_t *tokenizer, const char *str, s
 
 /* Check if a byte value has a <0xHH> fallback token. Returns token ID or -1. */
 static int byte_fallback_token(const bitnet_tokenizer_t *tokenizer, uint8_t byte_val) {
-    char buf[5];
+    char buf[7];
     (void)snprintf(buf, sizeof(buf), "<0x%02X>", byte_val);
-    return find_token_id(tokenizer, buf, 4);
+    return find_token_id(tokenizer, buf, 6);
 }
 
 static int gpt2_byte_to_codepoint(unsigned int byte_val) {
@@ -822,6 +822,20 @@ int bitnet_tokenizer_decode(bitnet_tokenizer_t *tokenizer, int token, char *out,
 
         out[out_pos] = '\0';
         return out_pos;
+    }
+
+    /* SentencePiece byte fallback tokens represent one raw byte. */
+    if (raw_len == 6 && raw[0] == '<' && raw[1] == '0' && raw[2] == 'x' && raw[5] == '>') {
+        int hi = raw[3] >= '0' && raw[3] <= '9' ? raw[3] - '0' :
+                 raw[3] >= 'A' && raw[3] <= 'F' ? raw[3] - 'A' + 10 : -1;
+        int lo = raw[4] >= '0' && raw[4] <= '9' ? raw[4] - '0' :
+                 raw[4] >= 'A' && raw[4] <= 'F' ? raw[4] - 'A' + 10 : -1;
+        if (hi >= 0 && lo >= 0) {
+            if (out_size < 2) return -1;
+            out[0] = (char)((hi << 4) | lo);
+            out[1] = '\0';
+            return 1;
+        }
     }
 
     /* Convert ▁ (U+2581, 0xE2 0x96 0x81) back to space during decode */
