@@ -414,28 +414,24 @@ void bitnet_rope_apply_impl(float *x, int n_heads, int head_dim, int rope_dim,
     for (int h = 0; h < n_heads; ++h) {
         int j = 0;
         for (; j + 1 < rope_dim / 2; j += 2) {
-            int idx0 = h * head_dim + 2 * j;
-            int idx1 = h * head_dim + 2 * j + 1;
-            int idx2 = h * head_dim + 2 * (j + 1);
-            int idx3 = h * head_dim + 2 * (j + 1) + 1;
-
-            float x0 = x[idx0], x1 = x[idx1];
-            float x2 = x[idx2], x3 = x[idx3];
-
-            /* Load cos/sin for positions j and j+1 */
-            float c0 = rope_cos[j], s0 = rope_sin[j];
+            /* Load 2 rotation pairs [x0,y0,x1,y1] and rotate each with its
+             * (cos,sin). vtrn duplicates x into even lanes, y into odd lanes;
+             * out = x*[c,s,c,s] + y*[-s,c,-s,c] per pair. */
+            float c0 = rope_cos[j],     s0 = rope_sin[j];
             float c1 = rope_cos[j + 1], s1 = rope_sin[j + 1];
-
-            /* Apply rotation: x' = x*cos - y*sin, y' = x*sin + y*cos */
-            x[idx0] = x0 * c0 - x1 * s0;
-            x[idx1] = x0 * s0 + x1 * c0;
-            x[idx2] = x2 * c1 - x3 * s1;
-            x[idx3] = x2 * s1 + x3 * c1;
+            float32x4_t v = vld1q_f32(x + h * head_dim + 2 * j);
+            float32x4x2_t tr = vtrnq_f32(v, v);
+            float32x4_t x_dup = tr.val[0];            /* [x0,x0,x1,x1] */
+            float32x4_t y_dup = tr.val[1];            /* [y0,y0,y1,y1] */
+            float32x4_t cs     = { c0, s0, c1, s1 };
+            float32x4_t neg_sc = { -s0, c0, -s1, c1 };
+            float32x4_t out = vfmaq_f32(vmulq_f32(x_dup, cs), y_dup, neg_sc);
+            vst1q_f32(x + h * head_dim + 2 * j, out);
         }
         /* Handle remaining pair */
         for (; j < rope_dim / 2; ++j) {
             int idx0 = h * head_dim + 2 * j;
-            int idx1 = h * head_dim + 2 * j + 1;
+            int idx1 = idx0 + 1;
             float c = rope_cos[j];
             float s = rope_sin[j];
             float x0 = x[idx0];
