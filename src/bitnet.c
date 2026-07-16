@@ -89,6 +89,7 @@ typedef struct bitnet_lora_tensor {
     float *b;
     uint32_t sparse_row_count;
     uint32_t *sparse_rows;
+    int32_t next_in_cell;
 } bitnet_lora_tensor_t;
 
 typedef struct bitnet_lora_adapter {
@@ -96,6 +97,8 @@ typedef struct bitnet_lora_adapter {
     float scale;
     uint32_t tensor_count;
     bitnet_lora_tensor_t *tensors;
+    int32_t *cell_head;
+    uint32_t cell_count;
 } bitnet_lora_adapter_t;
 
 typedef struct bitnet_block_scale_cache {
@@ -438,6 +441,7 @@ static void bitnet_free_lora_adapter(bitnet_lora_adapter_t *adapter) {
         }
         free(adapter->tensors);
     }
+    free(adapter->cell_head);
     free(adapter->path);
     free(adapter);
 }
@@ -654,6 +658,24 @@ int bitnet_load_lora(bitnet_model_t *model, const char *path, float scale) {
         if (trailing != EOF) goto cleanup;
     }
 
+    /* Build a per-(block,layer) index so bitnet_apply_lora is O(matches)
+     * instead of scanning every tensor on every projection. Output-layer
+     * tensors share a reserved block row (block_count) regardless of their
+     * sentinel block_index. Reverse-order head insertion preserves the
+     * original within-cell order on forward traversal. */
+    adapter->cell_count = (model->block_count + 1u) * (uint32_t)BITNET_LORA_LAYER_COUNT;
+    adapter->cell_head = (int32_t *)malloc((size_t)adapter->cell_count * sizeof(int32_t));
+    if (adapter->cell_head == NULL) goto cleanup;
+    for (uint32_t c = 0; c < adapter->cell_count; ++c) adapter->cell_head[c] = -1;
+    for (int32_t i = (int32_t)adapter->tensor_count - 1; i >= 0; --i) {
+        bitnet_lora_tensor_t *t = &adapter->tensors[i];
+        uint32_t brow = (t->layer_id == BITNET_LORA_LAYER_OUTPUT)
+                            ? model->block_count : t->block_index;
+        uint32_t cell = brow * (uint32_t)BITNET_LORA_LAYER_COUNT + t->layer_id;
+        t->next_in_cell = adapter->cell_head[cell];
+        adapter->cell_head[cell] = i;
+    }
+
     bitnet_free_lora_adapter(model->lora);
     model->lora = adapter;
     adapter = NULL;
@@ -701,17 +723,14 @@ static int bitnet_apply_lora(const bitnet_model_t *model,
     }
 
     adapter = model->lora;
-    for (uint32_t ti = 0; ti < adapter->tensor_count; ++ti) {
+    uint32_t brow = (layer_id == BITNET_LORA_LAYER_OUTPUT)
+                        ? model->block_count : (uint32_t)block_index;
+    uint32_t cell = brow * (uint32_t)BITNET_LORA_LAYER_COUNT + (uint32_t)layer_id;
+    for (int32_t ti = adapter->cell_head[cell]; ti >= 0;
+         ti = adapter->tensors[ti].next_in_cell) {
         const bitnet_lora_tensor_t *tensor = &adapter->tensors[ti];
-        float combined_scale = 0.0f;
 
-        uint32_t expected_block = layer_id == BITNET_LORA_LAYER_OUTPUT ?
-            BITNET_LORA_OUTPUT_BLOCK_INDEX : (uint32_t)block_index;
-
-        if (tensor->block_index != expected_block || tensor->layer_id != (uint32_t)layer_id) {
-            continue;
-        }
-        combined_scale = adapter->scale * tensor->scale;
+        float combined_scale = adapter->scale * tensor->scale;
         if (combined_scale == 0.0f) continue;
 
         for (uint32_t r = 0; r < tensor->rank; ++r) {
@@ -3263,6 +3282,27 @@ void bitnet_apply_repetition_penalty(float *logits,
         return;
     }
 
+    /* Penalize each distinct token once. A vocab-sized visited map makes this
+     * O(n_tokens + vocab) instead of the O(n_tokens^2) per-token rescan. */
+    uint8_t *visited = (uint8_t *)calloc((size_t)vocab_size, 1);
+    if (visited != NULL) {
+        for (int i = 0; i < n_tokens; ++i) {
+            int token = tokens[i];
+            if (token < 0 || token >= vocab_size || visited[token]) {
+                continue;
+            }
+            visited[token] = 1;
+            if (logits[token] >= 0.0f) {
+                logits[token] /= penalty;
+            } else {
+                logits[token] *= penalty;
+            }
+        }
+        free(visited);
+        return;
+    }
+
+    /* Allocation failed: fall back to the original O(n^2) dedup. */
     for (int i = 0; i < n_tokens; ++i) {
         int token = tokens[i];
         if (token < 0 || token >= vocab_size) {
@@ -3985,20 +4025,50 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
 
             /* ===== Block step 5c: activation(gate) and element-wise merge ===== */
-            if (model->ffn_activation == BITNET_FFN_ACTIVATION_RELU2) {
-                tq2_ffn_max_abs = bitnet_relu2_mul_max_abs(gate, up, ffn_dim);
-            } else {
-                tq2_ffn_max_abs = bitnet_silu_mul_max_abs(gate, up, ffn_dim);
-            }
             if (model->use_ffn_sub_norm) {
+                /* Sub-norm will recompute the activation max-abs, so use the
+                 * no-max activation variant where available to skip the wasted
+                 * scan (relu2 has no no-max variant; its max is discarded). */
+                if (model->ffn_activation == BITNET_FFN_ACTIVATION_RELU2) {
+                    (void)bitnet_relu2_mul_max_abs(gate, up, ffn_dim);
+                } else {
+                    bitnet_silu_mul(gate, up, ffn_dim);
+                }
                 const float *sub_norm_w =
                     (const float *)gguf_get_tensor_ptr(&model->gguf, bt->ffn_sub_norm);
                 if (sub_norm_w == NULL) goto cleanup;
                 bitnet_rms_norm_eps(gate, sub_norm_w, ffn_dim, model->rms_norm_eps);
+#if defined(__ARM_NEON)
+                {
+                    float32x4_t vmax = vdupq_n_f32(0.0f);
+                    int ffn_i = 0;
+                    for (; ffn_i + 7 < ffn_dim; ffn_i += 8) {
+                        float32x4_t a0 = vabsq_f32(vld1q_f32(gate + ffn_i));
+                        float32x4_t a1 = vabsq_f32(vld1q_f32(gate + ffn_i + 4));
+                        vmax = vmaxq_f32(vmax, vmaxq_f32(a0, a1));
+                    }
+                    for (; ffn_i + 3 < ffn_dim; ffn_i += 4) {
+                        vmax = vmaxq_f32(vmax, vabsq_f32(vld1q_f32(gate + ffn_i)));
+                    }
+                    float m = vmaxvq_f32(vmax);
+                    for (; ffn_i < ffn_dim; ++ffn_i) {
+                        float a = fabsf(gate[ffn_i]);
+                        if (a > m) m = a;
+                    }
+                    tq2_ffn_max_abs = m;
+                }
+#else
                 tq2_ffn_max_abs = 0.0f;
                 for (int ffn_i = 0; ffn_i < ffn_dim; ++ffn_i) {
                     float a = fabsf(gate[ffn_i]);
                     if (a > tq2_ffn_max_abs) tq2_ffn_max_abs = a;
+                }
+#endif
+            } else {
+                if (model->ffn_activation == BITNET_FFN_ACTIVATION_RELU2) {
+                    tq2_ffn_max_abs = bitnet_relu2_mul_max_abs(gate, up, ffn_dim);
+                } else {
+                    tq2_ffn_max_abs = bitnet_silu_mul_max_abs(gate, up, ffn_dim);
                 }
             }
 
