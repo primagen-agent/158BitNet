@@ -1,6 +1,5 @@
 #include "quant_q4k.h"
 
-#include <math.h>
 #include <string.h>
 
 static float fp16_to_fp32(uint16_t h) {
@@ -15,9 +14,14 @@ static float fp16_to_fp32(uint16_t h) {
             memcpy(&f, &raw, sizeof(f));
             return f;
         }
-        /* Denormalized: value = (-1)^sign * 2^(-14) * (mant/1024) */
-        float value = ldexpf((float)mant / 1024.0f, -14);
-        return sign ? -value : value;
+        /* Denormalized: normalize mantissa into fp32 without libm. */
+        int e = -14;
+        while ((mant & 0x400u) == 0u) { mant <<= 1; e--; }
+        mant &= 0x3FFu;
+        uint32_t raw = (sign << 31) | ((uint32_t)(e + 127) << 23) | (mant << 13);
+        float f;
+        memcpy(&f, &raw, sizeof(f));
+        return f;
     }
 
     if (exp == 31) {
@@ -119,11 +123,9 @@ int bitnet_q4k_embedding_lookup(const void *data, int token_id, int embedding_le
     for (b = 0; b < n_blocks; ++b) {
         const uint8_t *block_bytes = (const uint8_t *)data;
         const bitnet_q4k_block_t *block = (const bitnet_q4k_block_t *)(block_bytes + (block_offset + (size_t)b) * block_size);
-        float buf[BITNET_Q4K_QK];
-        if (bitnet_q4k_dequantize_block(block, buf, BITNET_Q4K_QK) != 0) {
+        if (bitnet_q4k_dequantize_block(block, out + (size_t)b * BITNET_Q4K_QK, BITNET_Q4K_QK) != 0) {
             return -1;
         }
-        memcpy(out + (size_t)b * BITNET_Q4K_QK, buf, BITNET_Q4K_QK * sizeof(float));
     }
 
     return 0;
