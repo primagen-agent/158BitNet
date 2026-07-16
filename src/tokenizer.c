@@ -240,6 +240,55 @@ static int build_gpt2_merge_table(bitnet_tokenizer_t *tokenizer,
     return 0;
 }
 
+/* SentencePiece (llama) models ship per-token scores but no explicit merge
+ * list. Derive the (left,right)->merged map from the vocab: a token T is the
+ * merge of adjacent pieces A,B iff str(A)+str(B)==str(T). The encode merge
+ * loop then does an O(1) pair lookup instead of building and rehashing the
+ * concatenated string for every pair, every round. Scores stay in
+ * tokenizer->scores and are read via the merged id, so this is exact-
+ * equivalent to the old string-concat path. */
+static int build_sp_merge_table(bitnet_tokenizer_t *tokenizer) {
+    size_t capacity = 0;
+    size_t total_splits = 1;
+
+    if (tokenizer == NULL || tokenizer->tokens == NULL || tokenizer->vocab_size == 0) {
+        return 0;
+    }
+
+    for (size_t t = 0; t < tokenizer->vocab_size; ++t) {
+        const char *s = tokenizer->tokens[t];
+        size_t len = (s == NULL) ? 0 : strlen(s);
+        if (len >= 2) total_splits += (len - 1u);
+    }
+    capacity = next_power_of_two_size(total_splits * 2u + 1u);
+    tokenizer->merge_table = (bitnet_merge_entry_t *)malloc(capacity * sizeof(*tokenizer->merge_table));
+    if (tokenizer->merge_table == NULL) {
+        return -1;
+    }
+    tokenizer->merge_table_capacity = capacity;
+    for (size_t i = 0; i < capacity; ++i) {
+        tokenizer->merge_table[i].key = 0;
+        tokenizer->merge_table[i].rank = INT_MAX;
+        tokenizer->merge_table[i].token_id = -1;
+    }
+
+    for (size_t t = 0; t < tokenizer->vocab_size; ++t) {
+        const char *s = tokenizer->tokens[t];
+        size_t len;
+        if (s == NULL) continue;
+        len = strlen(s);
+        if (len < 2) continue;
+        for (size_t p = 1; p < len; ++p) {
+            int left_id = token_index_find(tokenizer, s, p);
+            if (left_id < 0) continue;
+            int right_id = token_index_find(tokenizer, s + p, len - p);
+            if (right_id < 0) continue;
+            merge_table_insert(tokenizer, left_id, right_id, 0, (int)t);
+        }
+    }
+    return 0;
+}
+
 int bitnet_tokenizer_load(bitnet_tokenizer_t **out, const char *gguf_path) {
     gguf_file_t file;
     const gguf_metadata_t *tokens_meta = NULL;
@@ -347,6 +396,12 @@ int bitnet_tokenizer_load(bitnet_tokenizer_t **out, const char *gguf_path) {
     if (tokenizer->model == BITNET_TOKENIZER_MODEL_GPT2) {
         merges_meta = gguf_find_metadata(&file, "tokenizer.ggml.merges");
         if (build_gpt2_merge_table(tokenizer, merges_meta) != 0) {
+            bitnet_tokenizer_free(tokenizer);
+            gguf_close(&file);
+            return -1;
+        }
+    } else {
+        if (build_sp_merge_table(tokenizer) != 0) {
             bitnet_tokenizer_free(tokenizer);
             gguf_close(&file);
             return -1;
@@ -713,37 +768,24 @@ int bitnet_tokenizer_encode(bitnet_tokenizer_t *tokenizer, const char *text, int
     /* Step 2: BPE merge loop.
      * Repeatedly find the adjacent pair with the highest merge score
      * and merge them into a single token. */
-    if (tokenizer->scores != NULL) {
+    if (tokenizer->scores != NULL && tokenizer->merge_table != NULL) {
         while (n_pieces > 1) {
-            /* Find the best merge: look for adjacent pair (piece_ids[i], piece_ids[i+1])
-             * where the concatenation of their token strings exists as a token in vocab,
-             * and that merged token has the highest score. */
+            /* Find the best merge: the adjacent pair whose merge exists in the
+             * vocab with the highest score. O(1) lookup via the prebuilt pair
+             * table instead of per-pair string concat + rehash. */
             int best_score_idx = -1;
             float best_score = 0.0f;
             int best_merged_id = -1;
 
             for (i = 0; i < n_pieces - 1; ++i) {
-                /* Concatenate token strings for pieces i and i+1 */
-                const char *str_a = tokenizer->tokens[piece_ids[i]];
-                const char *str_b = tokenizer->tokens[piece_ids[i + 1]];
-                size_t len_a = strlen(str_a);
-                size_t len_b = strlen(str_b);
-                char merged[512];
-
-                if (len_a + len_b >= sizeof(merged)) continue;
-
-                memcpy(merged, str_a, len_a);
-                memcpy(merged + len_a, str_b, len_b);
-
-                {
-                    int merged_id = find_token_id(tokenizer, merged, len_a + len_b);
-                    if (merged_id >= 0) {
-                        float score = tokenizer->scores[merged_id];
-                        if (best_score_idx < 0 || score > best_score) {
-                            best_score_idx = i;
-                            best_score = score;
-                            best_merged_id = merged_id;
-                        }
+                int merged_id = -1;
+                if (merge_table_find(tokenizer, piece_ids[i], piece_ids[i + 1], NULL, &merged_id) &&
+                    merged_id >= 0) {
+                    float score = tokenizer->scores[merged_id];
+                    if (best_score_idx < 0 || score > best_score) {
+                        best_score_idx = i;
+                        best_score = score;
+                        best_merged_id = merged_id;
                     }
                 }
             }
