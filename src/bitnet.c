@@ -3932,34 +3932,15 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                     /* gate/up computed on Metal */
                 } else
 #endif
-                if (ffn_dim >= 8192) {
-                    if (bitnet_tq2_0_matmul_i2s_neon_parallel(bw->ffn_gate,
-                                                       model->i2s_cache.scales[block_idx * 7 + 4],
-                                                       tq2_hidden_block_bsums,
-                                                       ffn_dim, emb_dim,
-                                                       tq2_qhidden, tq2_hidden_scale,
-                                                       gate) != 0) {
-                        goto cleanup;
-                    }
-                    if (bitnet_tq2_0_matmul_i2s_neon_parallel(bw->ffn_up,
-                                                       model->i2s_cache.scales[block_idx * 7 + 5],
-                                                       tq2_hidden_block_bsums,
-                                                       ffn_dim, emb_dim,
-                                                       tq2_qhidden, tq2_hidden_scale,
-                                                       up) != 0) {
-                        goto cleanup;
-                    }
-                } else {
-                    if (bitnet_tq2_0_matmul_i2s_neon_pair_parallel(bw->ffn_gate,
-                                                            model->i2s_cache.scales[block_idx * 7 + 4],
-                                                            bw->ffn_up,
-                                                            model->i2s_cache.scales[block_idx * 7 + 5],
-                                                            tq2_hidden_block_bsums,
-                                                            ffn_dim, emb_dim,
-                                                            tq2_qhidden, tq2_hidden_scale,
-                                                            gate, up) != 0) {
-                        goto cleanup;
-                    }
+                if (bitnet_tq2_0_matmul_i2s_neon_pair_parallel(bw->ffn_gate,
+                                                        model->i2s_cache.scales[block_idx * 7 + 4],
+                                                        bw->ffn_up,
+                                                        model->i2s_cache.scales[block_idx * 7 + 5],
+                                                        tq2_hidden_block_bsums,
+                                                        ffn_dim, emb_dim,
+                                                        tq2_qhidden, tq2_hidden_scale,
+                                                        gate, up) != 0) {
+                    goto cleanup;
                 }
 #elif BITNET_USE_TQ2_TL1_LUT
                 {
