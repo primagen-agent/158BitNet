@@ -486,9 +486,9 @@ static void i2s_matmul_4rows_avx2(const uint8_t *packed_grp, const float *scales
                                     int blocks_per_row, const int8_t *qvec,
                                     const int32_t *bsums, float vec_scale,
                                     float *out_0, float *out_1, float *out_2, float *out_3) {
-    const __m128i mask_0f = _mm_set1_epi8(0x0F);
-    const __m128i lut_hi2 = _mm_loadu_si128((const __m128i *)i2s_lut_hi2_unsigned_x86);
-    const __m128i lut_lo2 = _mm_loadu_si128((const __m128i *)i2s_lut_lo2_unsigned_x86);
+    const __m256i mask_0f = _mm256_set1_epi8(0x0F);
+    const __m256i lut_hi2 = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)i2s_lut_hi2_unsigned_x86));
+    const __m256i lut_lo2 = _mm256_broadcastsi128_si256(_mm_loadu_si128((const __m128i *)i2s_lut_lo2_unsigned_x86));
     const __m256i ones_16 = _mm256_set1_epi16(1);
 
     float sum_0 = 0.0f, sum_1 = 0.0f, sum_2 = 0.0f, sum_3 = 0.0f;
@@ -530,42 +530,19 @@ static void i2s_matmul_4rows_avx2(const uint8_t *packed_grp, const float *scales
             for (int i = 0; i < QK_I2S; i += 32, ++iter) {
                 /* Load 32 packed bytes (split into two 16-byte halves for
                  * shuffle) and 32 qvec bytes (one full 256-bit vector). */
-                __m128i pk_lo = _mm_loadu_si128((const __m128i *)(pb + i));
-                __m128i pk_hi = _mm_loadu_si128((const __m128i *)(pb + i + 16));
-                __m256i v = _mm256_loadu_si256((const __m256i *)(qv + i));
+                __m256i pk = _mm256_loadu_si256((const __m256i *)(pb + i));
+                __m256i v  = _mm256_loadu_si256((const __m256i *)(qv + i));
 
-                /* Compute high/low nibble of each byte. _mm_srli_epi16
-                 * shifts each 16-bit lane; the high byte's high nibble is
-                 * preserved correctly because the top 4 bits become 0 in
-                 * the low byte's high nibble position. */
-                __m128i hi_nib_lo = _mm_srli_epi16(pk_lo, 4);
-                __m128i hi_nib_hi = _mm_srli_epi16(pk_hi, 4);
-                __m128i lo_nib_lo = _mm_and_si128(pk_lo, mask_0f);
-                __m128i lo_nib_hi = _mm_and_si128(pk_hi, mask_0f);
-                /* Mask off high nibble of high byte (srli_epi16 leaves it). */
-                hi_nib_lo = _mm_and_si128(hi_nib_lo, mask_0f);
-                hi_nib_hi = _mm_and_si128(hi_nib_hi, mask_0f);
+                /* High/low nibble of each byte (per-lane); the LUTs are
+                 * broadcast into both 128-bit lanes so four vpshufb
+                 * lookups produce the four 32-byte row-code vectors. */
+                __m256i hi_nib = _mm256_and_si256(_mm256_srli_epi16(pk, 4), mask_0f);
+                __m256i lo_nib = _mm256_and_si256(pk, mask_0f);
 
-                /* Extract 4 row codes per byte (one byte per code lane).
-                 * c0 from hi nibble hi2 (bits 6-7), c1 from hi nibble lo2
-                 * (bits 4-5), c2 from lo nibble hi2 (bits 2-3), c3 from lo
-                 * nibble lo2 (bits 0-1). Each row's codes form a 16-byte
-                 * vector per half. */
-                __m128i c0_lo = _mm_shuffle_epi8(lut_hi2, hi_nib_lo);
-                __m128i c1_lo = _mm_shuffle_epi8(lut_lo2, hi_nib_lo);
-                __m128i c2_lo = _mm_shuffle_epi8(lut_hi2, lo_nib_lo);
-                __m128i c3_lo = _mm_shuffle_epi8(lut_lo2, lo_nib_lo);
-                __m128i c0_hi = _mm_shuffle_epi8(lut_hi2, hi_nib_hi);
-                __m128i c1_hi = _mm_shuffle_epi8(lut_lo2, hi_nib_hi);
-                __m128i c2_hi = _mm_shuffle_epi8(lut_hi2, lo_nib_hi);
-                __m128i c3_hi = _mm_shuffle_epi8(lut_lo2, lo_nib_hi);
-
-                /* Combine the two 16-byte halves into one 32-byte vector so
-                 * the qvec lanes (loaded contiguously) line up. */
-                __m256i c0 = _mm256_inserti128_si256(_mm256_castsi128_si256(c0_lo), c0_hi, 1);
-                __m256i c1 = _mm256_inserti128_si256(_mm256_castsi128_si256(c1_lo), c1_hi, 1);
-                __m256i c2 = _mm256_inserti128_si256(_mm256_castsi128_si256(c2_lo), c2_hi, 1);
-                __m256i c3 = _mm256_inserti128_si256(_mm256_castsi128_si256(c3_lo), c3_hi, 1);
+                __m256i c0 = _mm256_shuffle_epi8(lut_hi2, hi_nib);
+                __m256i c1 = _mm256_shuffle_epi8(lut_lo2, hi_nib);
+                __m256i c2 = _mm256_shuffle_epi8(lut_hi2, lo_nib);
+                __m256i c3 = _mm256_shuffle_epi8(lut_lo2, lo_nib);
 
                 /* uint8 × int8 -> int16 (horizontally paired), then
                  * int16 × 1 -> int32 (horizontally paired again).
