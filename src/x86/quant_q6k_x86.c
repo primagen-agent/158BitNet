@@ -214,26 +214,36 @@ int bitnet_q6k_dot_product_q8_avx2(const int8_t *q8, const float *scales,
         return -1;
     }
 
-    float acc = 0.0f;
+    __m256 acc_v = _mm256_setzero_ps();
 
     for (int b = 0; b < blocks_per_row; ++b) {
         const int8_t *q = q8 + (size_t)b * BITNET_Q6K_QK;
         const int8_t *v = qvec + (size_t)b * BITNET_Q6K_QK;
         const float *sc = scales + (size_t)b * 16u;
 
-        /* 16 groups of 16 elements. Each scale applies to one 16-element
-         * group. AVX2 maddubs+madd does the inner dot (q6k_dot16_avx2);
-         * the per-group contribution is a scalar, accumulated in fp32. */
-        for (int g = 0; g < 16; ++g) {
-            __m128i w16 = _mm_loadu_si128((const __m128i *)(q + g * 16));
-            __m128i v16 = _mm_loadu_si128((const __m128i *)(v + g * 16));
-            int32_t d0 = q6k_dot16_avx2(w16, v16);
-
-            acc += (float)d0 * sc[g];
+        /* 16 groups of 16 elements. dot16 stays (maddubs+madd); the
+         * per-group scaled contributions accumulate in an 8-lane fp32
+         * vector (two FMA passes) instead of 16 scalar fmas per block. */
+        for (int g = 0; g < 16; g += 8) {
+            int32_t d[8];
+            for (int k = 0; k < 8; ++k) {
+                __m128i w16 = _mm_loadu_si128((const __m128i *)(q + (g + k) * 16));
+                __m128i v16 = _mm_loadu_si128((const __m128i *)(v + (g + k) * 16));
+                d[k] = q6k_dot16_avx2(w16, v16);
+            }
+            __m256i d_v = _mm256_setr_epi32(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
+            __m256 df = _mm256_cvtepi32_ps(d_v);
+            __m256 sc_v = _mm256_loadu_ps(sc + g);
+            acc_v = _mm256_fmadd_ps(df, sc_v, acc_v);
         }
     }
 
-    *out = acc * vec_scale;
+    __m128 hi128 = _mm256_extractf128_ps(acc_v, 1);
+    __m128 lo128 = _mm256_castps256_ps128(acc_v);
+    __m128 s4 = _mm_add_ps(hi128, lo128);
+    s4 = _mm_hadd_ps(s4, s4);
+    s4 = _mm_hadd_ps(s4, s4);
+    *out = _mm_cvtss_f32(s4) * vec_scale;
     return 0;
 }
 
