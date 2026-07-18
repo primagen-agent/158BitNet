@@ -234,7 +234,10 @@ BITNET_TARGET_AVX2
 static int bitnet_dot_i8_avx2_inner(const int8_t *a, const int8_t *b, int n) {
     __m256i acc = _mm256_setzero_si256();
     int i = 0;
-    for (; i + 31 < n; i += 32) {
+    /* 16 int8 -> 16 int16 -> pairwise int32 dot. Stride matches the 16-byte
+     * load: a dot product must cover every element, so we step by 16 (an
+     * earlier revision stepped by 32 and silently skipped half the vector). */
+    for (; i + 15 < n; i += 16) {
         __m128i a_lo = _mm_loadu_si128((const __m128i *)(a + i));
         __m128i b_lo = _mm_loadu_si128((const __m128i *)(b + i));
         __m256i a0 = _mm256_cvtepi8_epi16(a_lo);
@@ -255,17 +258,57 @@ static int bitnet_dot_i8_avx2_inner(const int8_t *a, const int8_t *b, int n) {
     return sum;
 }
 
+/* AVX-VNNI: native signed int16 x int16 int32 dot (vpdpwssd) instead of the
+ * AVX2 sign-extend + madd pair. Same math, one instruction. */
+BITNET_TARGET_AVX_VNNI
+static int bitnet_dot_i8_avx_vnni_inner(const int8_t *a, const int8_t *b, int n) {
+    __m256i acc = _mm256_setzero_si256();
+    int i = 0;
+    for (; i + 15 < n; i += 16) {
+        __m128i a_lo = _mm_loadu_si128((const __m128i *)(a + i));
+        __m128i b_lo = _mm_loadu_si128((const __m128i *)(b + i));
+        __m256i a0 = _mm256_cvtepi8_epi16(a_lo);
+        __m256i b0 = _mm256_cvtepi8_epi16(b_lo);
+        acc = _mm256_dpwssd_epi32(acc, a0, b0);
+    }
+    __m128i hi128 = _mm256_extracti128_si256(acc, 1);
+    __m128i lo128 = _mm256_castsi256_si128(acc);
+    __m128i s = _mm_add_epi32(hi128, lo128);
+    s = _mm_hadd_epi32(s, s);
+    s = _mm_hadd_epi32(s, s);
+    int sum = _mm_cvtsi128_si32(s);
+    for (; i < n; ++i) sum += (int)a[i] * (int)b[i];
+    return sum;
+}
+
+/* AVX512-VNNI: ZMM vpdpwssd, 32 int8 -> 32 int16 -> 16 int32 per iteration. */
+BITNET_TARGET_AVX512_VNNI
+static int bitnet_dot_i8_avx512_vnni_inner(const int8_t *a, const int8_t *b, int n) {
+    __m512i acc = _mm512_setzero_si512();
+    int i = 0;
+    for (; i + 31 < n; i += 32) {
+        __m256i a_hi = _mm256_loadu_si256((const __m256i *)(a + i));
+        __m256i b_hi = _mm256_loadu_si256((const __m256i *)(b + i));
+        __m512i a0 = _mm512_cvtepi8_epi16(a_hi);
+        __m512i b0 = _mm512_cvtepi8_epi16(b_hi);
+        acc = _mm512_dpwssd_epi32(acc, a0, b0);
+    }
+    int sum = (int)_mm512_reduce_add_epi32(acc);
+    for (; i < n; ++i) sum += (int)a[i] * (int)b[i];
+    return sum;
+}
+
 BITNET_TARGET_AVX2
 int bitnet_dot_i8_avx2(const int8_t *a, const int8_t *b, int n) {
     return bitnet_dot_i8_avx2_inner(a, b, n);
 }
 BITNET_TARGET_AVX_VNNI
 int bitnet_dot_i8_avx_vnni(const int8_t *a, const int8_t *b, int n) {
-    return bitnet_dot_i8_avx2_inner(a, b, n);
+    return bitnet_dot_i8_avx_vnni_inner(a, b, n);
 }
 BITNET_TARGET_AVX512_VNNI
 int bitnet_dot_i8_avx512_vnni(const int8_t *a, const int8_t *b, int n) {
-    return bitnet_dot_i8_avx2_inner(a, b, n);
+    return bitnet_dot_i8_avx512_vnni_inner(a, b, n);
 }
 
 /* ------------------------------------------------------------------ */
