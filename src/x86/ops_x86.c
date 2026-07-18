@@ -546,10 +546,32 @@ void bitnet_rope_apply_avx2(float *x, int n_heads, int head_dim, int rope_dim,
         n_heads <= 0 || head_dim <= 0 || rope_dim <= 0) {
         return;
     }
+    const int half = rope_dim / 2;
+    const __m128 sign_mask = _mm_castsi128_ps(_mm_set1_epi32((int)0x80000000u));
     for (int h = 0; h < n_heads; ++h) {
-        for (int j = 0; j < rope_dim / 2; ++j) {
+        int j = 0;
+        for (; j + 3 < half; j += 4) {
+            /* 4 rotation pairs [x0,y0,x1,y1,x2,y2,x3,y3].
+             * shuffle duplicates x into even lanes, y into odd lanes; then
+             * out = x*[c,s,c,s,c,s,c,s] + y*[-s,c,-s,c,-s,c,-s,c] per pair. */
+            __m256 v = _mm256_loadu_ps(x + h * head_dim + 2 * j);
+            __m256 x_dup = _mm256_shuffle_ps(v, v, _MM_SHUFFLE(2, 2, 0, 0));
+            __m256 y_dup = _mm256_shuffle_ps(v, v, _MM_SHUFFLE(3, 3, 1, 1));
+            __m128 c4 = _mm_loadu_ps(rope_cos + j);
+            __m128 s4 = _mm_loadu_ps(rope_sin + j);
+            __m128 ns4 = _mm_xor_ps(s4, sign_mask);
+            __m128 cs_lo = _mm_unpacklo_ps(c4, s4);     /* [c0,s0,c1,s1] */
+            __m128 cs_hi = _mm_unpackhi_ps(c4, s4);     /* [c2,s2,c3,s3] */
+            __m256 cs = _mm256_setr_m128(cs_lo, cs_hi);
+            __m128 ns_lo = _mm_unpacklo_ps(ns4, c4);    /* [-s0,c0,-s1,c1] */
+            __m128 ns_hi = _mm_unpackhi_ps(ns4, c4);    /* [-s2,c2,-s3,c3] */
+            __m256 neg_sc = _mm256_setr_m128(ns_lo, ns_hi);
+            __m256 out = _mm256_fmadd_ps(x_dup, cs, _mm256_mul_ps(y_dup, neg_sc));
+            _mm256_storeu_ps(x + h * head_dim + 2 * j, out);
+        }
+        for (; j < half; ++j) {
             int idx0 = h * head_dim + 2 * j;
-            int idx1 = h * head_dim + 2 * j + 1;
+            int idx1 = idx0 + 1;
             float c = rope_cos[j];
             float s = rope_sin[j];
             float x0 = x[idx0];
@@ -569,23 +591,7 @@ void bitnet_rope_apply_avx_vnni(float *x, int n_heads, int head_dim, int rope_di
 BITNET_TARGET_AVX512_VNNI
 void bitnet_rope_apply_avx512_vnni(float *x, int n_heads, int head_dim, int rope_dim,
                                     const float *rope_cos, const float *rope_sin) {
-    /* Same scalar-fallback rationale as the AVX2 variant. */
-    if (x == NULL || rope_cos == NULL || rope_sin == NULL ||
-        n_heads <= 0 || head_dim <= 0 || rope_dim <= 0) {
-        return;
-    }
-    for (int h = 0; h < n_heads; ++h) {
-        for (int j = 0; j < rope_dim / 2; ++j) {
-            int idx0 = h * head_dim + 2 * j;
-            int idx1 = h * head_dim + 2 * j + 1;
-            float c = rope_cos[j];
-            float s = rope_sin[j];
-            float x0 = x[idx0];
-            float x1 = x[idx1];
-            x[idx0] = x0 * c - x1 * s;
-            x[idx1] = x0 * s + x1 * c;
-        }
-    }
+    bitnet_rope_apply_avx2(x, n_heads, head_dim, rope_dim, rope_cos, rope_sin);
 }
 
 #else /* !__x86_64__ && !_M_X64 */
