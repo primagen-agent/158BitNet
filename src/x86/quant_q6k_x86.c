@@ -777,7 +777,30 @@ BITNET_TARGET_AVX512_VNNI
 int bitnet_q6k_dot_product_q8_avx512_vnni(const int8_t *q8, const float *scales,
                                              int blocks_per_row, const int8_t *qvec,
                                              float vec_scale, float *out) {
-    return bitnet_q6k_dot_product_q8_avx_vnni(q8, scales, blocks_per_row, qvec, vec_scale, out);
+    if (q8 == NULL || scales == NULL || qvec == NULL || out == NULL || blocks_per_row <= 0) {
+        return -1;
+    }
+    float acc = 0.0f;
+    for (int b = 0; b < blocks_per_row; ++b) {
+        const int8_t *q = q8 + (size_t)b * BITNET_Q6K_QK;
+        const int8_t *v = qvec + (size_t)b * BITNET_Q6K_QK;
+        const float *sc = scales + (size_t)b * 16u;
+        /* Two 16-element groups per ZMM vpdpwssd (32 int8 -> 32 int16 ->
+         * 16 int32); split low/high 8 int32 for the two group dots. No bias
+         * correction needed: vpdpwssd is signed x signed. */
+        for (int g = 0; g < 16; g += 2) {
+            __m256i w32 = _mm256_loadu_si256((const __m256i *)(q + g * 16));
+            __m256i v32 = _mm256_loadu_si256((const __m256i *)(v + g * 16));
+            __m512i w16 = _mm512_cvtepi8_epi16(w32);
+            __m512i v16 = _mm512_cvtepi8_epi16(v32);
+            __m512i p = _mm512_dpwssd_epi32(_mm512_setzero_si512(), w16, v16);
+            int32_t d0 = _mm256_reduce_add_epi32(_mm512_castsi512_si256(p));
+            int32_t d1 = _mm256_reduce_add_epi32(_mm512_extracti64x4_epi64(p, 1));
+            acc += (float)d0 * sc[g] + (float)d1 * sc[g + 1];
+        }
+    }
+    *out = acc * vec_scale;
+    return 0;
 }
 
 BITNET_TARGET_AVX512_VNNI
