@@ -794,8 +794,14 @@ int bitnet_q6k_dot_product_q8_avx512_vnni(const int8_t *q8, const float *scales,
             __m512i w16 = _mm512_cvtepi8_epi16(w32);
             __m512i v16 = _mm512_cvtepi8_epi16(v32);
             __m512i p = _mm512_dpwssd_epi32(_mm512_setzero_si512(), w16, v16);
-            int32_t d0 = _mm256_reduce_add_epi32(_mm512_castsi512_si256(p));
-            int32_t d1 = _mm256_reduce_add_epi32(_mm512_extracti64x4_epi64(p, 1));
+            __m256i lo = _mm512_castsi512_si256(p);
+            __m256i hi = _mm512_extracti64x4_epi64(p, 1);
+            __m128i s0 = _mm_add_epi32(_mm256_castsi256_si128(lo), _mm256_extracti128_si256(lo, 1));
+            __m128i s1 = _mm_add_epi32(_mm256_castsi256_si128(hi), _mm256_extracti128_si256(hi, 1));
+            s0 = _mm_hadd_epi32(s0, s0); s0 = _mm_hadd_epi32(s0, s0);
+            s1 = _mm_hadd_epi32(s1, s1); s1 = _mm_hadd_epi32(s1, s1);
+            int32_t d0 = _mm_cvtsi128_si32(s0);
+            int32_t d1 = _mm_cvtsi128_si32(s1);
             acc += (float)d0 * sc[g] + (float)d1 * sc[g + 1];
         }
     }
