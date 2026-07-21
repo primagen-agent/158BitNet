@@ -8,7 +8,11 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #define BITNET_TARGET_AVX2 __attribute__((target("avx2,fma")))
+#ifdef BITNET_AVX_VNNI_AS_AVX512
+#define BITNET_TARGET_AVX_VNNI __attribute__((target("avx2,fma,avx512f,avx512bw,avx512vl,avx512vnni")))
+#else
 #define BITNET_TARGET_AVX_VNNI __attribute__((target("avx2,fma,avxvnni")))
+#endif
 #define BITNET_TARGET_AVX512_VNNI __attribute__((target("avx512f,avx512bw,avx512vnni,avx512dq")))
 #else
 #define BITNET_TARGET_AVX2
