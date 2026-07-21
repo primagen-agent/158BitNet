@@ -18,11 +18,12 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 option(BITNET_BUILD_TESTS "Build test and benchmark executables" ON)
 
+option(BITNET_ENABLE_LTO "Enable link-time optimization" ON)
 include(CheckIPOSupported)
 if(NOT ANDROID)
     check_ipo_supported(RESULT BITNET_IPO_SUPPORTED OUTPUT BITNET_IPO_ERROR LANGUAGES C)
 endif()
-if(BITNET_IPO_SUPPORTED)
+if(BITNET_IPO_SUPPORTED AND BITNET_ENABLE_LTO)
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
