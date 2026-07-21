@@ -3772,35 +3772,61 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                         }
                     }
                 } else {
+                    /* Fused softmax + value weighting: a per-head max pass, then
+                     * a single exp+VO pass that accumulates unnormalized
+                     * exp(score-max)*V, then a final divide by the sum. Same
+                     * exp count as the 3-pass softmax, but one fewer sweep
+                     * over the score array and V is loaded during the exp pass. */
                     for (int kv_h = 0; kv_h < n_kv_heads; ++kv_h) {
+                        float mx[BITNET_MAX_GQA_RATIO];
+                        float sum[BITNET_MAX_GQA_RATIO];
                         for (int qg = 0; qg < gqa_ratio; ++qg) {
                             int query_head = kv_h * gqa_ratio + qg;
-                            bitnet_softmax(scores + query_head * n_positions, n_positions);
-                            memset(attn_buffer + query_head * head_dim, 0,
+                            const float *hs = scores + (size_t)query_head * (size_t)n_positions;
+                            float m = hs[0];
+                            for (int p = 1; p < n_positions; ++p) {
+                                if (hs[p] > m) m = hs[p];
+                            }
+                            mx[qg] = m;
+                            sum[qg] = 0.0f;
+                            memset(attn_buffer + (size_t)query_head * (size_t)head_dim, 0,
                                    (size_t)head_dim * sizeof(float));
                         }
                         for (int past_pos = 0; past_pos < n_positions; ++past_pos) {
                             size_t v_offset = bitnet_kv_cache_offset(ctx, block_idx, kv_h, past_pos);
+                            const float *vp = ctx->value_cache + v_offset;
+                            for (int qg = 0; qg < gqa_ratio; ++qg) {
+                                int query_head = kv_h * gqa_ratio + qg;
+                                float e = expf(scores[(size_t)query_head * (size_t)n_positions + past_pos] - mx[qg]);
+                                sum[qg] += e;
+                                float *attn_head = attn_buffer + (size_t)query_head * (size_t)head_dim;
+                                int d = 0;
+#if defined(__ARM_NEON)
+                                float32x4_t ev = vdupq_n_f32(e);
+                                for (d = 0; d + 3 < head_dim; d += 4) {
+                                    float32x4_t vv = vld1q_f32(vp + d);
+                                    vst1q_f32(attn_head + d,
+                                              vfmaq_f32(vld1q_f32(attn_head + d), vv, ev));
+                                }
+#endif
+                                for (; d < head_dim; ++d) {
+                                    attn_head[d] += e * vp[d];
+                                }
+                            }
+                        }
+                        for (int qg = 0; qg < gqa_ratio; ++qg) {
+                            int query_head = kv_h * gqa_ratio + qg;
+                            float inv = 1.0f / sum[qg];
+                            float *attn_head = attn_buffer + (size_t)query_head * (size_t)head_dim;
                             int d = 0;
 #if defined(__ARM_NEON)
+                            float32x4_t iv = vdupq_n_f32(inv);
                             for (d = 0; d + 3 < head_dim; d += 4) {
-                                float32x4_t vv = vld1q_f32(ctx->value_cache + v_offset + d);
-                                for (int qg = 0; qg < gqa_ratio; ++qg) {
-                                    int query_head = kv_h * gqa_ratio + qg;
-                                    float *attn_head = attn_buffer + query_head * head_dim;
-                                    float w = scores[query_head * n_positions + past_pos];
-                                    vst1q_f32(attn_head + d,
-                                              vfmaq_n_f32(vld1q_f32(attn_head + d), vv, w));
-                                }
+                                vst1q_f32(attn_head + d, vmulq_f32(vld1q_f32(attn_head + d), iv));
                             }
 #endif
                             for (; d < head_dim; ++d) {
-                                float vval = ctx->value_cache[v_offset + (size_t)d];
-                                for (int qg = 0; qg < gqa_ratio; ++qg) {
-                                    int query_head = kv_h * gqa_ratio + qg;
-                                    attn_buffer[(size_t)query_head * (size_t)head_dim + (size_t)d] +=
-                                        scores[query_head * n_positions + past_pos] * vval;
-                                }
+                                attn_head[d] *= inv;
                             }
                         }
                     }
