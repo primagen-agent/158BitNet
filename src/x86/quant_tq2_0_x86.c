@@ -803,9 +803,11 @@ static void i2s_matmul_4rows_avx512_vnni(const uint8_t *packed_grp, const float 
                                            int blocks_per_row, const int8_t *qvec,
                                            const int32_t *bsums, float vec_scale,
                                            float *out_0, float *out_1, float *out_2, float *out_3) {
-    const __m128i mask_0f = _mm_set1_epi8(0x0F);
-    const __m128i lut_hi2 = _mm_loadu_si128((const __m128i *)i2s_lut_hi2_unsigned_x86);
-    const __m128i lut_lo2 = _mm_loadu_si128((const __m128i *)i2s_lut_lo2_unsigned_x86);
+    const __m512i mask_0f = _mm512_set1_epi8(0x0F);
+    /* Broadcast the 16-byte code LUTs into all four 128-bit lanes so one
+     * per-lane vpshufb yields the full 64-byte row-code vector. */
+    const __m512i lut_hi2 = _mm512_broadcast_i32x4(_mm_loadu_si128((const __m128i *)i2s_lut_hi2_unsigned_x86));
+    const __m512i lut_lo2 = _mm512_broadcast_i32x4(_mm_loadu_si128((const __m128i *)i2s_lut_lo2_unsigned_x86));
 
     float sum_0 = 0.0f, sum_1 = 0.0f, sum_2 = 0.0f, sum_3 = 0.0f;
 
@@ -824,53 +826,16 @@ static void i2s_matmul_4rows_avx512_vnni(const uint8_t *packed_grp, const float 
             /* Process 64 packed bytes in two 32-byte iter amounts.  Per 32-byte
              * half: extract 4 rows' 32 codes via 128-bit shuffle (same pattern
              * as the AVX2 kernel), then combine halves into __m512i for dpbusd. */
-            __m256i row0_lo, row0_hi, row1_lo, row1_hi, row2_lo, row2_hi, row3_lo, row3_hi;
-
-            for (int half = 0; half < 2; ++half) {
-                int off = half * 32;
-                __m128i pk_lo = _mm_loadu_si128((const __m128i *)(pb + off));
-                __m128i pk_hi = _mm_loadu_si128((const __m128i *)(pb + off + 16));
-
-                __m128i hi_nib_lo = _mm_srli_epi16(pk_lo, 4);
-                __m128i hi_nib_hi = _mm_srli_epi16(pk_hi, 4);
-                hi_nib_lo = _mm_and_si128(hi_nib_lo, mask_0f);
-                hi_nib_hi = _mm_and_si128(hi_nib_hi, mask_0f);
-                __m128i lo_nib_lo = _mm_and_si128(pk_lo, mask_0f);
-                __m128i lo_nib_hi = _mm_and_si128(pk_hi, mask_0f);
-
-                __m128i c0_lo = _mm_shuffle_epi8(lut_hi2, hi_nib_lo);
-                __m128i c1_lo = _mm_shuffle_epi8(lut_lo2, hi_nib_lo);
-                __m128i c2_lo = _mm_shuffle_epi8(lut_hi2, lo_nib_lo);
-                __m128i c3_lo = _mm_shuffle_epi8(lut_lo2, lo_nib_lo);
-                __m128i c0_hi = _mm_shuffle_epi8(lut_hi2, hi_nib_hi);
-                __m128i c1_hi = _mm_shuffle_epi8(lut_lo2, hi_nib_hi);
-                __m128i c2_hi = _mm_shuffle_epi8(lut_hi2, lo_nib_hi);
-                __m128i c3_hi = _mm_shuffle_epi8(lut_lo2, lo_nib_hi);
-
-                /* Combine 2×16 bytes into __m256i (32 codes) */
-                if (half == 0) {
-                    row0_lo = _mm256_inserti128_si256(_mm256_castsi128_si256(c0_lo), c0_hi, 1);
-                    row1_lo = _mm256_inserti128_si256(_mm256_castsi128_si256(c1_lo), c1_hi, 1);
-                    row2_lo = _mm256_inserti128_si256(_mm256_castsi128_si256(c2_lo), c2_hi, 1);
-                    row3_lo = _mm256_inserti128_si256(_mm256_castsi128_si256(c3_lo), c3_hi, 1);
-                } else {
-                    row0_hi = _mm256_inserti128_si256(_mm256_castsi128_si256(c0_lo), c0_hi, 1);
-                    row1_hi = _mm256_inserti128_si256(_mm256_castsi128_si256(c1_lo), c1_hi, 1);
-                    row2_hi = _mm256_inserti128_si256(_mm256_castsi128_si256(c2_lo), c2_hi, 1);
-                    row3_hi = _mm256_inserti128_si256(_mm256_castsi128_si256(c3_lo), c3_hi, 1);
-                }
-            }
-
-            /* Combine two 32-byte halves -> 64-byte rows for dpbusd.
-             * Load 64 qvec bytes -> __m512i. */
-            __m512i r0 = _mm512_inserti64x4(_mm512_castsi256_si512(row0_lo), row0_hi, 1);
-            __m512i r1 = _mm512_inserti64x4(_mm512_castsi256_si512(row1_lo), row1_hi, 1);
-            __m512i r2 = _mm512_inserti64x4(_mm512_castsi256_si512(row2_lo), row2_hi, 1);
-            __m512i r3 = _mm512_inserti64x4(_mm512_castsi256_si512(row3_lo), row3_hi, 1);
-
-            __m256i q_lo = _mm256_loadu_si256((const __m256i *)(qv));
-            __m256i q_hi = _mm256_loadu_si256((const __m256i *)(qv + 32));
-            __m512i q512 = _mm512_inserti64x4(_mm512_castsi256_si512(q_lo), q_hi, 1);
+            /* 64 packed bytes -> 4 row-code __m512i via per-lane vpshufb
+             * (LUTs broadcast into all four 128-bit lanes). */
+            __m512i pk = _mm512_loadu_si512(pb);
+            __m512i q512 = _mm512_loadu_si512(qv);
+            __m512i hi_nib = _mm512_and_si512(_mm512_srli_epi16(pk, 4), mask_0f);
+            __m512i lo_nib = _mm512_and_si512(pk, mask_0f);
+            __m512i r0 = _mm512_shuffle_epi8(lut_hi2, hi_nib);
+            __m512i r1 = _mm512_shuffle_epi8(lut_lo2, hi_nib);
+            __m512i r2 = _mm512_shuffle_epi8(lut_hi2, lo_nib);
+            __m512i r3 = _mm512_shuffle_epi8(lut_lo2, lo_nib);
 
             /* dpbusd(unsigned codes, signed qvec): 64 × 64 products -> 16 i32 */
             acc0 = _mm512_dpbusd_epi32(acc0, r0, q512);
