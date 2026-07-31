@@ -731,6 +731,7 @@ int bitnet_tokenizer_encode(bitnet_tokenizer_t *tokenizer, const char *text, int
                         candidate[candidate_len++] = (char)0x96;
                         candidate[candidate_len++] = (char)0x81;
                     } else {
+                        if (candidate_len + 1 > sizeof(candidate) - 1) break;
                         candidate[candidate_len++] = (char)start[j];
                     }
                 }
