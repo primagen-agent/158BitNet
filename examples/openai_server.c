@@ -350,7 +350,7 @@ static void free_sessions(server_state_t *state) {
     if (state != NULL) state->sessions = NULL;
 }
 
-static char *build_chat_prompt_chatml(cJSON *root) {
+static char *build_chat_prompt_chatml(cJSON *root, int no_think) {
     cJSON *messages = json_get_array(root, "messages");
     char *prompt = NULL;
     size_t len = 0;
@@ -374,7 +374,11 @@ static char *build_chat_prompt_chatml(cJSON *root) {
             return NULL;
         }
     }
-    if (append_cstr(&prompt, &len, &cap, "<|im_start|>assistant\n") != 0) {
+    /* MiniCPM4-style thinking models: when thinking is disabled, the template
+     * injects an empty <think></think> block after the assistant header so the
+     * model answers directly instead of reasoning first. */
+    if (append_cstr(&prompt, &len, &cap, "<|im_start|>assistant\n") != 0 ||
+        (no_think && append_cstr(&prompt, &len, &cap, "<think>\n\n</think>\n") != 0)) {
         free(prompt);
         return NULL;
     }
@@ -445,11 +449,45 @@ static char *build_chat_prompt_bitnet_b158(cJSON *root) {
     return prompt;
 }
 
-static char *build_chat_prompt(server_state_t *state, cJSON *root) {
+static char *build_chat_prompt(server_state_t *state, cJSON *root, int enable_thinking) {
     if (state != NULL && bitnet_chat_template_kind(state->model) == 1) {
         return build_chat_prompt_bitnet_b158(root);
     }
-    return build_chat_prompt_chatml(root);
+    return build_chat_prompt_chatml(root, !enable_thinking);
+}
+
+/* enable_thinking: check chat_template_kwargs.enable_thinking then top-level
+ * enable_thinking; default true (let the model reason / emit <think>). */
+static int request_enable_thinking(cJSON *request) {
+    cJSON *kw = cJSON_GetObjectItem(request, "chat_template_kwargs");
+    if (kw != NULL && cJSON_IsObject(kw)) {
+        cJSON *et = cJSON_GetObjectItem(kw, "enable_thinking");
+        if (cJSON_IsBool(et)) return cJSON_IsTrue(et) ? 1 : 0;
+    }
+    {
+        cJSON *et = cJSON_GetObjectItem(request, "enable_thinking");
+        if (cJSON_IsBool(et)) return cJSON_IsTrue(et) ? 1 : 0;
+    }
+    return 1;
+}
+
+/* Split "<think>REASONING</think>CONTENT" into reasoning + content (in place).
+ * If there is no <think>...</think> block, returns text unchanged and
+ * *out_reason = NULL. Returned pointers alias into text (valid while text lives). */
+static char *split_reasoning(char *text, char **out_reason) {
+    char *start;
+    char *r;
+    char *end;
+    *out_reason = NULL;
+    start = strstr(text, "<think>");
+    if (start == NULL) return text;
+    r = start + 7;
+    end = strstr(r, "</think>");
+    if (end == NULL) return text;          /* unterminated <think>; return whole text */
+    *end = '\0';
+    if (*r == '\n') r++;                   /* trim leading newline from reasoning */
+    *out_reason = r;
+    return end + 8 + ((*(end + 8) == '\n') ? 1 : 0);
 }
 
 static char *build_completion_prompt(cJSON *root) {
@@ -1059,7 +1097,8 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     cJSON *choice = NULL;
     cJSON *message = NULL;
 
-    prompt = build_chat_prompt(state, request);
+    int enable_thinking = request_enable_thinking(request);
+    prompt = build_chat_prompt(state, request, enable_thinking);
     if (prompt == NULL) {
         send_error(c, 400, "invalid_request_error", "messages must be a non-empty array");
         return;
@@ -1105,7 +1144,14 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     json_add_string(root, "model", state->cfg.model_id);
     json_add_number(choice, "index", 0);
     json_add_string(message, "role", "assistant");
-    json_add_string(message, "content", result.text);
+    {
+        char *reasoning = NULL;
+        char *content = split_reasoning(result.text, &reasoning);
+        json_add_string(message, "content", content);
+        if (reasoning != NULL) {
+            json_add_string(message, "reasoning_content", reasoning);
+        }
+    }
     cJSON_AddItemToObject(choice, "message", message);
     json_add_string(choice, "finish_reason", result.finish_reason_length ? "length" : "stop");
     cJSON_AddItemToArray(choices, choice);
