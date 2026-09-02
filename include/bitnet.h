@@ -51,6 +51,52 @@ unsigned long long bitnet_kv_cache_bytes(const bitnet_context_t *ctx);
 void bitnet_free_context(bitnet_context_t *ctx);
 void bitnet_free_model(bitnet_model_t *model);
 
+/* Optional Metis memory model (side-car, no-op when not loaded).
+ *
+ * bitnet_load_memory_model loads a .bnmem file onto the model (validates
+ * d_model/block_count against the backbone; replaces any previously loaded
+ * memory model). bitnet_context_attach_memory binds a loaded memory model to
+ * a context: it allocates the per-context memory state (M/S, initially zero,
+ * inactive) and the commit-capture buffer. The model MUST be the same
+ * bitnet_model_t the context was created from (the context sizes its memory
+ * buffers from its own model's dimensions). A context without an attached
+ * memory model evaluates exactly as before (bit-exact, one null-check per
+ * block).
+ *
+ * Memory semantics: while attached, every bitnet_eval APPENDS each token's
+ * attn-normed hidden state at the deepest memory layer to a commit-capture
+ * buffer (an accumulation budget of min(max_tokens, 4096) rows per commit
+ * window). bitnet_memory_commit runs the GDU commit over ALL states
+ * accumulated since the previous commit — prefill plus every decode step of
+ * an exchange, committed once at end of generation — and activates the
+ * memory fusion in subsequent evals (state-gated bypass: until the first
+ * commit the memory path is a strict no-op). Long windows are committed in
+ * <=1024-row slices (GDU state carries across slices). An eval that would
+ * push the window past the buffer capacity returns -3 and computes nothing.
+ * bitnet_memory_reset zeroes the memory state and deactivates the fusion;
+ * bitnet_reset_context (KV rewind) intentionally does NOT touch memory state.
+ *
+ * Returns: 0 on success; bitnet_load_memory_model -1 on load/validation
+ * failure; bitnet_context_attach_memory -1 when the model has no memory
+ * model loaded or allocation fails; bitnet_memory_commit -1 when no memory
+ * model is attached or the last eval saved no states. */
+int  bitnet_load_memory_model(bitnet_model_t *model, const char *path);
+int  bitnet_context_attach_memory(bitnet_context_t *ctx, const bitnet_model_t *model);
+void bitnet_memory_reset(bitnet_context_t *ctx);
+int  bitnet_memory_commit(bitnet_context_t *ctx);
+int  bitnet_memory_active(const bitnet_context_t *ctx);
+/* Export/import the committed M/S state for one attached context. Pending
+ * capture rows are intentionally excluded. Import validates the snapshot
+ * against the attached memory model and leaves the current state unchanged
+ * on failure. Returns 0 on success, -1 on error. */
+int  bitnet_memory_export(const bitnet_context_t *ctx, const char *path);
+int  bitnet_memory_import(bitnet_context_t *ctx, const char *path);
+/* Discard the pending commit-capture rows (most recent evals) WITHOUT
+ * writing them to memory. Reference protocol: a memory session commits
+ * each user message right after its prefill and DISCARDS the assistant
+ * ack's decode rows, so ack text never enters the memory state. */
+void bitnet_memory_discard_captured(bitnet_context_t *ctx);
+
 #ifdef __cplusplus
 }
 #endif

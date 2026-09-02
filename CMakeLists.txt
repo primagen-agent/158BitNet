@@ -83,6 +83,7 @@ add_library(bitnet STATIC
     src/thread_config.c
     src/cpu_detect.c
     src/bitnet_dispatch.c
+    src/metis/metis_file.c
     src/x86/kernel_registry.c
     src/x86/ops_x86.c
     src/x86/bitnet_hotpath_x86.c
@@ -105,6 +106,9 @@ if(UNIX AND NOT APPLE AND NOT ANDROID)
     # glibc keeps libm separate; needed for expf/powf/sincosf.
     target_link_libraries(bitnet PUBLIC m)
 endif()
+
+# Trainer-only backward pass over the Metis memory module. NEVER linked into
+# the bitnet library -- inference binaries must not pull backprop code.
 
 add_executable(gguf_inspect tools/gguf_inspect.c)
 target_include_directories(gguf_inspect PRIVATE src)
@@ -284,4 +288,14 @@ add_executable(test_concurrent_eval tests/test_concurrent_eval.c)
 target_compile_definitions(test_concurrent_eval PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_link_libraries(test_concurrent_eval PRIVATE bitnet)
 add_test(NAME test_concurrent_eval COMMAND test_concurrent_eval)
+
+add_executable(test_metis_memory tests/test_metis_memory.c)
+target_include_directories(test_metis_memory PRIVATE src)
+target_compile_definitions(test_metis_memory PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_definitions(test_metis_memory PRIVATE BITNET_BINARY_DIR="${CMAKE_BINARY_DIR}")
+target_link_libraries(test_metis_memory PRIVATE bitnet m)
+add_test(NAME test_metis_memory COMMAND test_metis_memory)
+
+
+
 endif()

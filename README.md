@@ -527,3 +527,115 @@ Multi-turn KV-cache profiling:
 ```sh
 adb -s 192.168.210.10:5555 shell 'ps -A | grep openai_server || true'
 ```
+
+## Metis memory model
+
+The Metis memory model (arXiv:2607.26760) equips the backbone with a persistent
+dynamic memory state: 32 per-layer memory matrices (M/S) updated by a Gated
+Delta Rule on commits, and read back through per-layer memory attention fused
+into the attention branch. Trained with a Python/torch trainer (GPU); served by
+the pure-C runtime via `--memory-model` — no Python needed at inference, and
+inference is bit-exact unchanged without the flag.
+
+### Train
+
+```sh
+# GPU training, ~2000 steps/hour on an RTX 5070 class card
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python3 python/train_memory.py models/bitcpm4-3b-tq2_0.gguf data/synth_memory_v2 \
+  --output build/metis/metis.bnmem --steps 12000 --samples 6000 \
+  --seed 42 --gamma 0.7 --tok-probe build/tok_probe --lib build/libggwshim.so
+```
+
+The trainer exports SVD-128 low-rank query factors natively (no post-processing
+fold needed). The `.bnmem` file self-describes its geometry and carries a
+checksummed tensor manifest; the C loader validates it against the backbone
+(fail-closed on any mismatch).
+
+### Serve
+
+```sh
+mkdir -p build/memory-states
+./build/openai_server models/bitcpm4-3b-tq2_0.gguf \
+  --memory-model models/metis_v13_svd.bnmem \
+  --memory-state-dir build/memory-states
+```
+
+Each HTTP session gets its own memory state (reset on session start, commit on
+each exchange). Stateless requests bypass memory entirely. Without
+`--memory-model`, inference follows the original bit-exact path.
+
+### Export and import session memory
+
+The server exposes persistence endpoints only when `--memory-state-dir` is set.
+The client supplies a session ID; the server validates it and resolves the
+snapshot inside that directory, so requests cannot choose arbitrary filesystem
+paths.
+
+```sh
+# Export build/memory-states/demo-session.bnstate
+curl -sS http://127.0.0.1:8080/v1/memory/export \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id":"demo-session"}'
+
+# The same command works after a complete server restart. Import creates the
+# session when necessary and restores its committed M/S state.
+curl -sS http://127.0.0.1:8080/v1/memory/import \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id":"demo-session"}'
+```
+
+Snapshots contain committed M/S state only; pending capture rows and KV cache
+are not persisted. Imports validate the format version, memory geometry, layer
+IDs, payload sizes, and CRCs before replacing the current state. A failed import
+leaves the existing memory unchanged.
+
+Embedding applications can use the same functionality directly:
+
+```c
+bitnet_memory_export(ctx, "session.bnstate");
+bitnet_memory_import(ctx, "session.bnstate");
+```
+
+The context must already be attached to the same compatible memory model with
+`bitnet_context_attach_memory`.
+
+### Verify persistence accuracy
+
+This test first creates and exports all 90 session memories, terminates the
+server, starts a new server, imports every snapshot, and then scores queries:
+
+```sh
+python3 tests/eval_reference_protocol.py \
+  build/openai_server \
+  models/bitcpm4-3b-tq2_0.gguf \
+  models/metis_v13_svd.bnmem \
+  --protocol explicit --n-per-op 30 --persistence
+```
+
+Temporary state files are removed automatically after the run.
+
+### Results
+
+Trained model (v13, gamma=0.7, 12000 steps, 6000 samples, seed 42) evaluated on
+both the reference Metis eval protocol and the project's own harder eval set:
+
+| Eval protocol | remember | update | forget | distract | multi_entity | Overall |
+|---|---|---|---|---|---|---|
+| Reference explicit (90 cases) | 30/30 | 30/30 | 30/30 | — | — | **90/90 = 100%** |
+| Reference implicit (90 cases) | 30/30 | 30/30 | 30/30 | — | — | **90/90 = 100%** |
+| Restart persistence (90 cases) | 30/30 | 30/30 | 30/30 | — | — | **90/90 = 100%** |
+| Custom (79 cases, 14-attr pool) | 14/26 | 17/21 | 11/16 | 8/16 | 5/11 | **87.5%** |
+
+The reference project reports 82–93% on its own GGUF-trained models; our model
+scores 100% on both reference protocols. Model file: 278 MB (SVD-128 query).
+
+### Memory model files
+
+- `python/train_memory.py` — trainer (torch, GPU)
+- `python/train_data.py` — data loading / tokenizer bridge
+- `python/bnmem_export.py` — .bnmem writer (v1 format, SVD-128 native)
+- `python/ggw.py` + `python/ggwshim.c` — GGUF → torch weight bridge
+- `python/torch_backbone.py` — torch backbone for training
+- `src/metis/metis_file.{h,c}` — `.bnmem` model loading, `.bnstate` session snapshots, and runtime memory math
+- `tools/tok_probe.c` — persistent tokenizer for the trainer

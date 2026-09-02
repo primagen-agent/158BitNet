@@ -4,6 +4,7 @@
 #include "third_party/mongoose/mongoose.h"
 
 #include <signal.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +31,8 @@ typedef struct server_config {
     float repeat_penalty;
     const char *lora_path;
     float lora_scale;
+    const char *memory_model_path;
+    const char *memory_state_dir;
 } server_config_t;
 
 typedef struct cached_session {
@@ -307,6 +310,7 @@ static cached_session_t *find_session(server_state_t *state, const char *session
 static void reset_session(cached_session_t *session) {
     if (session == NULL) return;
     bitnet_reset_context(session->ctx);
+    bitnet_memory_reset(session->ctx);   /* no-op without metis attached */
     session->history_count = 0;
     session->transcript_len = 0;
     if (session->transcript != NULL) session->transcript[0] = '\0';
@@ -333,6 +337,22 @@ static cached_session_t *create_session(server_state_t *state, const char *sessi
     session->last_used = time(NULL);
     session->next = state->sessions;
     state->sessions = session;
+
+    /* Memory model (if one was loaded in main): bind it to this session's
+     * context. bitnet_model_t is opaque here; cfg.memory_model_path != NULL
+     * implies the model carries a loaded memory model because main exits on
+     * load failure. bitnet_context_attach_memory needs the same model the
+     * context was created from (checked there). */
+    if (state->cfg.memory_model_path != NULL) {
+        if (bitnet_context_attach_memory(session->ctx, state->model) != 0) {
+            state->sessions = session->next;
+            free(session->history_tokens);
+            bitnet_free_context(session->ctx);
+            free(session->id);
+            free(session);
+            return NULL;
+        }
+    }
     return session;
 }
 
@@ -453,20 +473,31 @@ static char *build_chat_prompt(server_state_t *state, cJSON *root, int enable_th
     if (state != NULL && bitnet_chat_template_kind(state->model) == 1) {
         return build_chat_prompt_bitnet_b158(root);
     }
+    /* Memory-model sessions use the reference Metis protocol rendering:
+     * plain assistant header, NO injected think block. Probe2 evidence:
+     * the trained memory models collapse (<answer>/<think> fragments)
+     * when a think block precedes the answer; without it recall works.
+     * Ignore enable_thinking in this mode — the memory training
+     * distribution defines the template. */
+    if (state != NULL && state->cfg.memory_model_path != NULL) {
+        return build_chat_prompt_chatml(root, 0);
+    }
     return build_chat_prompt_chatml(root, !enable_thinking);
 }
 
 /* enable_thinking: check chat_template_kwargs.enable_thinking then top-level
- * enable_thinking; default true (let the model reason / emit <think>). */
+ * enable_thinking; default true (let the model reason / emit <think>).
+ * NOTE: cJSON_IsBool is a macro without a NULL guard -- always check the
+ * GetObjectItem result for NULL first. */
 static int request_enable_thinking(cJSON *request) {
     cJSON *kw = cJSON_GetObjectItem(request, "chat_template_kwargs");
     if (kw != NULL && cJSON_IsObject(kw)) {
         cJSON *et = cJSON_GetObjectItem(kw, "enable_thinking");
-        if (cJSON_IsBool(et)) return cJSON_IsTrue(et) ? 1 : 0;
+        if (et != NULL && cJSON_IsBool(et)) return cJSON_IsTrue(et) ? 1 : 0;
     }
     {
         cJSON *et = cJSON_GetObjectItem(request, "enable_thinking");
-        if (cJSON_IsBool(et)) return cJSON_IsTrue(et) ? 1 : 0;
+        if (et != NULL && cJSON_IsBool(et)) return cJSON_IsTrue(et) ? 1 : 0;
     }
     return 1;
 }
@@ -666,6 +697,12 @@ static int prepare_generation(server_state_t *state,
             return -1;
         }
         prefill_end = monotonic_seconds();
+        /* v9b protocol (best measured, 52% on v9): the exchange is
+         * committed AFTER generation (user prefill + assistant ack rows
+         * accumulate and commit in finish_generation / the streaming
+         * tail) — matching the reference TRAINER, which commits each
+         * full chunk incl. acks. Nothing to do here; decode rows
+         * accumulate. bitnet_memory_commit is a no-op without memory. */
         memcpy(gen->history_tokens + gen->history_count, eval_tokens,
                (size_t)n_prompt_tokens * sizeof(*gen->history_tokens));
         gen->history_count += n_prompt_tokens;
@@ -790,6 +827,15 @@ static int finish_generation(generation_state_t *gen,
             snprintf(error, error_size, "failed to allocate empty text");
             return -1;
         }
+    }
+    /* Commit before transferring result ownership so a failure can be
+     * reported cleanly. Reset the memory state because a failed multi-layer
+     * commit may already have updated an earlier layer. */
+    if (gen->session != NULL && gen->emitted > 0 &&
+        bitnet_memory_active(gen->ctx) && bitnet_memory_commit(gen->ctx) != 0) {
+        bitnet_memory_reset(gen->ctx);
+        snprintf(error, error_size, "failed to commit memory model states");
+        return -1;
     }
     result->text = gen->text;
     gen->text = NULL;
@@ -1008,6 +1054,7 @@ static void handle_streaming_completion(struct mg_connection *c,
     char decoded[256];
     generation_state_t gen;
     int done = 0;
+    int failed = 0;
 
     snprintf(id, sizeof(id), "%s-%lld",
              is_chat ? "chatcmpl" : "cmpl", (long long)time(NULL));
@@ -1035,6 +1082,7 @@ static void handle_streaming_completion(struct mg_connection *c,
                 send_sse_json(c, error_chunk);
                 cJSON_Delete(error_chunk);
             }
+            failed = 1;
             break;
         }
         if (decoded[0] != '\0') {
@@ -1047,7 +1095,18 @@ static void handle_streaming_completion(struct mg_connection *c,
             }
         }
     }
-    {
+    if (!failed && gen.session != NULL && gen.emitted > 0 &&
+        bitnet_memory_active(gen.ctx) && bitnet_memory_commit(gen.ctx) != 0) {
+        cJSON *error_chunk = cJSON_CreateObject();
+        bitnet_memory_reset(gen.ctx);
+        if (error_chunk != NULL) {
+            json_add_string(error_chunk, "error", "failed to commit memory model states");
+            send_sse_json(c, error_chunk);
+            cJSON_Delete(error_chunk);
+        }
+        failed = 1;
+    }
+    if (!failed) {
         const char *finish_reason = gen.finish_reason_length ? "length" : "stop";
         cJSON *final_chunk = is_chat ?
             build_chat_stream_chunk(state, id, NULL, finish_reason, 0) :
@@ -1079,6 +1138,58 @@ static void handle_models(struct mg_connection *c, server_state_t *state) {
     json_add_string(model, "owned_by", "bitnet");
     cJSON_AddItemToArray(data, model);
     cJSON_AddItemToObject(root, "data", data);
+    send_json(c, 200, root);
+    cJSON_Delete(root);
+}
+
+static int memory_state_path(const server_state_t *state, const char *sid,
+                             char *out, size_t out_size) {
+    size_t n;
+    if (state == NULL || state->cfg.memory_state_dir == NULL || sid == NULL)
+        return -1;
+    n = strlen(sid);
+    if (n == 0 || n > 128) return -1;
+    for (size_t i = 0; i < n; ++i) {
+        unsigned char ch = (unsigned char)sid[i];
+        if (!(isalnum(ch) || ch == '-' || ch == '_')) return -1;
+    }
+    return snprintf(out, out_size, "%s/%s.bnstate",
+                    state->cfg.memory_state_dir, sid) < (int)out_size ? 0 : -1;
+}
+
+static void handle_memory_state(struct mg_connection *c, server_state_t *state,
+                                cJSON *request, int do_import) {
+    const char *sid = json_get_string(request, "session_id", NULL);
+    cached_session_t *session;
+    char path[1024];
+    cJSON *root;
+    if (state->cfg.memory_state_dir == NULL) {
+        send_error(c, 403, "memory_state_disabled", "memory state directory is not configured");
+        return;
+    }
+    if (memory_state_path(state, sid, path, sizeof path) != 0) {
+        send_error(c, 400, "invalid_request_error", "invalid session_id");
+        return;
+    }
+    session = find_session(state, sid);
+    if (do_import && session == NULL) session = create_session(state, sid);
+    if (session == NULL) {
+        send_error(c, 404, "not_found_error", "session not found");
+        return;
+    }
+    if ((do_import ? bitnet_memory_import(session->ctx, path) :
+                     bitnet_memory_export(session->ctx, path)) != 0) {
+        send_error(c, 500, "server_error", do_import ?
+                   "failed to import memory state" : "failed to export memory state");
+        return;
+    }
+    root = cJSON_CreateObject();
+    if (root == NULL) {
+        send_error(c, 500, "server_error", "failed to build response");
+        return;
+    }
+    json_add_string(root, "status", "ok");
+    json_add_string(root, "session_id", sid);
     send_json(c, 200, root);
     cJSON_Delete(root);
 }
@@ -1238,7 +1349,7 @@ static void handle_completions(struct mg_connection *c, server_state_t *state,
 static void handle_post_json(struct mg_connection *c,
                              struct mg_http_message *hm,
                              server_state_t *state,
-                             int is_chat) {
+                             int action) {
     char *body = dup_n(hm->body.buf, hm->body.len);
     cJSON *request = NULL;
     if (body == NULL) {
@@ -1252,7 +1363,11 @@ static void handle_post_json(struct mg_connection *c,
         send_error(c, 400, "invalid_request_error", "request body must be a JSON object");
         return;
     }
-    if (is_chat) {
+    if (action == 2) {
+        handle_memory_state(c, state, request, 0);
+    } else if (action == 3) {
+        handle_memory_state(c, state, request, 1);
+    } else if (action == 1) {
         handle_chat_completions(c, state, request);
     } else {
         handle_completions(c, state, request);
@@ -1276,6 +1391,12 @@ static void http_handler(struct mg_connection *c, int ev, void *ev_data) {
         } else if (is_method(hm, "POST") &&
                    mg_match(hm->uri, mg_str("/v1/completions"), NULL)) {
             handle_post_json(c, hm, state, 0);
+        } else if (is_method(hm, "POST") &&
+                   mg_match(hm->uri, mg_str("/v1/memory/export"), NULL)) {
+            handle_post_json(c, hm, state, 2);
+        } else if (is_method(hm, "POST") &&
+                   mg_match(hm->uri, mg_str("/v1/memory/import"), NULL)) {
+            handle_post_json(c, hm, state, 3);
         } else if (is_method(hm, "GET") && mg_match(hm->uri, mg_str("/health"), NULL)) {
             mg_http_reply(c, 200, "Content-Type: application/json\r\n", "{\"status\":\"ok\"}\n");
         } else {
@@ -1290,7 +1411,8 @@ static void print_usage(const char *argv0) {
             "       [--ctx TOKENS] [--max-tokens TOKENS] [--default-max-tokens TOKENS]\n"
             "       [--repeat-last-n N]\n"
             "       [--repeat-penalty PENALTY]\n"
-            "       [--lora PATH] [--lora-scale SCALE]\n",
+            "       [--lora PATH] [--lora-scale SCALE]\n"
+            "       [--memory-model PATH] [--memory-state-dir DIR]\n",
             argv0);
 }
 
@@ -1342,6 +1464,10 @@ int main(int argc, char **argv) {
             state.cfg.lora_path = argv[++i];
         } else if (strcmp(argv[i], "--lora-scale") == 0 && i + 1 < argc) {
             state.cfg.lora_scale = parse_float_arg(argv[++i], 1.0f, 0.0f, 100.0f);
+        } else if (strcmp(argv[i], "--memory-model") == 0 && i + 1 < argc) {
+            state.cfg.memory_model_path = argv[++i];
+        } else if (strcmp(argv[i], "--memory-state-dir") == 0 && i + 1 < argc) {
+            state.cfg.memory_state_dir = argv[++i];
         } else {
             print_usage(argv[0]);
             return 1;
@@ -1370,6 +1496,16 @@ int main(int argc, char **argv) {
                 state.cfg.lora_path,
                 bitnet_lora_count(state.model),
                 state.cfg.lora_scale);
+    }
+    if (state.cfg.memory_model_path != NULL) {
+        if (bitnet_load_memory_model(state.model, state.cfg.memory_model_path) != 0) {
+            fprintf(stderr, "Failed to load memory model: %s\n",
+                    state.cfg.memory_model_path);
+            bitnet_free_model(state.model);
+            return 1;
+        }
+        fprintf(stderr, "Memory model loaded: %s\n",
+                state.cfg.memory_model_path);
     }
 
     snprintf(listen_url, sizeof(listen_url), "http://%s:%s", state.cfg.host, state.cfg.port);

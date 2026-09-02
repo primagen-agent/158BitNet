@@ -90,6 +90,55 @@ static void print_decoded_utf8(utf8_stream_state_t *state, const char *bytes, in
     }
 }
 
+static int read_le_u32(FILE *f, unsigned int *out) {
+    unsigned char b[4];
+    if (fread(b, 1, 4, f) != 4) return 0;
+    *out = (unsigned int)b[0] | ((unsigned int)b[1] << 8) |
+           ((unsigned int)b[2] << 16) | ((unsigned int)b[3] << 24);
+    return 1;
+}
+
+/* Display-only banner: re-read the .bnmem header (the file was just
+ * validated by bitnet_load_memory_model) to list its memory layer ids.
+ * v1/v2 layout: 8-byte magic, u32 version (1 or 2), u32 n_layers, then u32
+ * layer_ids[4] (0xFFFFFFFF = unused slot), all little-endian.
+ * v3/v4 layout: magic "BNMEM3"/"BNMEM4", u32 version, u32 n_layers, then
+ * u32 layer_ids[32]. Range-compressed display for the 32-layer full-path
+ * file; v4 files append " v4" to flag reference-trained direct-use models. */
+static void print_memory_model_banner(const char *path) {
+    enum { kMaxLayers = 32 };
+    unsigned char magic[8];
+    unsigned int version = 0, n_layers = 0;
+    unsigned int ids[kMaxLayers];
+    FILE *f = fopen(path, "rb");
+    int ok = (f != NULL);
+
+    if (ok) ok = (fread(magic, 1, sizeof magic, f) == (size_t)sizeof magic);
+    if (ok) ok = read_le_u32(f, &version);
+    if (ok) ok = (version >= 1u && version <= 4u);
+    if (ok) ok = read_le_u32(f, &n_layers);
+    const int slots = version >= 3u ? 32 : 4;
+    for (int i = 0; i < kMaxLayers; ++i) {
+        ids[i] = 0xFFFFFFFFu;
+        if (ok && i < slots) ok = read_le_u32(f, &ids[i]);
+    }
+    if (f != NULL) fclose(f);
+
+    fprintf(stderr, "[bitnet] memory model: %s%s layers=[", path,
+            version == 4u ? " v4" : "");
+    if (ok && n_layers >= 1u && n_layers <= (unsigned int)slots) {
+        if (version >= 3u && n_layers > 6) {
+            fprintf(stderr, "%u..%u x%u", ids[0], ids[n_layers - 1],
+                    n_layers);
+        } else {
+            for (unsigned int i = 0; i < n_layers; ++i) {
+                fprintf(stderr, "%s%u", i > 0 ? "," : "", ids[i]);
+            }
+        }
+    }
+    fprintf(stderr, "]\n");
+}
+
 int main(int argc, char **argv) {
     bitnet_model_t *model = NULL;
     bitnet_context_t *ctx = NULL;
@@ -101,14 +150,30 @@ int main(int argc, char **argv) {
     int max_context_tokens = env_int_or_default("BITNET_MAX_CONTEXT", DEFAULT_MAX_CONTEXT_TOKENS);
     int repeat_last_n = env_int_or_default("BITNET_REPEAT_LAST_N", DEFAULT_REPEAT_LAST_N);
     float repeat_penalty = env_float_or_default("BITNET_REPEAT_PENALTY", DEFAULT_REPEAT_PENALTY);
+    const char *memory_model_path = NULL;
     char decoded[256];
     utf8_stream_state_t utf8_state;
     int i = 0;
 
     memset(&utf8_state, 0, sizeof(utf8_state));
 
+    /* Pre-pass: pull "--memory-model PATH" out of argv, shifting the rest
+     * down so the positional parsing below is unchanged. */
+    for (i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--memory-model") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr, "--memory-model requires a path argument\n");
+                return 1;
+            }
+            memory_model_path = argv[i + 1];
+            for (int j = i; j + 2 < argc; ++j) argv[j] = argv[j + 2];
+            argc -= 2;
+            --i;
+        }
+    }
+
     if (argc < 3) {
-        fprintf(stderr, "Usage: %s <model.gguf> <prompt> [num_tokens]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <model.gguf> <prompt> [num_tokens] [--memory-model PATH]\n", argv[0]);
         return 1;
     }
 
@@ -122,6 +187,15 @@ int main(int argc, char **argv) {
     if (model == NULL) {
         fprintf(stderr, "Failed to load model from: %s\n", argv[1]);
         return 1;
+    }
+
+    if (memory_model_path != NULL) {
+        if (bitnet_load_memory_model(model, memory_model_path) != 0) {
+            fprintf(stderr, "Failed to load memory model: %s\n", memory_model_path);
+            bitnet_free_model(model);
+            return 1;
+        }
+        print_memory_model_banner(memory_model_path);
     }
 
     if (max_context_tokens < MIN_CONTEXT_TOKENS) {
@@ -175,6 +249,16 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    if (memory_model_path != NULL) {
+        if (bitnet_context_attach_memory(ctx, model) != 0) {
+            fprintf(stderr, "Failed to attach memory model\n");
+            bitnet_free_context(ctx);
+            free(prompt_tokens);
+            bitnet_free_model(model);
+            return 1;
+        }
+    }
+
     history_tokens = (int *)calloc((size_t)context_tokens, sizeof(*history_tokens));
     if (history_tokens == NULL) {
         fprintf(stderr, "Failed to allocate generation history\n");
@@ -199,6 +283,19 @@ int main(int argc, char **argv) {
         bitnet_free_context(ctx);
         bitnet_free_model(model);
         return 1;
+    }
+
+    /* Commit the prompt's hidden states into the memory M/S store; reads in
+     * the decode loop below participate because active=1 from here on. */
+    if (memory_model_path != NULL) {
+        if (bitnet_memory_commit(ctx) != 0) {
+            fprintf(stderr, "Failed to commit memory model states\n");
+            free(history_tokens);
+            free(prompt_tokens);
+            bitnet_free_context(ctx);
+            bitnet_free_model(model);
+            return 1;
+        }
     }
 
     for (i = 0; i < num_tokens; ++i) {

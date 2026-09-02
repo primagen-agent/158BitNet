@@ -8,3 +8,7 @@ tests/*.bin
 .DS_Store
 .worktrees/
 .superpowers/
+data/
+docs/
+__pycache__/
+*.pyc
