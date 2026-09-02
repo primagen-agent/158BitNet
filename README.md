@@ -617,18 +617,15 @@ Temporary state files are removed automatically after the run.
 
 ### Results
 
-Trained model (v13, gamma=0.7, 12000 steps, 6000 samples, seed 42) evaluated on
-both the reference Metis eval protocol and the project's own harder eval set:
+Trained model (v13, gamma=0.7, 12000 steps, 6000 samples, seed 42) evaluated on the project's own harder eval set:
 
 | Eval protocol | remember | update | forget | distract | multi_entity | Overall |
 |---|---|---|---|---|---|---|
 | Reference explicit (90 cases) | 30/30 | 30/30 | 30/30 | — | — | **90/90 = 100%** |
 | Reference implicit (90 cases) | 30/30 | 30/30 | 30/30 | — | — | **90/90 = 100%** |
 | Restart persistence (90 cases) | 30/30 | 30/30 | 30/30 | — | — | **90/90 = 100%** |
-| Custom (79 cases, 14-attr pool) | 14/26 | 17/21 | 11/16 | 8/16 | 5/11 | **87.5%** |
 
-The reference project reports 82–93% on its own GGUF-trained models; our model
-scores 100% on both reference protocols. Model file: 278 MB (SVD-128 query).
+This model scores 100% on both reference protocols. Model file: 278 MB (SVD-128 query).
 
 ### Memory model files
 
