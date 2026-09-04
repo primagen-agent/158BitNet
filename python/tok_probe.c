@@ -7,6 +7,8 @@
  *   tok_probe <model.gguf> --encode     : reads UTF-8 text on stdin, prints
  *                                         space-separated token ids (no BOS)
  *   tok_probe <model.gguf> --eos        : prints the EOS token id
+ *   tok_probe <model.gguf> --serve-decode: reads token-id lines and returns
+ *                                          decoded bytes as lowercase hex
  *   tok_probe <model.gguf> --logits <json-ish-ids> : evaluates the ids,
  *                                         prints top-5 ids+logits per position
  *                                         (G1 backbone parity probe)
@@ -20,7 +22,7 @@
 
 int main(int argc, char **argv) {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s <model.gguf> --encode|--eos|--meta|--logits ids...\n",
+        fprintf(stderr, "usage: %s <model.gguf> --encode|--eos|--serve-decode|--meta|--logits ids...\n",
                 argv[0]);
         return 2;
     }
@@ -99,6 +101,22 @@ int main(int argc, char **argv) {
             if (cnt <= 0) cnt = 0;
             for (int i = 0; i < cnt; ++i)
                 printf("%d%s", toks[i], i + 1 < cnt ? " " : "");
+            printf("\n");
+            fflush(stdout);
+        }
+    } else if (strcmp(argv[2], "--serve-decode") == 0) {
+        static char line[1 << 20];
+        while (fgets(line, sizeof line, stdin) != NULL) {
+            char *save = NULL;
+            for (char *item = strtok_r(line, " ,\r\n", &save);
+                 item != NULL;
+                 item = strtok_r(NULL, " ,\r\n", &save)) {
+                char decoded[512];
+                int n = bitnet_decode_token(
+                    model, atoi(item), decoded, (int)sizeof decoded);
+                for (int i = 0; i < n; ++i)
+                    printf("%02x", (unsigned char)decoded[i]);
+            }
             printf("\n");
             fflush(stdout);
         }

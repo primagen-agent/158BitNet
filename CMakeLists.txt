@@ -82,6 +82,7 @@ add_library(bitnet STATIC
     src/sampler.c
     src/thread_config.c
     src/cpu_detect.c
+    src/sha256.c
     src/bitnet_dispatch.c
     src/metis/metis_file.c
     src/x86/kernel_registry.c

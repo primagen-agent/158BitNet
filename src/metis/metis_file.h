@@ -10,16 +10,16 @@
  *     concat groups -> [q_dim]; mem_norm (RMSNorm over q_dim, trainable);
  *     fused = frozen backbone o_proj @ mem_normed -> [d_model];
  *     attn' = gamma*attn + (1-gamma)*fused.
- *   - write: per-layer commit of that layer's captured attn-normed rows:
- *     double-norm with the layer's attn_norm, w_agg scores, AlphaTopP(rho)
+ *   - write: per-layer commit of that layer's captured raw residual rows:
+ *     one attn_norm, w_agg scores, AlphaTopP(rho)
  *     hard select, K = L2normalize(W_k h)/sqrt(kv_dim), V = W_v h,
  *     alpha = sum w sigma(gdu_aw.h+gdu_ab)/sum w,
  *     beta_i = beta_scale * sigma(gdu_bw.h+gdu_bb),
  *     GDU with pre-decay km/ks and S never pre-scaled by alpha.
  *
- * .bnmem v3 file (magic "BNMEM3", version 3): only TRAINABLE params are
- * stored (~170MB fp32 for 32 layers); the frozen q_proj/o_proj/norms come
- * from the backbone GGUF at runtime. Layers count <= METIS_MAX_LAYERS(32).
+ * BNMEM2 stores only trainable parameters plus the SHA-256 of the exact
+ * frozen backbone GGUF. Runtime loading rejects unbound files and digest
+ * mismatches. Layers count <= METIS_MAX_LAYERS(32).
  */
 #ifndef METIS_V6_H
 #define METIS_V6_H
@@ -33,6 +33,8 @@
 #define METIS_CAP_ROWS 1024
 
 typedef struct metis_params {
+    int has_backbone_sha256;
+    uint8_t backbone_sha256[32];
     int n_layers;
     int layer_ids[32];      /* backbone block index per slot, strictly incr */
     int d_model;            /* backbone hidden (2560 for the 3B) */
@@ -47,7 +49,7 @@ typedef struct metis_params {
      * query path + per-layer gate biases + +1 read denominator. When
      * version == 4, query_proj/query_norm are non-NULL and the runtime uses
      * metis_commit_states/metis_read. */
-    int denom_plus_one;     /* v4 flag: read = (q~M)/(q~S + 1) */
+    int denom_plus_one;     /* 1: qS+1; 2: |qS|+1 */
     float *gdu_ab_v, *gdu_bb_v;   /* [n_layers] per-layer gate biases (v4) */
     float *query_proj;      /* [n_layers][q_dim x d_model] row-major (v4;
                              * NULL in v5 low-rank files) */
@@ -57,8 +59,17 @@ typedef struct metis_params {
      * factors instead of the folded full-rank matrix (~110MB vs 1.34GB
      * for the 3B/32-layer model at rank 128). */
     int query_rank;         /* 0 = full-rank (v4 semantics); >0 = v5 */
+    int query_add_backbone; /* low-rank query is a delta on pre-RoPE Q */
     float *query_a;         /* [n_layers][q_dim x query_rank] row-major */
     float *query_b;         /* [n_layers][query_rank x d_model] row-major */
+    /* Optional SVD-factorized write projections.  kv_rank == 0 keeps the
+     * legacy full wk/wv tensors; kv_rank > 0 uses A(Bh) directly.  Dynamic
+     * memory state M/S is deliberately unchanged and remains full-rank. */
+    int kv_rank;
+    float *wk_a;            /* [n_layers][kv_dim x kv_rank] */
+    float *wk_b;            /* [n_layers][kv_rank x d_model] */
+    float *wv_a;            /* [n_layers][kv_dim x kv_rank] */
+    float *wv_b;            /* [n_layers][kv_rank x d_model] */
     /* per-layer trainable tensors, layer-major concatenation:
      * wk/wv: [n_layers][kv_dim x d_model] row-major
      * w_agg/gdu_aw/gdu_bw: [n_layers][d_model]
@@ -114,7 +125,7 @@ int  metis_file_probe(const char *path);
 
 /* One commit pass over L normed hidden rows for ONE layer slot. h_all rows
  * are PRE-norm hiddens of this layer; the norm is recomputed here (locked
- * double-norm). norm_w is this layer's attn_norm weight [d_model]. */
+ * single norm). norm_w is this layer's attn_norm weight [d_model]. */
 int metis_commit_states(const metis_params_t *p, int slot,
                            float *M, float *S, const float *h_all, int L,
                            const float *norm_w, float eps);
@@ -138,7 +149,9 @@ int metis_commit_states(const metis_params_t *p, int slot,
                               const float *norm_w, float eps);
 
 void metis_read(const metis_params_t *p, int slot,
-                      const float *h_raw /*[d_model]*/, const float *M,
+                      const float *h_raw /*[d_model]*/,
+                      const float *q_backbone /*[q_dim], nullable*/,
+                      const float *M,
                       const float *S, float *out /*[q_dim]*/);
 
 #endif

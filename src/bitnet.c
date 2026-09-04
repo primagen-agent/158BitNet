@@ -3,6 +3,7 @@
 #include "bitnet_dispatch.h"
 #include "bitnet_internal.h"
 #include "gguf.h"
+#include "sha256.h"
 #include "metis/metis_file.h"
 #include "ops.h"
 #include "quant_q4k.h"
@@ -262,6 +263,7 @@ struct bitnet_context {
     float *metis_fused;     /* fusion scratch [d_model] */
     float *metis_h_raw;     /* read query source: layer INPUT residual
                              * [d_model] (snapshot before the attn-norm swap) */
+    float *metis_q_base;    /* backbone pre-RoPE query [q_dim], reused */
     float *metis_lut;       /* scalar-tier LUT [lut_count] for o_proj */
     size_t metis_lut_count;
     int8_t *metis_qhidden;  /* i8 quantized mem vector [q_dim] for o_proj */
@@ -3397,22 +3399,21 @@ static int metis_apply_layer(bitnet_context_t *ctx, int slot,
     float *mem_out = ctx->metis_mem_out;   /* [q_dim] */
     float *fused = ctx->metis_fused;       /* [d_model] */
 
-    metis_read(p, slot, ctx->metis_h_raw,
+    metis_read(p, slot, ctx->metis_h_raw, ctx->metis_q_base,
                      ctx->metis_M + (size_t)slot * (size_t)p->kv_dim *
                          (size_t)p->kv_dim,
                      ctx->metis_S + (size_t)slot * (size_t)p->kv_dim, mem_out);
 
-    /* mem_norm: RMSNorm(mem_out * w) over q_dim, eps = backbone rms eps
-     * (reference uses the backbone norm eps; 1e-6 for this model family) */
+    /* mem_norm: standard RMSNorm over mem_out, followed by the learned
+     * per-dimension weight. The reference uses eps=1e-6 here. */
     {
         const float *mnw = p->mem_norm + (size_t)slot * (size_t)q_dim;
         float sum = 0.0f;
         for (int i = 0; i < q_dim; ++i) {
-            mem_out[i] *= mnw[i];
             sum += mem_out[i] * mem_out[i];
         }
         float inv = 1.0f / sqrtf(sum / (float)q_dim + 1e-6f);
-        for (int i = 0; i < q_dim; ++i) mem_out[i] *= inv;
+        for (int i = 0; i < q_dim; ++i) mem_out[i] *= inv * mnw[i];
     }
 
     /* fused = o_proj @ mem_out through the TQ2 kernels (weights from GGUF,
@@ -3790,6 +3791,12 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_ATTN_K, hidden, k) != 0 ||
                 bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_ATTN_V, hidden, v) != 0) {
                 goto cleanup;
+            }
+            if (ctx->metis != NULL &&
+                ctx->metis->params.query_add_backbone &&
+                metis_is_memory_block(ctx->metis, block_idx) >= 0) {
+                memcpy(ctx->metis_q_base, q,
+                       (size_t)q_dim * sizeof(float));
             }
             if (profile_eval) {
                 profile_qkv_sec += monotonic_seconds() - profile_step_start;
@@ -4532,6 +4539,7 @@ void bitnet_free_context(bitnet_context_t *ctx) {
     free(ctx->metis_mem_out);
     free(ctx->metis_fused);
     free(ctx->metis_h_raw);
+    free(ctx->metis_q_base);
     free(ctx->metis_lut);
     free(ctx->metis_qhidden);
     free(ctx);
@@ -4561,7 +4569,7 @@ void bitnet_free_model(bitnet_model_t *model) {
 
 int bitnet_load_memory_model(bitnet_model_t *model, const char *path) {
     char err[256];
-    metis_file_model_t *loaded = NULL;
+    uint8_t backbone_sha256[32];
 
     if (model == NULL || path == NULL) return -1;
     err[0] = '\0';
@@ -4574,6 +4582,24 @@ int bitnet_load_memory_model(bitnet_model_t *model, const char *path) {
     if (mf == NULL) {
         fprintf(stderr, "bitnet: memory model load failed: %s\n",
                 err[0] != '\0' ? err : "unknown error");
+        return -1;
+    }
+    if (!mf->params.has_backbone_sha256) {
+        fprintf(stderr,
+                "bitnet: memory model is not bound to a backbone SHA-256\n");
+        metis_model_free_loaded(mf);
+        return -1;
+    }
+    if (bitnet_sha256_file(model->model_path, backbone_sha256) != 0) {
+        fprintf(stderr, "bitnet: failed to hash backbone model\n");
+        metis_model_free_loaded(mf);
+        return -1;
+    }
+    if (memcmp(backbone_sha256, mf->params.backbone_sha256,
+               sizeof backbone_sha256) != 0) {
+        fprintf(stderr,
+                "bitnet: memory model was trained for a different backbone\n");
+        metis_model_free_loaded(mf);
         return -1;
     }
     metis_model_free_loaded(model->metis);
@@ -4605,6 +4631,7 @@ int bitnet_context_attach_memory(bitnet_context_t *ctx, const bitnet_model_t *mo
     ctx->metis_mem_out = (float *)calloc((size_t)q_dim, sizeof(float));
     ctx->metis_fused = (float *)calloc((size_t)emb_dim, sizeof(float));
     ctx->metis_h_raw = (float *)calloc((size_t)emb_dim, sizeof(float));
+    ctx->metis_q_base = (float *)calloc((size_t)q_dim, sizeof(float));
     ctx->metis_lut = NULL;
     ctx->metis_lut_count = bitnet_tq2_0_lut_float_count(q_dim);
 #if !BITNET_USE_TQ2_I2S && !BITNET_USE_TQ2_NEON_ATTN
@@ -4613,7 +4640,7 @@ int bitnet_context_attach_memory(bitnet_context_t *ctx, const bitnet_model_t *mo
     ctx->metis_qhidden = (int8_t *)calloc((size_t)q_dim, sizeof(int8_t));
     if (ctx->metis_M == NULL || ctx->metis_S == NULL || ctx->metis_capture == NULL ||
         ctx->metis_mem_out == NULL || ctx->metis_fused == NULL ||
-        ctx->metis_h_raw == NULL ||
+        ctx->metis_h_raw == NULL || ctx->metis_q_base == NULL ||
         ctx->metis_qhidden == NULL) {
         free(ctx->metis_M); ctx->metis_M = NULL;
         free(ctx->metis_S); ctx->metis_S = NULL;
@@ -4621,6 +4648,7 @@ int bitnet_context_attach_memory(bitnet_context_t *ctx, const bitnet_model_t *mo
         free(ctx->metis_mem_out); ctx->metis_mem_out = NULL;
         free(ctx->metis_fused); ctx->metis_fused = NULL;
         free(ctx->metis_h_raw); ctx->metis_h_raw = NULL;
+        free(ctx->metis_q_base); ctx->metis_q_base = NULL;
         free(ctx->metis_lut); ctx->metis_lut = NULL;
         free(ctx->metis_qhidden); ctx->metis_qhidden = NULL;
         ctx->metis_lut_count = 0;

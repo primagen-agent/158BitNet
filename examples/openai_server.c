@@ -316,6 +316,17 @@ static void reset_session(cached_session_t *session) {
     if (session->transcript != NULL) session->transcript[0] = '\0';
 }
 
+/* Clear transient conversation/KV state without touching attached memory.
+ * Used before importing a committed snapshot into an existing session. */
+static void reset_session_context_only(cached_session_t *session) {
+    if (session == NULL) return;
+    bitnet_reset_context(session->ctx);
+    bitnet_memory_discard_captured(session->ctx);
+    session->history_count = 0;
+    session->transcript_len = 0;
+    if (session->transcript != NULL) session->transcript[0] = '\0';
+}
+
 static cached_session_t *create_session(server_state_t *state, const char *session_id) {
     cached_session_t *session = NULL;
     if (state == NULL || state->model == NULL || session_id == NULL || session_id[0] == '\0') {
@@ -1177,6 +1188,7 @@ static void handle_memory_state(struct mg_connection *c, server_state_t *state,
         send_error(c, 404, "not_found_error", "session not found");
         return;
     }
+    if (do_import) reset_session_context_only(session);
     if ((do_import ? bitnet_memory_import(session->ctx, path) :
                      bitnet_memory_export(session->ctx, path)) != 0) {
         send_error(c, 500, "server_error", do_import ?

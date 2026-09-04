@@ -20,7 +20,8 @@ SEMANTICS (C runtime LAW, FD-verified; violate = model misbehaves):
   sum_i outer(k_i, beta_i w_i (V_i - alpha*(k_i M_old)));
   S <- S + sum_i k_i beta_i w_i (1 - alpha*(k_i S_old))  [S never scaled
   by alpha; both inner products on PRE-decay state].
-- State-gated bypass: inactive -> strict pass-through until first commit.
+- Empty-state behavior: memory fusion remains enabled; the zero readout
+  therefore scales the attention branch by gamma before the first commit.
 - Grad structure (C trainer ruling-A, simplified for Phase A): blocks 0..30
   frozen (no_grad); block-31 attn branch frozen but grad-TRACKED
   activations (fusion + memory trainable; FFN + output frozen). Loss grads
@@ -39,6 +40,7 @@ clip 1.0, seed 42, token-mean NLL on query-chunk assistant tokens.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -54,7 +56,15 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from ggw import GGUFWeights
 from torch_backbone import TorchBackbone, rms_norm
-from bnmem_export import save_bnmem, METIS_ACT_SILU
+try:
+    # Legacy two-layer trainer/exporter.
+    from bnmem_export import save_bnmem, METIS_ACT_SILU
+except ImportError:
+    # The current per-layer trainer imports this module only for dataset and
+    # tokenizer helpers.  Keep the legacy class importable with the v3-v5
+    # exporter too; its export path is not used by train_memory.py.
+    from bnmem_export import save_bnmem_v3 as save_bnmem
+    METIS_ACT_SILU = 1
 
 # ----------------------------------------------------------------------
 # Tokenizer bridge: token ids come from the C runtime via a probe binary
@@ -96,6 +106,24 @@ class CTokenizer:
         self._proc.stdin.write(b"EOS?\n")
         self._proc.stdin.flush()
         return int(self._proc.stdout.readline().decode().split()[0])
+
+
+class CTokenDecoder:
+    """Persistent exact decoder backed by the C runtime tokenizer."""
+
+    def __init__(self, probe_bin: str, model_path: str):
+        import subprocess
+        self._proc = subprocess.Popen(
+            [probe_bin, model_path, "--serve-decode"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+
+    def decode(self, token_ids) -> str:
+        line = " ".join(str(int(token)) for token in token_ids) + "\n"
+        self._proc.stdin.write(line.encode("ascii"))
+        self._proc.stdin.flush()
+        raw = bytes.fromhex(self._proc.stdout.readline().decode().strip())
+        return raw.decode("utf-8", errors="replace")
 
 
 # ----------------------------------------------------------------------
@@ -315,6 +343,10 @@ class MetisMemoryTorch(nn.Module):
 # ----------------------------------------------------------------------
 
 WANTED_FILES = [
+    "reconstruction.jsonl",
+    "locomo_cat1.jsonl", "locomo_cat2.jsonl",
+    "locomo_cat3.jsonl", "locomo_cat4.jsonl",
+    "locomo_cat5.jsonl",
     "remember_explicit.jsonl", "remember_implicit.jsonl",
     "remember_distract.jsonl", "update_explicit.jsonl",
     "update_implicit.jsonl", "update_distract.jsonl",
@@ -350,11 +382,12 @@ def dataset_order(strata, seed, oversample=None):
     strata named in `oversample` appear k times per round, biasing the mix
     toward the eval's weak classes without duplicating any single sample
     within one pass)."""
-    rng = random.Random(seed)
     perms = []
     for stem, lines in strata:
         idx = list(range(len(lines)))
-        rng2 = random.Random(seed + hash(stem) % (2**31))
+        stable_stem_seed = int.from_bytes(
+            hashlib.sha256(stem.encode("utf-8")).digest()[:8], "little")
+        rng2 = random.Random((seed + stable_stem_seed) % (2**63))
         rng2.shuffle(idx)
         perms.append(idx)
     reps = [oversample.get(stem, 1) if oversample else 1

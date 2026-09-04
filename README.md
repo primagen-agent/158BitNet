@@ -4,7 +4,8 @@
 It focuses on low-bit BitNet-style decode on ARM CPUs, especially Apple Silicon
 and Android arm64 devices. The repository includes a core `bitnet` library,
 examples, an OpenAI-compatible HTTP server, LoRA loading, KV-cache reuse, Android
-cross-compilation, tests, and profiling tools.
+cross-compilation, persistent-memory training and runtime support, tests, and
+profiling tools.
 
 ## Models
 
@@ -74,6 +75,10 @@ The runtime is intentionally compact:
 - `examples/minimal_generate.c`: minimal CLI generation.
 - `examples/openai_server.c`: OpenAI-compatible HTTP server using Mongoose and
   cJSON from `src/third_party/`.
+- `src/metis/metis_file.{h,c}`: persistent memory model loading, runtime
+  read/write math, and session-state serialization.
+- `python/train_memory.py`: GPU trainer for the low-rank, layer-wise memory
+  model and optional memory-aware answer decoder.
 - `tools/train_xiaoli_lora.c`: small local LoRA generation tool used by tests.
 - `tests/`: correctness tests, HTTP API tests, Android-relevant profiling, and
   decode benchmarks.
@@ -95,6 +100,7 @@ Key runtime features:
 - F32 and Q8 KV-cache modes through `bitnet_set_kv_cache_type`.
 - OpenAI-compatible completions/chat API, including streaming SSE responses.
 - Session KV reuse and full-history de-duplication for multi-turn HTTP calls.
+- Optional persistent memory sidecar with per-session state export/import.
 - External LoRA loading with `--lora` and `--lora-scale`.
 
 ## Important Optimizations
@@ -528,111 +534,171 @@ Multi-turn KV-cache profiling:
 adb -s 192.168.210.10:5555 shell 'ps -A | grep openai_server || true'
 ```
 
-## Metis memory model
+## Persistent memory model
 
-The Metis memory model (arXiv:2607.26760) equips the backbone with a persistent
-dynamic memory state: 32 per-layer memory matrices (M/S) updated by a Gated
-Delta Rule on commits, and read back through per-layer memory attention fused
-into the attention branch. Trained with a Python/torch trainer (GPU); served by
-the pure-C runtime via `--memory-model` — no Python needed at inference, and
-inference is bit-exact unchanged without the flag.
+The repository contains a Metis-style persistent memory path alongside the
+ordinary transformer runtime. Each selected backbone layer owns a dynamic
+memory state, updated by a gated delta rule after a committed exchange and read
+back into the attention branch on later queries.
 
-### Train
+The learned memory model and the remembered data are deliberately separate:
+
+- `.bnmem` stores the trained memory architecture and parameters.
+- `.bnstate` stores one session's committed memory state.
+
+The experimental `.bnanswer` and `.bnrouter` files are auxiliary Python models,
+not memory data and not part of the deployable C memory model.
+
+The memory model is bound to the SHA-256 identity of the GGUF backbone. A
+checkpoint must be used with the same GGUF file used during training; changing
+the backbone is rejected rather than silently producing invalid results.
+
+### Architecture and compression
+
+The trainer supports low-rank query, key, and value projections. SVD
+initializes the learned projection factors, while the dynamic memory data
+itself remains full-rank and is not SVD-compressed.
+
+Differentiable NAS/neuron gates can search:
+
+- active query bottleneck components;
+- a shared key/value bottleneck rank;
+- active memory layers.
+
+This gating work is informed by *Designing Compact Neural Architectures via
+Neuron Gating and Mixed Activation* (arXiv:2607.26760). The current
+implementation includes neuron/rank gates and layer gates. It does not yet
+implement the paper's mixed-activation search, so it should not be described as
+a complete NGMA implementation.
+
+### Memory-model training
+
+LoCoMo supplies diverse episodic examples, but its facts are not the product.
+Training uses those examples to teach a general memory model what to write,
+update, ignore, and retrieve. Evaluation conversations must remain independent
+from training conversations.
+
+The deployable training path updates only `.bnmem`:
 
 ```sh
-# GPU training, ~2000 steps/hour on an RTX 5070 class card
-PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
-python3 python/train_memory.py models/bitcpm4-3b-tq2_0.gguf data/synth_memory_v2 \
-  --output build/metis/metis.bnmem --steps 12000 --samples 6000 \
-  --seed 42 --gamma 0.7 --tok-probe build/tok_probe --lib build/libggwshim.so
+scripts/train_locomo_v70_memory_model.sh
 ```
 
-The trainer exports SVD-128 low-rank query factors natively (no post-processing
-fold needed). The `.bnmem` file self-describes its geometry and carries a
-checksummed tensor manifest; the C loader validates it against the backbone
-(fail-closed on any mismatch).
+This run:
 
-### Serve
+- starts from the GGUF backbone's SVD initialization instead of a slot-trained
+  checkpoint;
+- freezes the GGUF backbone and trains only the memory parameters;
+- uses the same M/S delta state and signed-plus-one read denominator as the C
+  runtime;
+- resets the transformer context between exchanges, so memory is the only
+  cross-exchange carrier;
+- disables `.bnanswer`, slot retrieval, retrieval-window prompt injection,
+  layer routers, LoRA, and self-generated answer-prefix training;
+- trains rank-64 query/key/value factors and NAS neuron/layer gates;
+- uses contrastive stale-answer loss to teach update and interference
+  handling.
+
+The output is a single deployable memory model:
+
+```text
+build/locomo_v70_memory_model_delta.bnmem
+```
+
+At runtime, new conversation data produces per-session `.bnstate` files. The
+training set's conversation facts are not stored in `.bnmem`.
+
+### V70 validation status
+
+The best V70 checkpoint was selected at step 3999. On the 390-sample held-out
+LoCoMo set, with no KV cache, answer decoder, LoRA, slot retrieval, router, or
+retrieval prompt injection:
+
+| Configuration | Free-generation F1 | Teacher token accuracy | Teacher NLL |
+| --- | ---: | ---: | ---: |
+| V70 `.bnmem` | 10.49% | 39.94% | 3.8901 |
+| Memory disabled | 4.93% | 32.67% | 6.8689 |
+
+The trained memory path therefore has a measurable effect, but it is not yet a
+successful general-purpose memory model. A pure-C, restart-persistence test
+with 90 explicit cases scored remember 0/30, update 0/30, and forget 28/30.
+The high forget score mostly reflects default unknown-answer behavior.
+
+These results are diagnostic and should not be presented as a completed memory
+accuracy target. Python/C per-commit parity and broader task-independent memory
+training must be resolved before scaling training further.
+
+### Historical V56 decoder experiment
+
+V56 froze the V50 memory parameters and trained a separate structured
+`.bnanswer` decoder with Python-only slot retrieval and prompt injection. It
+reached free-generation F1 of 46.57% on a fixed 64-sample subset and 44.53% on
+the 390-sample held-out set on September 4, 2026.
+
+Those measurements are retained as experiment history, but they are answer
+decoder results rather than improvements to the deployable memory model. They
+must not be reported as the accuracy of `C runtime + .bnmem`.
+
+Older 90-case results obtained while session KV reuse was enabled are not valid
+memory-only measurements and are intentionally not reported. The C reference
+protocol test now rejects a persistence run if `cached_tokens` or
+`reused_tokens` is non-zero.
+
+### C runtime serving
+
+The C-compatible `.bnmem` path can be served without Python:
 
 ```sh
 mkdir -p build/memory-states
 ./build/openai_server models/bitcpm4-3b-tq2_0.gguf \
-  --memory-model models/metis_v13_svd.bnmem \
+  --memory-model build/memory-model.bnmem \
   --memory-state-dir build/memory-states
 ```
 
-Each HTTP session gets its own memory state (reset on session start, commit on
-each exchange). Stateless requests bypass memory entirely. Without
-`--memory-model`, inference follows the original bit-exact path.
+Each HTTP session gets independent committed memory state. Without
+`--memory-model`, the normal inference path remains unchanged.
 
-### Export and import session memory
-
-The server exposes persistence endpoints only when `--memory-state-dir` is set.
-The client supplies a session ID; the server validates it and resolves the
-snapshot inside that directory, so requests cannot choose arbitrary filesystem
-paths.
+The server exposes persistence endpoints only when `--memory-state-dir` is set:
 
 ```sh
-# Export build/memory-states/demo-session.bnstate
 curl -sS http://127.0.0.1:8080/v1/memory/export \
   -H 'Content-Type: application/json' \
   -d '{"session_id":"demo-session"}'
 
-# The same command works after a complete server restart. Import creates the
-# session when necessary and restores its committed M/S state.
+# This may be called after restarting the server.
 curl -sS http://127.0.0.1:8080/v1/memory/import \
   -H 'Content-Type: application/json' \
   -d '{"session_id":"demo-session"}'
 ```
 
 Snapshots contain committed M/S state only; pending capture rows and KV cache
-are not persisted. Imports validate the format version, memory geometry, layer
-IDs, payload sizes, and CRCs before replacing the current state. A failed import
-leaves the existing memory unchanged.
+are not persisted. Import validates the format, memory geometry, layer IDs,
+payload sizes, and CRCs before replacing the current state. A failed import
+leaves the existing state unchanged.
 
-Embedding applications can use the same functionality directly:
+Embedding applications can use the same operations directly:
 
 ```c
 bitnet_memory_export(ctx, "session.bnstate");
 bitnet_memory_import(ctx, "session.bnstate");
 ```
 
-The context must already be attached to the same compatible memory model with
+The context must already be attached to a compatible memory model with
 `bitnet_context_attach_memory`.
 
-### Verify persistence accuracy
+### Memory code map
 
-This test first creates and exports all 90 session memories, terminates the
-server, starts a new server, imports every snapshot, and then scores queries:
-
-```sh
-python3 tests/eval_reference_protocol.py \
-  build/openai_server \
-  models/bitcpm4-3b-tq2_0.gguf \
-  models/metis_v13_svd.bnmem \
-  --protocol explicit --n-per-op 30 --persistence
-```
-
-Temporary state files are removed automatically after the run.
-
-### Results
-
-Trained model (v13, gamma=0.7, 12000 steps, 6000 samples, seed 42) evaluated on the project's own harder eval set:
-
-| Eval protocol | remember | update | forget | distract | multi_entity | Overall |
-|---|---|---|---|---|---|---|
-| Reference explicit (90 cases) | 30/30 | 30/30 | 30/30 | — | — | **90/90 = 100%** |
-| Reference implicit (90 cases) | 30/30 | 30/30 | 30/30 | — | — | **90/90 = 100%** |
-| Restart persistence (90 cases) | 30/30 | 30/30 | 30/30 | — | — | **90/90 = 100%** |
-
-This model scores 100% on both reference protocols. Model file: 278 MB (SVD-128 query).
-
-### Memory model files
-
-- `python/train_memory.py` — trainer (torch, GPU)
-- `python/train_data.py` — data loading / tokenizer bridge
-- `python/bnmem_export.py` — .bnmem writer (v1 format, SVD-128 native)
-- `python/ggw.py` + `python/ggwshim.c` — GGUF → torch weight bridge
-- `python/torch_backbone.py` — torch backbone for training
-- `src/metis/metis_file.{h,c}` — `.bnmem` model loading, `.bnstate` session snapshots, and runtime memory math
-- `tools/tok_probe.c` — persistent tokenizer for the trainer
+- `scripts/train_locomo_v70_memory_model.sh` — deployable memory-only training
+- `scripts/train_locomo_v56.sh` — historical V56 decoder experiment
+- `python/train_memory.py` — torch/GPU memory trainer
+- `python/answer_decoder.py` — experimental Python answer decoder
+- `python/memory_retrieval.py` — slot-attention excerpt retrieval
+- `python/train_memory_layer_router.py` — retrieval-layer router training
+- `python/eval_bnmem_torch_jsonl.py` — no-KV memory-model JSONL evaluator
+- `python/train_data.py` — dataset and tokenizer bridge
+- `python/bnmem_export.py` — `.bnmem` reader/writer and low-rank export
+- `python/ggw.py` and `python/ggwshim.c` — GGUF-to-torch weight bridge
+- `python/torch_backbone.py` — frozen torch backbone used during training
+- `python/tok_probe.c` — persistent C tokenizer bridge
+- `src/metis/metis_file.{h,c}` — C model loading, runtime math, and `.bnstate`
+  serialization

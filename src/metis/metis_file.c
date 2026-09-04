@@ -1,13 +1,14 @@
 /* metis_file.c -- Metis memory model: file format + runtime math.
  *
- * File layout (little-endian), magic "BNMEM3\0\0" (8 bytes):
- *   u32 version (=3)
+ * File layout (little-endian), magic "BNMEM1\0\0" or "BNMEM2\0\0":
+ *   u32 version (=1 legacy unbound, =2 backbone-bound)
  *   u32 n_layers
  *   u32 layer_ids[32]        (unused slots = 0xFFFFFFFF)
  *   u32 d_model, kv_dim, q_dim, head_dim
  *   f32 gamma, tau, rho
  *   u32 k_min
  *   f32 gdu_ab, gdu_bb, beta_scale
+ *   v2 only: u8 backbone_sha256[32]
  *   tensor payloads in fixed order (all f32, row-major, layer-major):
  *     wk       [n_layers x kv_dim*d_model]
  *     wv       [n_layers x kv_dim*d_model]
@@ -42,12 +43,19 @@
 
 #define METIS_FILE_VERSION_3 3u
 #define METIS_FILE_VERSION 1u
+#define METIS_BOUND_FILE_VERSION 2u
 #define METIS_MAX_LAYERS 32
 #define METIS_HDR_MAGIC_LEN 8u
 #define METIS_UNUSED_LAYER 0xFFFFFFFFu
+#define METIS_QUERY_ADD_BACKBONE 0x80000000u
+#define METIS_QUERY_RANK_MASK 0x0000FFFFu
+#define METIS_KV_RANK_MASK 0x7FFF0000u
+#define METIS_KV_RANK_SHIFT 16u
 
 static const uint8_t METIS_MAGIC[METIS_HDR_MAGIC_LEN] =
     { 'B', 'N', 'M', 'E', 'M', '1', 0, 0 };
+static const uint8_t METIS_BOUND_MAGIC[METIS_HDR_MAGIC_LEN] =
+    { 'B', 'N', 'M', 'E', 'M', '2', 0, 0 };
 /* Accept BNMEM5 as well (same v1 format, written by the converter before
  * the rename from v5 to v1; the writer now emits BNMEM1). */
 static const uint8_t METIS_MAGIC_5[METIS_HDR_MAGIC_LEN] =
@@ -141,9 +149,11 @@ enum {
     T_QUERY_NORM, /* v4/v5: f32[n_layers x head_dim] */
     T_QUERY_A,    /* v5 only: f32[n_layers x (q_dim*query_rank)] */
     T_QUERY_B,    /* v5 only: f32[n_layers x (query_rank*d_model)] */
+    T_WK_A,       /* low-rank K: f32[n_layers x (kv_dim*kv_rank)] */
+    T_WK_B,       /* low-rank K: f32[n_layers x (kv_rank*d_model)] */
+    T_WV_A,       /* low-rank V: f32[n_layers x (kv_dim*kv_rank)] */
+    T_WV_B,       /* low-rank V: f32[n_layers x (kv_rank*d_model)] */
     T_TENSOR_COUNT,
-    T_TENSOR_COUNT_V5 = 9,  /* v3's six + qnorm + qa + qb (no qproj) */
-    T_TENSOR_COUNT_V3 = 6
 };
 
 typedef struct {
@@ -178,6 +188,18 @@ static void metis_build_tinfo(const metis_params_t *p,
     metis_tinfo_fill(&ti[T_QUERY_B], "query_b", NL,
                   (uint64_t)(p->query_rank > 0 ? p->query_rank : 1) *
                   p->d_model);
+    metis_tinfo_fill(&ti[T_WK_A], "wk_a", NL,
+                  (uint64_t)p->kv_dim *
+                  (uint64_t)(p->kv_rank > 0 ? p->kv_rank : 1));
+    metis_tinfo_fill(&ti[T_WK_B], "wk_b", NL,
+                  (uint64_t)(p->kv_rank > 0 ? p->kv_rank : 1) *
+                  p->d_model);
+    metis_tinfo_fill(&ti[T_WV_A], "wv_a", NL,
+                  (uint64_t)p->kv_dim *
+                  (uint64_t)(p->kv_rank > 0 ? p->kv_rank : 1));
+    metis_tinfo_fill(&ti[T_WV_B], "wv_b", NL,
+                  (uint64_t)(p->kv_rank > 0 ? p->kv_rank : 1) *
+                  p->d_model);
 }
 
 static const void *metis_tensor_ptr(const metis_params_t *p, int idx) {
@@ -192,8 +214,38 @@ static const void *metis_tensor_ptr(const metis_params_t *p, int idx) {
     case T_QUERY_A:    return p->query_a;
     case T_QUERY_B:    return p->query_b;
     case T_QUERY_NORM: return p->query_norm;
+    case T_WK_A:       return p->wk_a;
+    case T_WK_B:       return p->wk_b;
+    case T_WV_A:       return p->wv_a;
+    case T_WV_B:       return p->wv_b;
     default:          return NULL;
     }
+}
+
+static int metis_build_tmap(const metis_params_t *p,
+                            int tmap[T_TENSOR_COUNT]) {
+    int n = 0;
+    if (p->kv_rank > 0) {
+        tmap[n++] = T_WK_A;
+        tmap[n++] = T_WK_B;
+        tmap[n++] = T_WV_A;
+        tmap[n++] = T_WV_B;
+    } else {
+        tmap[n++] = T_WK;
+        tmap[n++] = T_WV;
+    }
+    tmap[n++] = T_W_AGG;
+    tmap[n++] = T_GDU_AW;
+    tmap[n++] = T_GDU_BW;
+    tmap[n++] = T_MEM_NORM;
+    tmap[n++] = T_QUERY_NORM;
+    if (p->query_rank > 0) {
+        tmap[n++] = T_QUERY_A;
+        tmap[n++] = T_QUERY_B;
+    } else {
+        tmap[n++] = T_QUERY_PROJ;
+    }
+    return n;
 }
 
 /* ------------------------------------------------------------------ */
@@ -229,7 +281,6 @@ static void *metis_xcalloc(uint64_t n) {
 /* alloc / free                                                        */
 /* ------------------------------------------------------------------ */
 
-/* v5 alloc: v4 minus the folded query_proj, plus rank-r factors. */
 int metis_model_alloc(metis_file_model_t *m, int n_layers,
                             const int *layer_ids, int d_model, int kv_dim,
                             int q_dim, int head_dim, float gamma, float tau,
@@ -237,7 +288,7 @@ int metis_model_alloc(metis_file_model_t *m, int n_layers,
                             int denom_plus_one, int query_rank) {
     metis_params_t *p = &m->params;
     if (m == NULL || layer_ids == NULL) return -1;
-    if (query_rank <= 0 || query_rank > q_dim || query_rank > d_model)
+    if (query_rank < 0 || query_rank > q_dim || query_rank > d_model)
         return -1;
     memset(m, 0, sizeof *m);
     p->n_layers = n_layers;
@@ -261,15 +312,24 @@ int metis_model_alloc(metis_file_model_t *m, int n_layers,
         metis_model_free_arrays(m);
         return -1;
     }
-    p->denom_plus_one = denom_plus_one ? 1 : 0;
+    p->denom_plus_one = denom_plus_one;
     p->gdu_ab_v = metis_xcalloc(NL);
     p->gdu_bb_v = metis_xcalloc(NL);
     p->query_norm = metis_xcalloc(NL * head_dim);
     p->query_rank = query_rank;
-    p->query_a = metis_xcalloc(NL * (uint64_t)q_dim * (uint64_t)query_rank);
-    p->query_b = metis_xcalloc(NL * (uint64_t)query_rank * d_model);
+    p->kv_rank = 0;
+    if (query_rank > 0) {
+        p->query_a = metis_xcalloc(
+            NL * (uint64_t)q_dim * (uint64_t)query_rank);
+        p->query_b = metis_xcalloc(
+            NL * (uint64_t)query_rank * d_model);
+    } else {
+        p->query_proj = metis_xcalloc(
+            NL * (uint64_t)q_dim * (uint64_t)d_model);
+    }
     if (!p->gdu_ab_v || !p->gdu_bb_v || !p->query_norm ||
-        !p->query_a || !p->query_b) {
+        (query_rank > 0 && (!p->query_a || !p->query_b)) ||
+        (query_rank == 0 && !p->query_proj)) {
         metis_model_free_arrays(m);
         return -1;
     }
@@ -294,6 +354,10 @@ void metis_model_free_arrays(metis_file_model_t *m) {
     free(p->query_norm); p->query_norm = NULL;
     free(p->query_a); p->query_a = NULL;
     free(p->query_b); p->query_b = NULL;
+    free(p->wk_a); p->wk_a = NULL;
+    free(p->wk_b); p->wk_b = NULL;
+    free(p->wv_a); p->wv_a = NULL;
+    free(p->wv_b); p->wv_b = NULL;
     memset(m, 0, sizeof *m);
 }
 
@@ -315,28 +379,33 @@ int metis_model_save(const metis_file_model_t *m, const char *path) {
                     p->q_dim, p->head_dim, p->gamma, p->tau, p->rho) != 0)
         return -1;
     if (p->gdu_ab_v == NULL || p->gdu_bb_v == NULL ||
-        p->query_norm == NULL || p->query_a == NULL || p->query_b == NULL)
+        p->query_norm == NULL ||
+        (p->kv_rank > 0 &&
+         (p->wk_a == NULL || p->wk_b == NULL ||
+          p->wv_a == NULL || p->wv_b == NULL)) ||
+        (p->kv_rank == 0 && (p->wk == NULL || p->wv == NULL)) ||
+        (p->query_rank > 0 &&
+         (p->query_a == NULL || p->query_b == NULL)) ||
+        (p->query_rank == 0 && p->query_proj == NULL))
         return -1;
 
     FILE *f = fopen(path, "wb");
     if (f == NULL) return -1;
 
     int tmap[T_TENSOR_COUNT];
-    {
-        const int order[T_TENSOR_COUNT_V5] = {
-            T_WK, T_WV, T_W_AGG, T_GDU_AW, T_GDU_BW, T_MEM_NORM,
-            T_QUERY_NORM, T_QUERY_A, T_QUERY_B,
-        };
-        for (int i = 0; i < T_TENSOR_COUNT_V5; ++i) tmap[i] = order[i];
-    }
-    const int n_tensors = T_TENSOR_COUNT_V5;
+    int n_tensors = metis_build_tmap(p, tmap);
     metis_tinfo_t ti[T_TENSOR_COUNT];
     metis_build_tinfo((metis_params_t *)p, ti);
 
     uint64_t off = 0;
-    if (metis_w_bytes(f, METIS_MAGIC, METIS_HDR_MAGIC_LEN) != 0) goto io_fail;
+    const uint8_t *magic =
+        p->has_backbone_sha256 ? METIS_BOUND_MAGIC : METIS_MAGIC;
+    uint32_t version =
+        p->has_backbone_sha256 ? METIS_BOUND_FILE_VERSION :
+                                 METIS_FILE_VERSION;
+    if (metis_w_bytes(f, magic, METIS_HDR_MAGIC_LEN) != 0) goto io_fail;
     off += METIS_HDR_MAGIC_LEN;
-    if (metis_w_u32(f, METIS_FILE_VERSION) != 0) goto io_fail;   off += 4;
+    if (metis_w_u32(f, version) != 0) goto io_fail;   off += 4;
     if (metis_w_u32(f, (uint32_t)p->n_layers) != 0) goto io_fail; off += 4;
     for (int i = 0; i < METIS_MAX_LAYERS; ++i) {
         uint32_t id = (i < p->n_layers) ? (uint32_t)p->layer_ids[i]
@@ -355,10 +424,24 @@ int metis_model_save(const metis_file_model_t *m, const char *path) {
     if (metis_w_f32(f, p->gdu_ab) != 0) goto io_fail;               off += 4;
     if (metis_w_f32(f, p->gdu_bb) != 0) goto io_fail;               off += 4;
     if (metis_w_f32(f, p->beta_scale) != 0) goto io_fail;           off += 4;
-    if (metis_w_u32(f, p->denom_plus_one ? 1u : 0u) != 0) goto io_fail;
+    if (metis_w_u32(f, (uint32_t)p->denom_plus_one) != 0) goto io_fail;
     off += 4;
-    if (metis_w_u32(f, (uint32_t)p->query_rank) != 0) goto io_fail;
+    {
+        uint32_t encoded_rank =
+            ((uint32_t)p->query_rank & METIS_QUERY_RANK_MASK) |
+            (((uint32_t)p->kv_rank << METIS_KV_RANK_SHIFT) &
+             METIS_KV_RANK_MASK);
+        if (p->query_add_backbone)
+            encoded_rank |= METIS_QUERY_ADD_BACKBONE;
+        if (metis_w_u32(f, encoded_rank) != 0) goto io_fail;
+    }
     off += 4;
+    if (p->has_backbone_sha256) {
+        if (metis_w_bytes(
+                f, p->backbone_sha256, sizeof p->backbone_sha256) != 0)
+            goto io_fail;
+        off += sizeof p->backbone_sha256;
+    }
     for (int i = 0; i < p->n_layers; ++i) {
         if (metis_w_f32(f, p->gdu_ab_v[i]) != 0) goto io_fail;  off += 4;
     }
@@ -406,6 +489,7 @@ int metis_file_probe(const char *path) {
     uint8_t magic[METIS_HDR_MAGIC_LEN];
     int ok = metis_r_bytes(f, magic, sizeof magic) == 0 &&
              (memcmp(magic, METIS_MAGIC, sizeof magic) == 0 ||
+              memcmp(magic, METIS_BOUND_MAGIC, sizeof magic) == 0 ||
               memcmp(magic, METIS_MAGIC_5, sizeof magic) == 0);
     fclose(f);
     return ok ? 1 : 0;
@@ -444,6 +528,7 @@ metis_file_model_t *metis_model_load(const char *path,
     if (metis_r_bytes(f, magic, sizeof magic) != 0) METIS_FAIL("truncated header");
     off += sizeof magic;
     if (memcmp(magic, METIS_MAGIC, sizeof magic) != 0 &&
+    memcmp(magic, METIS_BOUND_MAGIC, sizeof magic) != 0 &&
     memcmp(magic, METIS_MAGIC_5, sizeof magic) != 0)
         METIS_FAIL("bad magic (not a metis bnmem file)");
 
@@ -454,6 +539,8 @@ metis_file_model_t *metis_model_load(const char *path,
      * layout is identical; accept only the matching legacy magic/version
      * pair so unrelated version numbers still fail closed. */
     if (version != METIS_FILE_VERSION &&
+        !(version == METIS_BOUND_FILE_VERSION &&
+          memcmp(magic, METIS_BOUND_MAGIC, sizeof magic) == 0) &&
         !(version == 5u && memcmp(magic, METIS_MAGIC_5, sizeof magic) == 0))
         METIS_FAIL("unsupported version %u", version);
     if (metis_r_u32(f, &n_layers) != 0) METIS_FAIL("truncated header");
@@ -500,14 +587,35 @@ metis_file_model_t *metis_model_load(const char *path,
     off += 3 * 4;
 
     uint32_t denom_plus_one = 0;
-    uint32_t query_rank = 0;
+    uint32_t encoded_query_rank = 0;
     if (metis_r_u32(f, &denom_plus_one) != 0) METIS_FAIL("truncated header");
-    if (denom_plus_one > 1u) METIS_FAIL("denom_plus_one flag %u", denom_plus_one);
+    if (denom_plus_one > 2u) METIS_FAIL("denominator mode %u", denom_plus_one);
     off += 4;
-    if (metis_r_u32(f, &query_rank) != 0) METIS_FAIL("truncated header");
-    if (query_rank == 0 || query_rank > q_dim || query_rank > d_model)
+    if (metis_r_u32(f, &encoded_query_rank) != 0)
+        METIS_FAIL("truncated header");
+    int query_add_backbone =
+        (encoded_query_rank & METIS_QUERY_ADD_BACKBONE) != 0;
+    uint32_t query_rank =
+        encoded_query_rank & METIS_QUERY_RANK_MASK;
+    uint32_t kv_rank =
+        (encoded_query_rank & METIS_KV_RANK_MASK) >>
+        METIS_KV_RANK_SHIFT;
+    if (query_add_backbone && query_rank == 0)
+        METIS_FAIL("full query cannot use backbone-delta mode");
+    if (query_rank > q_dim || query_rank > d_model)
         METIS_FAIL("query_rank %u out of range", query_rank);
+    if (kv_rank > kv_dim || kv_rank > d_model)
+        METIS_FAIL("kv_rank %u out of range", kv_rank);
     off += 4;
+    uint8_t backbone_sha256[32];
+    int has_backbone_sha256 =
+        version == METIS_BOUND_FILE_VERSION;
+    memset(backbone_sha256, 0, sizeof backbone_sha256);
+    if (has_backbone_sha256) {
+        if (metis_r_bytes(f, backbone_sha256, sizeof backbone_sha256) != 0)
+            METIS_FAIL("truncated backbone SHA-256");
+        off += sizeof backbone_sha256;
+    }
 
     if (d_model != (uint32_t)d_model_expected)
         METIS_FAIL("d_model mismatch: file %u, expected %d", d_model,
@@ -535,28 +643,40 @@ metis_file_model_t *metis_model_load(const char *path,
                           gamma, tau, rho, (int)k_min, beta_scale,
                           (int)denom_plus_one, (int)query_rank) != 0)
         METIS_FAIL("model allocation failed");
-    for (int i = 0; i < (int)n_layers; ++i) {
-        float a = 0, b = 0;
-        if (metis_r_f32(f, &a) != 0) METIS_FAIL("truncated header");
-        if (metis_r_f32(f, &b) != 0) METIS_FAIL("truncated header");
-        m->params.gdu_ab_v[i] = a;
-        m->params.gdu_bb_v[i] = b;
+    m->params.query_add_backbone = query_add_backbone;
+    m->params.has_backbone_sha256 = has_backbone_sha256;
+    if (has_backbone_sha256)
+        memcpy(m->params.backbone_sha256, backbone_sha256,
+               sizeof backbone_sha256);
+    if (kv_rank > 0) {
+        metis_params_t *p = &m->params;
+        free(p->wk); p->wk = NULL;
+        free(p->wv); p->wv = NULL;
+        p->kv_rank = (int)kv_rank;
+        p->wk_a = metis_xcalloc(
+            (uint64_t)n_layers * kv_dim * kv_rank);
+        p->wk_b = metis_xcalloc(
+            (uint64_t)n_layers * kv_rank * d_model);
+        p->wv_a = metis_xcalloc(
+            (uint64_t)n_layers * kv_dim * kv_rank);
+        p->wv_b = metis_xcalloc(
+            (uint64_t)n_layers * kv_rank * d_model);
+        if (p->wk_a == NULL || p->wk_b == NULL ||
+            p->wv_a == NULL || p->wv_b == NULL)
+            METIS_FAIL("low-rank K/V allocation failed");
     }
+    for (int i = 0; i < (int)n_layers; ++i)
+        if (metis_r_f32(f, &m->params.gdu_ab_v[i]) != 0)
+            METIS_FAIL("truncated alpha biases");
+    for (int i = 0; i < (int)n_layers; ++i)
+        if (metis_r_f32(f, &m->params.gdu_bb_v[i]) != 0)
+            METIS_FAIL("truncated beta biases");
     off += 2ull * n_layers * 4u;
     m->params.gdu_ab = m->params.gdu_ab_v[0];
     m->params.gdu_bb = m->params.gdu_bb_v[0];
 
-    /* tensor order: wk wv w_agg gdu_aw gdu_bw mem_norm
-     *               query_norm query_a query_b */
     int tmap[T_TENSOR_COUNT];
-    {
-        const int order[T_TENSOR_COUNT_V5] = {
-            T_WK, T_WV, T_W_AGG, T_GDU_AW, T_GDU_BW, T_MEM_NORM,
-            T_QUERY_NORM, T_QUERY_A, T_QUERY_B,
-        };
-        for (int i = 0; i < T_TENSOR_COUNT_V5; ++i) tmap[i] = order[i];
-    }
-    const int n_tensors = T_TENSOR_COUNT_V5;
+    int n_tensors = metis_build_tmap(&m->params, tmap);
     metis_tinfo_t ti[T_TENSOR_COUNT];
     metis_build_tinfo(&m->params, ti);
     uint64_t exp_offs[T_TENSOR_COUNT];
@@ -768,17 +888,17 @@ int metis_commit_states(const metis_params_t *p, int slot,
         return -1;
     }
 
-    /* SINGLE norm: h_all rows are the RAW residual; apply attn_norm once. */
+    /* SINGLE standard RMSNorm: normalize the RAW residual first, then apply
+     * the learned backbone norm weight. */
     for (int l = 0; l < L; ++l) {
         const float *h = h_all + (size_t)l * (size_t)d;
         float *hn = h_normed + (size_t)l * (size_t)d;
         float sum = 0.0f;
         for (int i = 0; i < d; ++i) {
-            hn[i] = h[i] * norm_w[i];
-            sum += hn[i] * hn[i];
+            sum += h[i] * h[i];
         }
         float inv = 1.0f / sqrtf(sum / (float)d + eps);
-        for (int i = 0; i < d; ++i) hn[i] *= inv;
+        for (int i = 0; i < d; ++i) hn[i] = h[i] * inv * norm_w[i];
     }
 
     /* scores + softmax(scores/tau) */
@@ -824,24 +944,74 @@ int metis_commit_states(const metis_params_t *p, int slot,
         for (int l = 0; l < k; ++l) w_sel[idx[l]] = probs[idx[l]] / mass;
     }
 
-    /* K/V projections (same layout as v3) */
-    const float *wk = p->wk + layer_off * (size_t)dk * (size_t)d;
-    const float *wv = p->wv + layer_off * (size_t)dv * (size_t)d;
-    for (int l = 0; l < L; ++l) {
-        const float *hn = h_normed + (size_t)l * (size_t)d;
-        float *k = K + (size_t)l * (size_t)dk;
-        float *v = V + (size_t)l * (size_t)dv;
-        for (int o = 0; o < dk; ++o) {
-            const float *row = wk + (size_t)o * (size_t)d;
-            float acc = 0.0f;
-            for (int i = 0; i < d; ++i) acc += row[i] * hn[i];
-            k[o] = acc;
+    /* K/V model projections.  Low-rank files execute A(Bh) directly;
+     * the dynamic M/S state below remains a full [kv,kv]/[kv] pair. */
+    if (p->kv_rank > 0) {
+        const int r = p->kv_rank;
+        const float *wk_a = p->wk_a +
+            layer_off * (size_t)dk * (size_t)r;
+        const float *wk_b = p->wk_b +
+            layer_off * (size_t)r * (size_t)d;
+        const float *wv_a = p->wv_a +
+            layer_off * (size_t)dv * (size_t)r;
+        const float *wv_b = p->wv_b +
+            layer_off * (size_t)r * (size_t)d;
+        float *kh = (float *)malloc((size_t)r * sizeof(float));
+        float *vh = (float *)malloc((size_t)r * sizeof(float));
+        if (kh == NULL || vh == NULL) {
+            free(kh); free(vh);
+            free(h_normed); free(K); free(V);
+            free(scores); free(probs); free(w_sel); free(beta_i);
+            return -1;
         }
-        for (int o = 0; o < dv; ++o) {
-            const float *row = wv + (size_t)o * (size_t)d;
-            float acc = 0.0f;
-            for (int i = 0; i < d; ++i) acc += row[i] * hn[i];
-            v[o] = acc;
+        for (int l = 0; l < L; ++l) {
+            const float *hn = h_normed + (size_t)l * (size_t)d;
+            float *k = K + (size_t)l * (size_t)dk;
+            float *v = V + (size_t)l * (size_t)dv;
+            for (int j = 0; j < r; ++j) {
+                float ka = 0.0f, va = 0.0f;
+                const float *kb = wk_b + (size_t)j * (size_t)d;
+                const float *vb = wv_b + (size_t)j * (size_t)d;
+                for (int i = 0; i < d; ++i) {
+                    ka += kb[i] * hn[i];
+                    va += vb[i] * hn[i];
+                }
+                kh[j] = ka;
+                vh[j] = va;
+            }
+            for (int o = 0; o < dk; ++o) {
+                float ka = 0.0f, va = 0.0f;
+                const float *karow = wk_a + (size_t)o * (size_t)r;
+                const float *varow = wv_a + (size_t)o * (size_t)r;
+                for (int j = 0; j < r; ++j) {
+                    ka += karow[j] * kh[j];
+                    va += varow[j] * vh[j];
+                }
+                k[o] = ka;
+                v[o] = va;
+            }
+        }
+        free(kh);
+        free(vh);
+    } else {
+        const float *wk = p->wk + layer_off * (size_t)dk * (size_t)d;
+        const float *wv = p->wv + layer_off * (size_t)dv * (size_t)d;
+        for (int l = 0; l < L; ++l) {
+            const float *hn = h_normed + (size_t)l * (size_t)d;
+            float *k = K + (size_t)l * (size_t)dk;
+            float *v = V + (size_t)l * (size_t)dv;
+            for (int o = 0; o < dk; ++o) {
+                const float *row = wk + (size_t)o * (size_t)d;
+                float acc = 0.0f;
+                for (int i = 0; i < d; ++i) acc += row[i] * hn[i];
+                k[o] = acc;
+            }
+            for (int o = 0; o < dv; ++o) {
+                const float *row = wv + (size_t)o * (size_t)d;
+                float acc = 0.0f;
+                for (int i = 0; i < d; ++i) acc += row[i] * hn[i];
+                v[o] = acc;
+            }
         }
     }
     {
@@ -941,8 +1111,8 @@ int metis_commit_states(const metis_params_t *p, int slot,
 }
 
 void metis_read(const metis_params_t *p, int slot,
-                      const float *h_raw, const float *M, const float *S,
-                      float *out) {
+                      const float *h_raw, const float *q_backbone,
+                      const float *M, const float *S, float *out) {
     /* Reference NormedReweightLearnedQuery read:
      * q = query_proj(h_raw)  [q_dim]  (h_raw = layer INPUT residual)
      * per head h: q_h <- RMSNorm(q_h * query_norm, head_dim, eps 1e-6)
@@ -985,7 +1155,8 @@ void metis_read(const metis_params_t *p, int slot,
         }
         for (int o = 0; o < p->q_dim; ++o) {
             const float *arow = qa + (size_t)o * (size_t)r;
-            float acc = 0.0f;
+            float acc = p->query_add_backbone && q_backbone != NULL ?
+                        q_backbone[o] : 0.0f;
             for (int k = 0; k < r; ++k) acc += arow[k] * hid[k];
             q[o] = acc;
         }
@@ -1024,6 +1195,7 @@ void metis_read(const metis_params_t *p, int slot,
         if (p->denom_plus_one) {
             float denom = 0.0f;
             for (int r = 0; r < dk; ++r) denom += qg[r] * S[r];
+            if (p->denom_plus_one == 2) denom = fabsf(denom);
             float inv = 1.0f / (denom + 1.0f);
             for (int c = 0; c < dv; ++c) {
                 float acc = 0.0f;

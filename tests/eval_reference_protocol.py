@@ -200,10 +200,19 @@ def main():
                         "max_tokens": 1,
                         "messages": [{"role": "user", "content": s[m]}],
                     })
-            ans = response_text(request_json(base, {
+            response = request_json(base, {
                 "session_id": sid, "max_tokens": 24,
                 "messages": [{"role": "user", "content": s["query"]}],
-            }))
+            })
+            if persistence:
+                session = response.get("session", {})
+                cached = session.get("cached_tokens", 0)
+                reused = session.get("reused_tokens", 0)
+                if cached != 0 or reused != 0:
+                    raise RuntimeError(
+                        f"session {sid} reused KV cache: "
+                        f"cached_tokens={cached}, reused_tokens={reused}")
+            ans = response_text(response)
             if s["gold"] is not None:
                 ok = any(g.lower() in ans.lower() for g in s["gold"])
             else:

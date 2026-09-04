@@ -31,6 +31,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ggw import GGUFWeights
+from model_identity import sha256_file
 
 
 @dataclass
@@ -62,14 +63,23 @@ def rope_tables(cfg: BackboneConfig, positions: torch.Tensor,
                 device, dtype=torch.float32):
     """cos/sin [T, rope_dim/2] matching the C cache build:
     theta_j = 1/(base^(2j/head_dim)) / factors[j]; angle = pos*theta."""
-    j = torch.arange(cfg.rope_dim // 2, dtype=torch.float64, device=device)
+    # MPS does not implement float64.  CUDA/CPU retain the higher-precision
+    # table construction used by the parity tests; Apple GPU evaluation uses
+    # float32, matching the C runtime's stored rope cache precision.
+    work_dtype = (
+        torch.float32 if torch.device(device).type == "mps"
+        else torch.float64)
+    j = torch.arange(cfg.rope_dim // 2, dtype=work_dtype, device=device)
     theta = 1.0 / torch.pow(
-        torch.tensor(float(cfg.rope_freq_base), dtype=torch.float64, device=device),
+        torch.tensor(
+            float(cfg.rope_freq_base), dtype=work_dtype, device=device),
         (2.0 * j / cfg.head_dim))
     if cfg.rope_factors is not None:
-        f = cfg.rope_factors.to(device=device, dtype=torch.float64)
+        f = cfg.rope_factors.to(device=device, dtype=work_dtype)
         theta = torch.where(f > 0, theta / f, theta)
-    ang = positions.to(device=device, dtype=torch.float64).unsqueeze(1) * theta.unsqueeze(0)
+    ang = (
+        positions.to(device=device, dtype=work_dtype).unsqueeze(1)
+        * theta.unsqueeze(0))
     return ang.cos().to(dtype), ang.sin().to(dtype)
 
 
@@ -105,6 +115,7 @@ class TorchBackbone(nn.Module):
 
     def __init__(self, gw: GGUFWeights, device="cuda", dtype=torch.bfloat16):
         super().__init__()
+        self.gguf_path = gw.gguf_path
         self.cfg = BackboneConfig(
             n_layers=gw.n_layers, hidden=gw.hidden, q_dim=gw.q_dim,
             kv_dim=gw.kv_dim, ffn=gw.ffn, vocab=gw.vocab, rope_dim=gw.rope_dim,
@@ -141,6 +152,21 @@ class TorchBackbone(nn.Module):
         out = torch.from_numpy(gw.get_f32("output.weight",
                                           (gw.vocab, gw.hidden)).copy())
         self.out_proj = out.to(device=device, dtype=dtype)
+        self.backbone_lora = None
+        self.output_lora = None
+        self.answer_decoder = None
+
+    def model_sha256(self) -> bytes:
+        return sha256_file(self.gguf_path)
+
+    def linear(self, hidden, weight, block_index, layer_id):
+        output = F.linear(hidden, weight)
+        if self.backbone_lora is not None:
+            delta = self.backbone_lora.delta(
+                block_index, layer_id, hidden)
+            if delta is not None:
+                output = output + delta.to(output.dtype)
+        return output
 
     def _norm(self, gw, i, kind):
         arr = gw.get_f32(f"blk.{i}.{kind}.weight", (gw.hidden,))
@@ -152,7 +178,8 @@ class TorchBackbone(nn.Module):
 
     def forward(self, tokens: torch.Tensor, start_pos: int = 0,
                 memory=None, logits_all: bool = False,
-                fuse_start: int = 0, memory_v6=None):
+                fuse_start: int = 0, memory_v6=None,
+                return_hidden: bool = False):
         """Grad scope: ALL backbone weights are requires_grad=False, so
         autograd flows only through activations the memory module touches.
         Callers wrap in torch.no_grad() for pure eval; for training, the
@@ -168,7 +195,9 @@ class TorchBackbone(nn.Module):
         apply only to tokens with index >= fuse_start (full-prefix replay:
         earlier tokens must behave as they did when first processed, with
         memory inactive).
-        Returns logits [T, vocab] if logits_all else [vocab]."""
+        Returns normalized hidden states [T, hidden] when
+        return_hidden=True; otherwise logits [T, vocab] if logits_all else
+        [vocab]."""
         cfg = self.cfg
         T = tokens.shape[0]
         device = self.device
@@ -186,9 +215,12 @@ class TorchBackbone(nn.Module):
             resid = h
             hn = rms_norm(h, L["attn_norm"], cfg.rms_eps)  # bf16
 
-            q = F.linear(hn, L["q"]).view(T, cfg.n_heads, cfg.head_dim).transpose(0, 1)
-            k = F.linear(hn, L["k"]).view(T, cfg.n_kv_heads, cfg.head_dim).transpose(0, 1)
-            v = F.linear(hn, L["v"]).view(T, cfg.n_kv_heads, cfg.head_dim).transpose(0, 1)
+            q = self.linear(hn, L["q"], bi, 0).view(
+                T, cfg.n_heads, cfg.head_dim).transpose(0, 1)
+            k = self.linear(hn, L["k"], bi, 1).view(
+                T, cfg.n_kv_heads, cfg.head_dim).transpose(0, 1)
+            v = self.linear(hn, L["v"], bi, 2).view(
+                T, cfg.n_kv_heads, cfg.head_dim).transpose(0, 1)
             q_pre = q                                        # pre-RoPE [H, T, hd]
 
             q = apply_rope_hf(q, cos, sin)
@@ -207,7 +239,7 @@ class TorchBackbone(nn.Module):
                 # whole sequences in Phase A so this branch is unused.
                 raise NotImplementedError("start_pos != 0 requires KV cache")
             attn = att.transpose(0, 1).reshape(T, cfg.q_dim)  # [T, q_dim]
-            down = F.linear(attn, L["o"])                    # [T, D] bf16
+            down = self.linear(attn, L["o"], bi, 3)          # [T, D] bf16
 
             if is_last and memory is not None:
                 # capture attn-normed rows for the commit (C runtime captures
@@ -232,8 +264,7 @@ class TorchBackbone(nn.Module):
                     # v4 read input: the layer's INPUT residual (raw, not
                     # normed) — the reference query_proj's input domain.
                     h_raw_cur = resid if fuse_start == 0 else resid[fuse_start:]
-                    hn_cur = hn if fuse_start == 0 else hn[fuse_start:]
-                    v6_caps.append((slot, hn_cur, h_raw_cur))
+                    v6_caps.append((slot, h_raw_cur))
                     if v6.active:
                         if fuse_start > 0:
                             down_fused = v6.fuse(slot, down[fuse_start:], h_raw_cur)
@@ -246,10 +277,10 @@ class TorchBackbone(nn.Module):
 
             resid2 = h
             hn2 = rms_norm(h, L["ffn_norm"], cfg.rms_eps)
-            g = F.linear(hn2, L["gate"])
-            u = F.linear(hn2, L["up"])
+            g = self.linear(hn2, L["gate"], bi, 4)
+            u = self.linear(hn2, L["up"], bi, 5)
             act = F.silu(g) * u
-            dout = F.linear(act, L["down"])
+            dout = self.linear(act, L["down"], bi, 6)
             h = resid2 + dout * cfg.residual_scale
 
         if v6 is not None and v6_caps:
@@ -257,9 +288,29 @@ class TorchBackbone(nn.Module):
             # slots that saw no fusion this call contributing nothing
             per_layer = [None] * v6.n_layers
             for entry in v6_caps:
-                per_layer[entry[0]] = entry[1]     # commit rows = hn
+                # The hyper-memory applies the layer input norm itself.
+                # Capturing the already-normalized rows here would apply
+                # input_layernorm twice and diverge from the deployment
+                # runtime as well as the paper's PreNorm(H) definition.
+                per_layer[entry[0]] = entry[1]
             v6.capture(per_layer)
 
         h = rms_norm(h, self.out_norm, cfg.rms_eps)
+        if return_hidden:
+            return h
+        if self.answer_decoder is not None:
+            memory_summary = (
+                (
+                    v6.answer_memory_layers()
+                    if self.answer_decoder.structured_memory
+                    else v6.answer_memory_summary()
+                )
+                if (
+                    v6 is not None
+                    and self.answer_decoder.memory_aware
+                ) else None)
+            h = self.answer_decoder(h, memory_summary)
         logits = F.linear(h, self.out_proj)
+        if self.output_lora is not None:
+            logits = logits + self.output_lora(h)
         return logits if logits_all else logits[-1]
