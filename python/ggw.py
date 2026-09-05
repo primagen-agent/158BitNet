@@ -57,28 +57,32 @@ class GGUFWeights:
         self.ffn = self.geometry["ffn"]
         self.vocab = self.geometry["vocab"]
         self.rope_dim = self.geometry["rope_dim"]
-        # rms eps from metadata (default 1e-6 like the C runtime)
-        self.rms_eps = 1e-6
-        t, v64, f64 = ctypes.c_uint32(), ctypes.c_uint64(), ctypes.c_double()
-        if self.lib.shim_meta(self.model, b"llama.attention.layer_norm_rms_epsilon",
-                              ctypes.byref(t), ctypes.byref(v64),
-                              ctypes.byref(f64)) == 0 and f64.value != 0.0:
-            self.rms_eps = f64.value
-        self.rope_freq_base = 10000.0
-        if self.lib.shim_meta(self.model, b"llama.rope.freq_base",
-                              ctypes.byref(t), ctypes.byref(v64),
-                              ctypes.byref(f64)) == 0 and f64.value != 0.0:
-            self.rope_freq_base = f64.value
-        self.n_heads = 0
-        if self.lib.shim_meta(self.model, b"llama.attention.head_count",
-                              ctypes.byref(t), ctypes.byref(v64),
-                              ctypes.byref(f64)) == 0:
-            self.n_heads = int(v64.value)
-        self.n_kv_heads = 0
-        if self.lib.shim_meta(self.model, b"llama.attention.head_count_kv",
-                              ctypes.byref(t), ctypes.byref(v64),
-                              ctypes.byref(f64)) == 0:
-            self.n_kv_heads = int(v64.value)
+        def meta_number(suffix: str, default, floating: bool):
+            for prefix in ("llama", "minicpm"):
+                t = ctypes.c_uint32()
+                v64 = ctypes.c_uint64()
+                f64 = ctypes.c_double()
+                rc = self.lib.shim_meta(
+                    self.model, f"{prefix}.{suffix}".encode(),
+                    ctypes.byref(t), ctypes.byref(v64), ctypes.byref(f64))
+                if rc == 0:
+                    return f64.value if floating else int(v64.value)
+            return default
+
+        self.rms_eps = meta_number(
+            "attention.layer_norm_rms_epsilon", 1e-6, True)
+        self.rope_freq_base = meta_number(
+            "rope.freq_base", 10000.0, True)
+        self.embedding_scale = meta_number(
+            "embedding_scale", 1.0, True)
+        self.residual_scale = meta_number(
+            "residual_scale", 1.0, True)
+        self.logit_scale = meta_number(
+            "logit_scale", 1.0, True)
+        self.n_heads = meta_number(
+            "attention.head_count", 0, False)
+        self.n_kv_heads = meta_number(
+            "attention.head_count_kv", 0, False)
         if self.n_heads == 0 or self.n_kv_heads == 0:
             raise RuntimeError("missing head counts in GGUF metadata")
         self.head_dim = self.q_dim // self.n_heads

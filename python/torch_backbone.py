@@ -49,6 +49,7 @@ class BackboneConfig:
     rms_eps: float
     rope_freq_base: float
     rope_factors: torch.Tensor | None = None   # [rope_dim/2] fp32 cpu
+    embedding_scale: float = 1.0
     residual_scale: float = 1.0
     logit_scale: float = 1.0
 
@@ -122,7 +123,10 @@ class TorchBackbone(nn.Module):
             n_heads=gw.n_heads, n_kv_heads=gw.n_kv_heads,
             head_dim=gw.head_dim, rms_eps=gw.rms_eps,
             rope_freq_base=gw.rope_freq_base,
-            rope_factors=None)
+            rope_factors=None,
+            embedding_scale=gw.embedding_scale,
+            residual_scale=gw.residual_scale,
+            logit_scale=gw.logit_scale)
         factors = gw.get_rope_factors("short")
         if factors is not None:
             self.cfg.rope_factors = torch.from_numpy(factors.copy())
@@ -149,8 +153,13 @@ class TorchBackbone(nn.Module):
             }
             self.layers.append(layer)
         self.out_norm = self._norm_out(gw)
-        out = torch.from_numpy(gw.get_f32("output.weight",
-                                          (gw.vocab, gw.hidden)).copy())
+        try:
+            output_array = gw.get_f32(
+                "output.weight", (gw.vocab, gw.hidden))
+        except RuntimeError:
+            output_array = gw.get_f32(
+                "token_embd.weight", (gw.vocab, gw.hidden))
+        out = torch.from_numpy(output_array.copy())
         self.out_proj = out.to(device=device, dtype=dtype)
         self.backbone_lora = None
         self.output_lora = None
@@ -201,7 +210,7 @@ class TorchBackbone(nn.Module):
         cfg = self.cfg
         T = tokens.shape[0]
         device = self.device
-        h = self.token_embd[tokens]                       # [T, D] bf16
+        h = self.token_embd[tokens] * cfg.embedding_scale  # [T, D] bf16
         positions = torch.arange(start_pos, start_pos + T, device=device)
         cos, sin = rope_tables(cfg, positions, device, torch.bfloat16)
         cos = cos.to(self.dtype)
@@ -313,4 +322,6 @@ class TorchBackbone(nn.Module):
         logits = F.linear(h, self.out_proj)
         if self.output_lora is not None:
             logits = logits + self.output_lora(h)
+        if cfg.logit_scale != 0.0:
+            logits = logits / cfg.logit_scale
         return logits if logits_all else logits[-1]

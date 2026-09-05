@@ -299,6 +299,39 @@ def forget_sample(index: int, split_salt: int, rng: random.Random) -> dict:
     }
 
 
+def memory_irrelevant_sample(
+    index: int, split_salt: int, rng: random.Random
+) -> dict:
+    name = entity(index + 8_000_000, split_salt)
+    attribute = ATTRIBUTES[(index * 17 + 6) % len(ATTRIBUTES)]
+    value = opaque_value(index + 8_000_000, split_salt)
+    first = f"marker{split_salt:02d}{index:04d}"
+    second = f"answer{split_salt:02d}{index:04d}"
+    return {
+        "sample_id": f"task4-normal-{split_salt}-{index:06d}",
+        "messages": [
+            chunk(
+                rng.choice(STORE_TEMPLATES).format(
+                    name=name, attribute=attribute, value=value
+                ),
+                rng.choice(ACK_TEMPLATES),
+            ),
+            chunk(
+                f"In the pair '{first} {second}', return only the word "
+                f"that follows {first}.",
+                second,
+            ),
+        ],
+        "query_turn_id": 1,
+        "metadata": {
+            "type": "normal",
+            "style": "memory_irrelevant",
+            "v2_task": "task4_normal",
+            "stage": 3,
+        },
+    }
+
+
 def write_jsonl(path: Path, samples: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
@@ -327,6 +360,8 @@ def build_split(
             multi_entity_sample(i, split_salt, rng)
             for i in range(stage2_count)
         ]
+        for sample in multi_entity:
+            sample["metadata"]["v2_task"] = "task3_multi_entity"
         distract = [
             distract_sample(i, split_salt, rng)
             for i in range(stage2_count)
@@ -342,8 +377,13 @@ def build_split(
             forget_sample(i, split_salt, rng)
             for i in range(stage3_count)
         ]
+        normal = [
+            memory_irrelevant_sample(i, split_salt, rng)
+            for i in range(stage3_count)
+        ]
         write_jsonl(output / split / "update_explicit.jsonl", updates)
         write_jsonl(output / split / "forget_explicit.jsonl", forgets)
+        write_jsonl(output / split / "task4_normal.jsonl", normal)
 
 
 def main() -> None:
@@ -388,8 +428,8 @@ def main() -> None:
                 "valid": args.valid * 2,
                 "stage2_train": args.stage2_train * 2,
                 "stage2_valid": args.stage2_valid * 2,
-                "stage3_train": args.stage3_train * 2,
-                "stage3_valid": args.stage3_valid * 2,
+                "stage3_train": args.stage3_train * 3,
+                "stage3_valid": args.stage3_valid * 3,
                 "train_valid_entity_overlap": 0,
                 "stage": (
                     "reconstruction_remember_multi_entity_distract_"

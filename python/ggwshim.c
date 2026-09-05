@@ -273,7 +273,7 @@ const shim_tensor_t *shim_find(shim_model_t *m, const char *name) {
     return NULL;
 }
 
-/* metadata lookup: returns 0 and fills *out_u64/*out_f64 on success */
+/* metadata lookup: returns 0 and fills out_u64 or out_f64 on success */
 int shim_meta(shim_model_t *m, const char *key, uint32_t *type_out,
               uint64_t *u64_out, double *f64_out) {
     if (m == NULL || key == NULL) return -1;
@@ -414,12 +414,14 @@ int shim_dequant_tensor(shim_model_t *m, const char *name, float *out,
 }
 
 /* geometry helper: out = {n_layers(block_count), hidden, kv_dim, q_dim,
- * ffn, vocab, rope_dim}. Derived from llama.* metadata with tensor-dims
+ * ffn, vocab, rope_dim}. Derived from architecture metadata with tensor-dims
  * fallback, matching bitnet.c's config reading. */
 int shim_geometry(shim_model_t *m, int out[7]) {
     if (m == NULL || out == NULL) return -1;
     uint64_t bc = 0, hidden = 0, kv = 0, qd = 0, ffn = 0, vocab = 0, rope = 0;
     shim_meta(m, "llama.block_count", NULL, &bc, NULL);
+    if (bc == 0)
+        shim_meta(m, "minicpm.block_count", NULL, &bc, NULL);
     shim_meta(m, "general.block_count", NULL, &bc, NULL);
     const shim_tensor_t *q = shim_find(m, "blk.0.attn_q.weight");
     const shim_tensor_t *k = shim_find(m, "blk.0.attn_k.weight");
@@ -432,12 +434,15 @@ int shim_geometry(shim_model_t *m, int out[7]) {
     ffn = gate->dims[1];
     vocab = embd->dims[1];
     rope = qd / (qd / hidden > 0 ? (qd / hidden) : 1); /* placeholder; refined below */
-    /* head_dim = q_dim / n_heads; n_heads from metadata; rope_dim from
-     * llama.rope.dimension_count (fallback head_dim) */
+    /* head_dim = q_dim / n_heads; rope_dim falls back to head_dim. */
     uint64_t n_heads = 0;
     shim_meta(m, "llama.attention.head_count", NULL, &n_heads, NULL);
+    if (n_heads == 0)
+        shim_meta(m, "minicpm.attention.head_count", NULL, &n_heads, NULL);
     uint64_t rope_dim = 0;
     shim_meta(m, "llama.rope.dimension_count", NULL, &rope_dim, NULL);
+    if (rope_dim == 0)
+        shim_meta(m, "minicpm.rope.dimension_count", NULL, &rope_dim, NULL);
     if (n_heads > 0) {
         uint64_t head_dim = qd / n_heads;
         rope = rope_dim > 0 ? rope_dim : head_dim;

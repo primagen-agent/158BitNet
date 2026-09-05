@@ -51,14 +51,13 @@ def load_memory(path, backbone, device=None, state_mode="delta",
     query_mode = (
         "backbone_delta"
         if checkpoint["query_add_backbone"] else "independent")
-    kv_rank = checkpoint["kv_rank"] or checkpoint["kv_dim"]
     memory = MetisMemory(
         backbone, checkpoint["layer_ids"],
         gamma=checkpoint["gamma"], tau=checkpoint["tau"],
         rho=checkpoint["rho"], k_min=checkpoint["k_min"],
         beta_scale=checkpoint["beta_scale"],
         query_rank=checkpoint["query_rank"], query_mode=query_mode,
-        kv_rank=kv_rank, denom_mode=denom_name,
+        kv_rank=checkpoint["kv_rank"], denom_mode=denom_name,
         query_gate_lambda=0.0, kv_gate_lambda=0.0,
         layer_gate_lambda=0.0,
         state_mode=state_mode, max_memory_slots=max_memory_slots,
@@ -66,21 +65,6 @@ def load_memory(path, backbone, device=None, state_mode="delta",
         device=device, dtype=torch.float32, seed=0)
     arrays = dict(checkpoint["tensors"])
     with torch.no_grad():
-        if checkpoint["kv_rank"] == 0:
-            for name in ("wk", "wv"):
-                a_target = getattr(memory, name + "_a")
-                b_target = getattr(memory, name + "_b")
-                source = arrays.pop(name)
-                for layer in range(memory.n_layers):
-                    # Legacy full K/V has rank <= kv_dim.  Identity @ W is
-                    # exact and avoids an expensive SVD during evaluation.
-                    a_target[layer].copy_(
-                        torch.eye(
-                            checkpoint["kv_dim"], device=device,
-                            dtype=a_target.dtype))
-                    b_target[layer].copy_(
-                        source[layer].to(
-                            device=device, dtype=b_target.dtype))
         for name, value in arrays.items():
             getattr(memory, name).copy_(
                 value.to(device=device, dtype=getattr(memory, name).dtype))

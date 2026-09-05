@@ -1,42 +1,14 @@
-"""train_memory.py -- Metis memory trainer (32 layers, GQA
-reads through frozen backbone q_proj/o_proj).
+"""Train a backbone-bound, per-layer Metis memory model.
 
-Mirrors the C runtime (src/metis/metis_file.{h,c}) EXACTLY:
-- One memory (M[kv,kv], S[kv]) per backbone layer.
-- Read (active tokens, every memory layer): q = frozen backbone q_proj @
-  h_normed (PRE-RoPE); per-head L2 normalize (head_dim); groups of
-  q_dim/kv_dim heads read the same per-layer M: out_g = (q~ M)/(q~ S),
-  NO +1, |q~ S| < 1e-8 -> zeros; concat groups -> [q_dim]; mem_norm =
-  RMSNorm(out * mem_norm_w, q_dim, eps 1e-6); fused = frozen bb o_proj @
-  mem_normed; attn' = gamma*attn + (1-gamma)*fused.
-  (The C side pushes the mem vector through the i8-quantized TQ2 o_proj
-  kernel; torch uses the dequantized bf16 o_proj — same accepted deviation
-  class as the Phase-A G2 parity, which agreed at cos 0.9997.)
-- Write (per exchange chunk, per layer): apply the layer's attn_norm once
-  to captured raw residuals, w_agg scores, softmax/tau,
-  StraightThroughAlphaTopP(rho, k_min)
-  inclusive-crossing hard select, K = L2normalize(h @ Wk)/sqrt(kv),
-  V = h @ Wv (SINGLE-layer projections [kv, d]),
-  alpha = sum w sigma(gdu_aw h + gdu_ab) / sum w,
-  beta_i = beta_scale sigma(gdu_bw h + gdu_bb),
-  GDU: M <- alpha M + sum outer(k, beta (V - alpha (k M_old))); km/ks
-  PRE-decay; S <- alpha S + sum k beta (1 - alpha (k S_old)).
-- Trainable per layer: SVD-factorized K/V and low-rank Q projections,
-  w_agg/gdu_aw/gdu_bw [d], mem_norm [q_dim]. K/V factors are initialized
-  from the leading singular triplets of the backbone projections. Dynamic
-  memory data M/S remains full-rank.
-- Differentiable NAS-NG: bottleneck-neuron gates search Q and shared K/V
-  ranks; straight-through binary layer gates search which memory layers to
-  retain. Architecture logits are optimized on held-out samples, separately
-  from ordinary weights.
-- Export: unified BNMEM1 stores low-rank Q/K/V factors directly and removes
-  thresholded layers. Memory-state export/import remains unchanged.
+The accuracy-first path follows the public MemTensor/Metis implementation:
+learned full-rank query/K/V projections, normalized GQA memory reads,
+StraightThrough AlphaTopP selection, gated-delta writes, five-task dynamic
+sampling, and a complete differentiable graph across dialogue chunks. The
+backbone stays frozen and KV cache is not used.
 
-Training protocol (reference-aligned): exchange chunks evaluated as
-full-prefix replays with fusion/capture gated to the current chunk
-(fuse_start); commit after each chunk; QUERY from a FRESH context
-(memory is the only fact source — v3 fix kept). Loss = NLL on query
-assistant tokens.
+Positive query/K/V ranks and NAS gates remain available only for later
+compression experiments. BNMEM export stores model parameters; dynamic
+memory contents are exported separately as BNSTATE data.
 """
 from __future__ import annotations
 
@@ -45,6 +17,7 @@ import json
 import math
 import os
 import random
+import shutil
 import sys
 import time
 import traceback
@@ -78,6 +51,62 @@ from backbone_lora import (
 # clamped to 1-1e-4, then log(p/(1-p)) = log(9999) ~ +9.2102 (sigmoid -> ~1).
 # (An earlier sign-flipped version produced -9.21 -> beta ~ 0 -> empty M/S.)
 LOGIT_CLAMPED_1 = math.log((1.0 - 1e-4) / 1e-4)        # ~ +9.2102
+
+
+TASK_WEIGHT_DEFAULTS = {
+    0: (0.25, 0.10),
+    1: (0.35, 0.25),
+    2: (0.20, 0.30),
+    3: (0.10, 0.20),
+    4: (0.10, 0.15),
+}
+
+
+def memory_task_id(stratum_name, sample):
+    """Map local memory data to the official five-task training schedule."""
+    metadata = sample.get("metadata", {})
+    v2_task = str(metadata.get("v2_task", ""))
+    if v2_task.startswith("task3") or stratum_name.startswith("task3"):
+        return 3
+    if v2_task.startswith("task4") or stratum_name.startswith("task4"):
+        return 4
+    if stratum_name == "multi_entity":
+        return 3
+    if stratum_name == "post_memory":
+        return 4
+    if "distract" in stratum_name:
+        return 2
+    if stratum_name == "reconstruction" or stratum_name.startswith(
+        "remember_"
+    ):
+        return 0
+    if stratum_name.startswith(("update_", "forget_", "reflect_")):
+        return 1
+    operation = str(metadata.get("type", ""))
+    style = str(metadata.get("style", ""))
+    if "distract" in style:
+        return 2
+    if operation == "reconstruction":
+        return 0
+    if operation in {"update", "forget", "reflection"}:
+        return 1
+    return 0
+
+
+def scheduled_task_weights(progress, available_tasks, starts, ends):
+    """Linearly anneal and normalize official task sampling weights."""
+    progress = min(max(float(progress), 0.0), 1.0)
+    raw = {
+        task: max(
+            0.0,
+            starts[task] + (ends[task] - starts[task]) * progress,
+        )
+        for task in available_tasks
+    }
+    total = sum(raw.values())
+    if total <= 0.0:
+        return {task: 1.0 / len(raw) for task in raw}
+    return {task: value / total for task, value in raw.items()}
 
 
 def straight_through_alpha_top_p(p, rho, k_min):
@@ -246,45 +275,63 @@ class MetisMemory(nn.Module):
         g = torch.Generator(device="cpu").manual_seed(seed)
         def zeros(*shape):
             return torch.zeros(*shape, device=device, dtype=dtype)
-        # trainable
-        if kv_rank < 1 or kv_rank > min(self.kv_dim, self.d_model):
+        # A zero rank selects the accuracy-first full-rank path. Positive
+        # ranks keep the legacy factorized path for later compression work.
+        if kv_rank < 0 or kv_rank > min(self.kv_dim, self.d_model):
             raise ValueError(
-                f"kv_rank {kv_rank} outside [1, "
+                f"kv_rank {kv_rank} outside [0, "
                 f"{min(self.kv_dim, self.d_model)}]")
         self.kv_rank = kv_rank
-        self.wk_a = nn.Parameter(zeros(NL, self.kv_dim, kv_rank))
-        self.wk_b = nn.Parameter(zeros(NL, kv_rank, self.d_model))
-        self.wv_a = nn.Parameter(zeros(NL, self.kv_dim, kv_rank))
-        self.wv_b = nn.Parameter(zeros(NL, kv_rank, self.d_model))
+        if kv_rank == 0:
+            self.wk = nn.Parameter(zeros(NL, self.kv_dim, self.d_model))
+            self.wv = nn.Parameter(zeros(NL, self.kv_dim, self.d_model))
+            self.wk_a = self.wk_b = None
+            self.wv_a = self.wv_b = None
+        else:
+            self.wk = self.wv = None
+            self.wk_a = nn.Parameter(zeros(NL, self.kv_dim, kv_rank))
+            self.wk_b = nn.Parameter(zeros(NL, kv_rank, self.d_model))
+            self.wv_a = nn.Parameter(zeros(NL, self.kv_dim, kv_rank))
+            self.wv_b = nn.Parameter(zeros(NL, kv_rank, self.d_model))
         self.w_agg = nn.Parameter(zeros(NL, self.d_model))
         self.gdu_aw = nn.Parameter(zeros(NL, self.d_model))
         self.gdu_bw = nn.Parameter(zeros(NL, self.d_model))
         self.mem_norm = nn.Parameter(torch.ones(NL, self.q_dim,
                                                 device=device, dtype=dtype))
-        # The memory query is trained directly as low-rank A(Bh), optionally
-        # as a delta on the frozen backbone projection.  The factors remain
-        # factorized in BNMEM1 and are independent of the full-rank dynamic
-        # memory state M.
-        if query_rank < 1 or query_rank > min(self.q_dim, self.d_model):
+        # Zero selects an independent full-rank query projection. Positive
+        # ranks use the legacy factorized query, optionally as a backbone
+        # residual.
+        if query_rank < 0 or query_rank > min(self.q_dim, self.d_model):
             raise ValueError(
-                f"query_rank {query_rank} outside [1, "
+                f"query_rank {query_rank} outside [0, "
                 f"{min(self.q_dim, self.d_model)}]")
         self.q_rank = query_rank
-        self.query_a = nn.Parameter(zeros(NL, self.q_dim, query_rank))
-        self.query_b = nn.Parameter(zeros(NL, query_rank, self.d_model))
-        with torch.no_grad():
-            for layer in range(NL):
-                init_b = torch.randn(
-                    query_rank, self.d_model, generator=g,
-                    dtype=torch.float32) / math.sqrt(self.d_model)
-                self.query_b[layer].copy_(
-                    init_b.to(device=device, dtype=dtype))
+        if query_rank == 0:
+            self.query_proj = nn.Parameter(
+                zeros(NL, self.q_dim, self.d_model))
+            self.query_a = self.query_b = None
+        else:
+            self.query_proj = None
+            self.query_a = nn.Parameter(
+                zeros(NL, self.q_dim, query_rank))
+            self.query_b = nn.Parameter(
+                zeros(NL, query_rank, self.d_model))
+            with torch.no_grad():
+                for layer in range(NL):
+                    init_b = torch.randn(
+                        query_rank, self.d_model, generator=g,
+                        dtype=torch.float32) / math.sqrt(self.d_model)
+                    self.query_b[layer].copy_(
+                        init_b.to(device=device, dtype=dtype))
         self.query_gate_lambda = query_gate_lambda
         self.query_gate_temperature = query_gate_temperature
         self.query_gate_threshold = query_gate_threshold
         self.query_gate_min_rank = query_gate_min_rank
         if query_mode not in {"backbone_delta", "independent"}:
             raise ValueError(f"unsupported query mode {query_mode}")
+        if query_rank == 0 and query_mode != "independent":
+            raise ValueError(
+                "full-rank query requires query_mode='independent'")
         self.query_mode = query_mode
         self.denom_mode = denom_mode
         if state_mode not in {"delta", "slots"}:
@@ -297,6 +344,8 @@ class MetisMemory(nn.Module):
         self.max_memory_slots = max_memory_slots
         self.slot_temperature = slot_temperature
         self.query_gate_logits = None
+        if query_gate_lambda > 0.0 and query_rank == 0:
+            raise ValueError("query rank gates require a factorized query")
         if query_gate_lambda > 0.0:
             # Global gates keep the selected rank components consistent
             # across all memory layers, allowing a compact common-rank
@@ -308,6 +357,8 @@ class MetisMemory(nn.Module):
         self.kv_gate_threshold = kv_gate_threshold
         self.kv_gate_min_rank = kv_gate_min_rank
         self.kv_gate_logits = None
+        if kv_gate_lambda > 0.0 and kv_rank == 0:
+            raise ValueError("K/V rank gates require factorized projections")
         if kv_gate_lambda > 0.0:
             # One shared bottleneck architecture keeps K and V at the same
             # searched rank and makes the deployed projection pair compact.
@@ -324,7 +375,7 @@ class MetisMemory(nn.Module):
                 torch.full((NL,), 4.0, device=device, dtype=dtype))
         self.query_norm = nn.Parameter(
             torch.ones(NL, self.head_dim, device=device, dtype=dtype))
-        if self.query_mode == "independent":
+        if self.query_mode == "independent" and self.q_rank > 0:
             with torch.no_grad():
                 self.query_a.normal_(
                     mean=0.0, std=1.0 / math.sqrt(query_rank))
@@ -359,23 +410,30 @@ class MetisMemory(nn.Module):
         self._captured = None    # list of per-layer [T, d] tensors
 
     def init_from_backbone(self):
-        """Initialize the trainable K/V factors with truncated backbone SVD.
+        """Initialize memory projections from the matching backbone.
 
-        The dynamic M/S memory state remains full-rank; only the memory
-        model's learned projection parameters are factorized.
+        Full-rank projections are exact copies. Factorized projections retain
+        the legacy truncated-SVD initialization for compressed experiments.
         """
         with torch.no_grad():
             for s, blk in enumerate(self.layer_ids):
                 lw = self.backbone.layers[blk]
-                for source, factor_a, factor_b in (
-                    (lw["k"], self.wk_a, self.wk_b),
-                    (lw["v"], self.wv_a, self.wv_b),
-                ):
-                    a, b = balanced_truncated_svd(source, self.kv_rank)
-                    factor_a[s].copy_(
-                        a.to(device=factor_a.device, dtype=factor_a.dtype))
-                    factor_b[s].copy_(
-                        b.to(device=factor_b.device, dtype=factor_b.dtype))
+                if self.kv_rank == 0:
+                    self.wk[s].copy_(lw["k"].float())
+                    self.wv[s].copy_(lw["v"].float())
+                else:
+                    for source, factor_a, factor_b in (
+                        (lw["k"], self.wk_a, self.wk_b),
+                        (lw["v"], self.wv_a, self.wv_b),
+                    ):
+                        a, b = balanced_truncated_svd(
+                            source, self.kv_rank)
+                        factor_a[s].copy_(a.to(
+                            device=factor_a.device, dtype=factor_a.dtype))
+                        factor_b[s].copy_(b.to(
+                            device=factor_b.device, dtype=factor_b.dtype))
+                if self.q_rank == 0:
+                    self.query_proj[s].copy_(lw["q"].float())
 
     def load_checkpoint(self, path, allow_query_rank_expand=False):
         checkpoint = load_bnmem_v1(path)
@@ -446,18 +504,24 @@ class MetisMemory(nn.Module):
         with torch.no_grad():
             for name, value in checkpoint_tensors.items():
                 if name in {"wk", "wv"}:
-                    factor_a = getattr(self, name + "_a")
-                    factor_b = getattr(self, name + "_b")
-                    for layer in range(self.n_layers):
-                        a, b = balanced_truncated_svd(
-                            value[layer].to(device=self.device),
-                            self.kv_rank)
-                        factor_a[layer].copy_(
-                            a.to(device=factor_a.device,
-                                 dtype=factor_a.dtype))
-                        factor_b[layer].copy_(
-                            b.to(device=factor_b.device,
-                                 dtype=factor_b.dtype))
+                    if self.kv_rank == 0:
+                        target = getattr(self, name)
+                        target.copy_(
+                            value.to(
+                                device=target.device, dtype=target.dtype))
+                    else:
+                        factor_a = getattr(self, name + "_a")
+                        factor_b = getattr(self, name + "_b")
+                        for layer in range(self.n_layers):
+                            a, b = balanced_truncated_svd(
+                                value[layer].to(device=self.device),
+                                self.kv_rank)
+                            factor_a[layer].copy_(
+                                a.to(device=factor_a.device,
+                                     dtype=factor_a.dtype))
+                            factor_b[layer].copy_(
+                                b.to(device=factor_b.device,
+                                     dtype=factor_b.dtype))
                     continue
                 target = getattr(self, name)
                 if rank_expanded and name == "query_a":
@@ -676,7 +740,7 @@ class MetisMemory(nn.Module):
                     else:
                         with torch.enable_grad():
                             key, value = self._slot_commit_math(
-                                slot, rows.detach().float(), eps)
+                                slot, rows.float(), eps)
                         keys.append(key)
                         values.append(value)
                         ran = True
@@ -694,8 +758,8 @@ class MetisMemory(nn.Module):
             for slot, rows in enumerate(caps):
                 if rows is not None and rows.shape[0] > 0:
                     with torch.enable_grad():
-                        nm, ns = self._commit_math(slot,
-                                                   rows.detach().float(), eps)
+                        nm, ns = self._commit_math(
+                            slot, rows.float(), eps)
                     new_M_parts.append((slot, nm))
                     new_S_parts.append((slot, ns))
                     ran = True
@@ -809,15 +873,19 @@ class MetisMemory(nn.Module):
         blk = self.layer_ids[slot]
         base_q_w = self.backbone.layers[blk]["q"]
         # Memory-efficient trainable low-rank query.
-        query_hidden = F.linear(
-            h_raw.float(), self.query_b[slot].float())
-        gates = self.query_gates()
-        if gates is not None:
-            query_hidden = query_hidden * gates
-        q = F.linear(query_hidden, self.query_a[slot].float())
-        if self.query_mode == "backbone_delta":
-            q = q + F.linear(
-                h_raw.to(base_q_w.dtype), base_q_w).float()
+        if self.q_rank == 0:
+            q = F.linear(
+                h_raw.float(), self.query_proj[slot].float())
+        else:
+            query_hidden = F.linear(
+                h_raw.float(), self.query_b[slot].float())
+            gates = self.query_gates()
+            if gates is not None:
+                query_hidden = query_hidden * gates
+            q = F.linear(query_hidden, self.query_a[slot].float())
+            if self.query_mode == "backbone_delta":
+                q = q + F.linear(
+                    h_raw.to(base_q_w.dtype), base_q_w).float()
         q = q.view(T, -1, hd)                       # [T, H, hd]
         q = metis_rms_norm(
             q, self.query_norm[slot], 1e-6)           # per-head RMSNorm
@@ -928,14 +996,18 @@ class MetisMemory(nn.Module):
         w_sel = straight_through_alpha_top_p(
             p, self.rho, self.k_min)
 
-        kv_gates = self.kv_gates()
-        kh = F.linear(h, self.wk_b[slot])
-        vh = F.linear(h, self.wv_b[slot])
-        if kv_gates is not None:
-            kh = kh * kv_gates
-            vh = vh * kv_gates
-        Kall = F.linear(kh, self.wk_a[slot])                  # [L, kv]
-        Vall = F.linear(vh, self.wv_a[slot])                 # [L, kv]
+        if self.kv_rank == 0:
+            Kall = F.linear(h, self.wk[slot])                 # [L, kv]
+            Vall = F.linear(h, self.wv[slot])                # [L, kv]
+        else:
+            kv_gates = self.kv_gates()
+            kh = F.linear(h, self.wk_b[slot])
+            vh = F.linear(h, self.wv_b[slot])
+            if kv_gates is not None:
+                kh = kh * kv_gates
+                vh = vh * kv_gates
+            Kall = F.linear(kh, self.wk_a[slot])              # [L, kv]
+            Vall = F.linear(vh, self.wv_a[slot])             # [L, kv]
         Kn = F.normalize(Kall, dim=-1, eps=1e-12) / math.sqrt(self.kv_dim)
 
         a_pre = h @ self.gdu_aw[slot] + self.gdu_ab[slot]
@@ -959,14 +1031,18 @@ class MetisMemory(nn.Module):
         norm_w = self.attn_norm_w[slot]
         h = metis_rms_norm(raw_rows, norm_w, eps)
 
-        kv_gates = self.kv_gates()
-        key_hidden = F.linear(h, self.wk_b[slot])
-        value_hidden = F.linear(h, self.wv_b[slot])
-        if kv_gates is not None:
-            key_hidden = key_hidden * kv_gates
-            value_hidden = value_hidden * kv_gates
-        keys = F.linear(key_hidden, self.wk_a[slot])
-        values = F.linear(value_hidden, self.wv_a[slot])
+        if self.kv_rank == 0:
+            keys = F.linear(h, self.wk[slot])
+            values = F.linear(h, self.wv[slot])
+        else:
+            kv_gates = self.kv_gates()
+            key_hidden = F.linear(h, self.wk_b[slot])
+            value_hidden = F.linear(h, self.wv_b[slot])
+            if kv_gates is not None:
+                key_hidden = key_hidden * kv_gates
+                value_hidden = value_hidden * kv_gates
+            keys = F.linear(key_hidden, self.wk_a[slot])
+            values = F.linear(value_hidden, self.wv_a[slot])
         return F.normalize(keys, dim=-1, eps=1e-12), values
 
     def _append_memory_slot(self, keys, values):
@@ -996,8 +1072,12 @@ class MetisMemory(nn.Module):
     # ---- export ----
     def export(self, path):
         kv_gates = self.kv_gates()
-        wk_a, wk_b = self.wk_a.data, self.wk_b.data
-        wv_a, wv_b = self.wv_a.data, self.wv_b.data
+        wk = self.wk.data if self.kv_rank == 0 else None
+        wv = self.wv.data if self.kv_rank == 0 else None
+        wk_a = self.wk_a.data if self.kv_rank > 0 else None
+        wk_b = self.wk_b.data if self.kv_rank > 0 else None
+        wv_a = self.wv_a.data if self.kv_rank > 0 else None
+        wv_b = self.wv_b.data if self.kv_rank > 0 else None
         if kv_gates is not None:
             kv_values = kv_gates.detach()
             kv_active = self._selected_gate_indices(
@@ -1011,8 +1091,10 @@ class MetisMemory(nn.Module):
                   f'"kv_rank_exported":{kv_active.numel()},'
                   f'"kv_gate_mean":{float(kv_values.mean()):.6f}}}',
                   flush=True)
-        query_a = self.query_a.data
-        query_b = self.query_b.data
+        query_proj = (
+            self.query_proj.data if self.q_rank == 0 else None)
+        query_a = self.query_a.data if self.q_rank > 0 else None
+        query_b = self.query_b.data if self.q_rank > 0 else None
         gates = self.query_gates()
         if gates is not None:
             gate_values = gates.detach()
@@ -1036,12 +1118,19 @@ class MetisMemory(nn.Module):
                 self.layer_gate_min_layers)
             active_slots = layer_active.tolist()
             layer_ids = [self.layer_ids[index] for index in active_slots]
-            wk_a = wk_a[layer_active]
-            wk_b = wk_b[layer_active]
-            wv_a = wv_a[layer_active]
-            wv_b = wv_b[layer_active]
-            query_a = query_a[layer_active]
-            query_b = query_b[layer_active]
+            if self.kv_rank == 0:
+                wk = wk[layer_active]
+                wv = wv[layer_active]
+            else:
+                wk_a = wk_a[layer_active]
+                wk_b = wk_b[layer_active]
+                wv_a = wv_a[layer_active]
+                wv_b = wv_b[layer_active]
+            if self.q_rank == 0:
+                query_proj = query_proj[layer_active]
+            else:
+                query_a = query_a[layer_active]
+                query_b = query_b[layer_active]
             print(f'{{"layers_searched":{self.n_layers},'
                   f'"layers_exported":{layer_active.numel()},'
                   f'"layer_gate_mean":{float(layer_values.mean()):.6f},'
@@ -1059,12 +1148,14 @@ class MetisMemory(nn.Module):
                       gdu_ab=selected(self.gdu_ab.data),
                       gdu_bb=selected(self.gdu_bb.data),
                       beta_scale=self.beta_scale,
+                      wk=wk, wv=wv,
                       wk_a=wk_a, wk_b=wk_b,
                       wv_a=wv_a, wv_b=wv_b,
                       w_agg=selected(self.w_agg.data),
                       gdu_aw=selected(self.gdu_aw.data),
                       gdu_bw=selected(self.gdu_bw.data),
                       mem_norm=selected(self.mem_norm.data),
+                      query_proj=query_proj,
                       query_a=query_a, query_b=query_b,
                       query_norm=selected(self.query_norm.data),
                       denom_mode=(2 if self.denom_mode == "abs_plus_one"
@@ -1083,23 +1174,36 @@ class MemoryTrainer:
     def __init__(self, args):
         self.args = args
         torch.manual_seed(args.seed)
-        self.device = "cuda"
+        if args.device == "auto":
+            if torch.cuda.is_available():
+                self.device = "cuda"
+            elif torch.backends.mps.is_available():
+                self.device = "mps"
+            else:
+                self.device = "cpu"
+        else:
+            self.device = args.device
+        if self.device == "cuda" and not torch.cuda.is_available():
+            raise ValueError("CUDA was requested but is not available")
+        if self.device == "mps" and not torch.backends.mps.is_available():
+            raise ValueError("MPS was requested but is not available")
 
-        print('{"phase":"load_backbone"}', flush=True)
+        print(f'{{"phase":"load_backbone","device":"{self.device}"}}',
+              flush=True)
         t0 = time.time()
         gw = GGUFWeights(args.gguf, args.lib)
         self.gw = gw
-        self.backbone = TorchBackbone(gw, device="cuda",
+        self.backbone = TorchBackbone(gw, device=self.device,
                                       dtype=torch.bfloat16)
         self.answer_decoder = None
         if args.init_answer_decoder:
             self.answer_decoder = MemoryAnswerDecoder.load(
                 args.init_answer_decoder, self.backbone.cfg.hidden,
-                device="cuda")
+                device=self.device)
         elif args.answer_decoder_width > 0:
             self.answer_decoder = MemoryAnswerDecoder(
                 self.backbone.cfg.hidden, args.answer_decoder_width,
-                device="cuda",
+                device=self.device,
                 memory_aware=args.memory_aware_answer_decoder,
                 structured_memory=(
                     args.structured_memory_answer_decoder))
@@ -1108,7 +1212,8 @@ class MemoryTrainer:
         self.backbone_lora = None
         if args.init_backbone_lora:
             self.backbone_lora, bundled_output = load_lora_bundle(
-                args.init_backbone_lora, self.backbone.cfg, device="cuda")
+                args.init_backbone_lora, self.backbone.cfg,
+                device=self.device)
             self.backbone.backbone_lora = self.backbone_lora
         elif args.backbone_lora_rank > 0:
             if args.backbone_lora_blocks == "all":
@@ -1137,7 +1242,7 @@ class MemoryTrainer:
                 targets=targets,
                 rank=args.backbone_lora_rank,
                 alpha=args.backbone_lora_alpha,
-                device="cuda")
+                device=self.device)
             self.backbone.backbone_lora = self.backbone_lora
             bundled_output = None
         else:
@@ -1199,11 +1304,15 @@ class MemoryTrainer:
                                 state_mode=args.state_mode,
                                 max_memory_slots=args.max_memory_slots,
                                 slot_temperature=args.slot_temperature,
-                                device="cuda", dtype=torch.float32,
+                                device=self.device, dtype=torch.float32,
                                 seed=args.seed)
         if args.bb_init:
             self.mem.init_from_backbone()
-            print(f'{{"phase":"memory_init","source":"backbone_kv_svd",'
+            init_kind = (
+                "backbone_exact_full_rank"
+                if self.mem.kv_rank == 0 and self.mem.q_rank == 0
+                else "backbone_factorized")
+            print(f'{{"phase":"memory_init","source":"{init_kind}",'
                   f'"kv_rank":{self.mem.kv_rank}}}', flush=True)
         if args.init_memory:
             self.mem.load_checkpoint(
@@ -1269,6 +1378,31 @@ class MemoryTrainer:
                   'use --valid-data for leakage-safe model selection"}',
                   flush=True)
 
+        self.train_by_task = {}
+        for stratum_index, line_index in self.train_idx:
+            stratum_name, lines = self.train_strata[stratum_index]
+            sample = json.loads(lines[line_index])
+            task = memory_task_id(stratum_name, sample)
+            self.train_by_task.setdefault(task, []).append(
+                (stratum_index, line_index))
+        self.train_task_positions = {
+            task: 0 for task in self.train_by_task}
+        self.task_weight_starts = {
+            task: getattr(args, f"task{task}_weight_start")
+            for task in TASK_WEIGHT_DEFAULTS}
+        self.task_weight_ends = {
+            task: getattr(args, f"task{task}_weight_end")
+            for task in TASK_WEIGHT_DEFAULTS}
+        task_counts = {
+            str(task): len(indices)
+            for task, indices in sorted(self.train_by_task.items())}
+        print(json.dumps({
+            "phase": "task_schedule",
+            "task_counts": task_counts,
+            "weight_start": self.task_weight_starts,
+            "weight_end": self.task_weight_ends,
+        }, separators=(",", ":")), flush=True)
+
         memory_parameters = [
             parameter
             for name, parameter in self.mem.named_parameters()
@@ -1276,8 +1410,8 @@ class MemoryTrainer:
         ]
         if args.train_retrieval_only:
             retrieval_prefixes = (
-                "query_a", "query_b", "query_norm",
-                "wk_a", "wk_b",
+                "query_proj", "query_a", "query_b", "query_norm",
+                "wk", "wk_a", "wk_b",
                 "query_gate_logits", "kv_gate_logits",
             )
             for name, parameter in self.mem.named_parameters():
@@ -1358,6 +1492,25 @@ class MemoryTrainer:
             return self.base_lr
         return self.base_lr * (step + 1) / self.warmup
 
+    def next_training_batch(self, step, batch_size):
+        available = sorted(self.train_by_task)
+        progress = step / max(self.args.steps - 1, 1)
+        weights = scheduled_task_weights(
+            progress, available,
+            self.task_weight_starts, self.task_weight_ends)
+        task = self.schedule_rng.choices(
+            available, weights=[weights[value] for value in available],
+            k=1)[0]
+        indices = self.train_by_task[task]
+        position = self.train_task_positions[task]
+        batch = [
+            indices[(position + offset) % len(indices)]
+            for offset in range(batch_size)
+        ]
+        self.train_task_positions[task] = (
+            position + batch_size) % len(indices)
+        return task, batch, weights
+
     def run_architecture_step(self, tok_cache):
         """One validation-gradient step for differentiable NAS gates."""
         if self.arch_opt is None:
@@ -1395,7 +1548,7 @@ class MemoryTrainer:
         with torch.no_grad():
             for _ in range(length):
                 tokens = torch.tensor(
-                    prompt_ids + generated, device="cuda")
+                    prompt_ids + generated, device=self.device)
                 logits = self.backbone(
                     tokens, memory_v6=self.mem, fuse_start=0)
                 self.mem.discard_captured()
@@ -1445,23 +1598,19 @@ class MemoryTrainer:
             return None, 0
 
         ctx = torch.enable_grad() if want_grads else torch.no_grad()
-        loss_sum = torch.zeros((), device="cuda")
+        loss_sum = torch.zeros((), device=self.device)
         n_label = 0
         n_correct = 0
         sequence_exact = 0
         with ctx:
             for chunk_index, (ids, is_q, target, text) in enumerate(prompts):
                 if not is_q:
-                    # REFERENCE-ALIGNED protocol: each exchange chunk is a
-                    # standalone FRESH-context forward (their training loop
-                    # evals chunks independently, use_cache=False; memory is
-                    # the only carrier between chunks). Matches the C G2'
-                    # driver (reset_context per chunk). 12GB ruling: replays
-                    # run without grad; commits still differentiate through
-                    # the memory params on the constant rows.
-                    with torch.no_grad():
-                        toks = torch.tensor(ids, device="cuda")
-                        _ = bb(toks, memory_v6=mem, fuse_start=0)
+                    # Official Metis keeps the complete multi-chunk graph:
+                    # later query loss differentiates through every earlier
+                    # memory read and write. The backbone weights remain
+                    # frozen, but its activations must not be detached.
+                    toks = torch.tensor(ids, device=self.device)
+                    _ = bb(toks, memory_v6=mem, fuse_start=0)
                     if chunk_index in distractor_indices:
                         slot_labels = [0] * len(ids)
                     elif chunk_index in evidence_indices:
@@ -1490,7 +1639,7 @@ class MemoryTrainer:
                 if not query_memory_enabled:
                     mem.active = False
                 with torch.no_grad():
-                    toks = torch.tensor(ids, device="cuda")
+                    toks = torch.tensor(ids, device=self.device)
                     _ = bb(toks, memory_v6=mem, fuse_start=0)
                 mem.discard_captured()
                 if (
@@ -1510,9 +1659,9 @@ class MemoryTrainer:
                             ids = self.tok.encode(text, add_bos=True)
                             tok_cache[key] = ids
                 # Scheduled-prefix training closes the exposure gap between
-                # teacher forcing and deployment generation.  On selected
-                # LoCoMo samples, score every gold next-token target after the
-                # model's own greedy prefix instead of the gold prefix.  The
+                # teacher forcing and deployment generation. Score every gold
+                # next-token target after the model's own greedy prefix
+                # instead of the gold prefix. The
                 # rollout is no-grad and never commits, so memory remains the
                 # only cross-chunk carrier and the differentiable scoring
                 # forward has the same size as ordinary teacher forcing.
@@ -1520,7 +1669,6 @@ class MemoryTrainer:
                 if (
                     want_grads
                     and allow_self_prefix
-                    and sample.get("locomo_id")
                     and self.args.self_prefix_prob > 0.0
                     and self.schedule_rng.random()
                     < self.args.self_prefix_prob
@@ -1529,7 +1677,7 @@ class MemoryTrainer:
                     self.self_prefix_used += 1
                 # score targets on the same fresh context with fusion active
                 full = ids + prefix
-                toks = torch.tensor(full, device="cuda")
+                toks = torch.tensor(full, device=self.device)
                 supervise_evidence = (
                     want_grads
                     and query_memory_enabled
@@ -1549,7 +1697,7 @@ class MemoryTrainer:
                         + self.args.evidence_lambda
                         * evidence_loss * len(tgt_ids))
                 lp = logits_all[len(full) - len(tgt_ids): len(full)]
-                tgt_t = torch.tensor(tgt_ids, device="cuda")
+                tgt_t = torch.tensor(tgt_ids, device=self.device)
                 nll = F.cross_entropy(lp.float(), tgt_t, reduction="sum")
                 loss_sum = loss_sum + nll
                 n_label += len(tgt_ids)
@@ -1567,7 +1715,8 @@ class MemoryTrainer:
                             tok_cache[nkey] = negative_ids
                         negative_full = ids + negative_ids[:-1]
                         negative_logits = bb(
-                            torch.tensor(negative_full, device="cuda"),
+                            torch.tensor(
+                                negative_full, device=self.device),
                             memory_v6=mem, logits_all=True,
                             fuse_start=0)
                         mem.discard_captured()
@@ -1575,7 +1724,7 @@ class MemoryTrainer:
                             len(negative_full) - len(negative_ids):
                             len(negative_full)]
                         negative_target = torch.tensor(
-                            negative_ids, device="cuda")
+                            negative_ids, device=self.device)
                         negative_nll = F.cross_entropy(
                             negative_selected.float(),
                             negative_target, reduction="mean")
@@ -1700,13 +1849,17 @@ def main():
              "fusion, gate, and write parameters")
     ap.add_argument("--lib", default=None)
     ap.add_argument("--tok-probe", default="tok_probe")
+    ap.add_argument(
+        "--device", choices=("auto", "cuda", "mps", "cpu"),
+        default="auto",
+        help="training device; auto prefers CUDA, then Apple MPS")
     ap.add_argument("--layers", default="all")
     ap.add_argument("--gamma", type=float, default=0.9)
     ap.add_argument("--tau", type=float, default=1.0)
     ap.add_argument("--rho", type=float, default=0.9)
     ap.add_argument("--beta-scale", type=float, default=0.9)
     ap.add_argument("--query-rank", type=int, default=128,
-                    help="rank of the trainable query projection")
+                    help="query projection rank; zero selects full rank")
     ap.add_argument(
         "--query-mode",
         choices=("independent", "backbone_delta"),
@@ -1718,7 +1871,7 @@ def main():
     ap.add_argument("--query-gate-threshold", type=float, default=0.5)
     ap.add_argument("--query-gate-min-rank", type=int, default=1)
     ap.add_argument("--kv-rank", type=int, default=128,
-                    help="SVD rank for both trainable K/V projections")
+                    help="K/V projection rank; zero selects full rank")
     ap.add_argument("--kv-gate-lambda", type=float, default=1e-4,
                     help="NAS-NG sparsity weight for K/V rank neurons")
     ap.add_argument("--kv-gate-temperature", type=float, default=1.0)
@@ -1771,7 +1924,7 @@ def main():
     ap.add_argument("--valid-subset", type=int, default=32)
     ap.add_argument(
         "--self-prefix-prob", type=float, default=0.0,
-        help="probability of using a no-KV greedy model prefix for LoCoMo "
+        help="probability of using a no-KV greedy model prefix for "
              "training targets instead of the gold teacher-forcing prefix")
     ap.add_argument(
         "--contrastive-lambda", type=float, default=1.0,
@@ -1799,6 +1952,11 @@ def main():
     ap.add_argument("--export-only", action="store_true")
     ap.add_argument("--oversample-distract", type=int, default=1,
                     help="rounds per pass for distract strata (v10run: 3)")
+    for task, (start, end) in TASK_WEIGHT_DEFAULTS.items():
+        ap.add_argument(
+            f"--task{task}-weight-start", type=float, default=start)
+        ap.add_argument(
+            f"--task{task}-weight-end", type=float, default=end)
     args = ap.parse_args()
     if args.retrieval_windows < 0:
         ap.error("--retrieval-windows must be non-negative")
@@ -1814,6 +1972,17 @@ def main():
         ap.error("--contrastive-negatives must be positive")
     if args.evidence_lambda < 0.0:
         ap.error("--evidence-lambda must be non-negative")
+    for task in TASK_WEIGHT_DEFAULTS:
+        for suffix in ("start", "end"):
+            if getattr(args, f"task{task}_weight_{suffix}") < 0.0:
+                ap.error(
+                    f"--task{task}-weight-{suffix} must be non-negative")
+    if args.query_rank == 0 and args.query_mode != "independent":
+        ap.error("--query-rank 0 requires --query-mode independent")
+    if args.query_rank == 0 and args.query_gate_lambda > 0.0:
+        ap.error("--query-rank 0 requires --query-gate-lambda 0")
+    if args.kv_rank == 0 and args.kv_gate_lambda > 0.0:
+        ap.error("--kv-rank 0 requires --kv-gate-lambda 0")
     for name in ("query_gate_temperature", "kv_gate_temperature",
                  "layer_gate_temperature"):
         if getattr(args, name) <= 0.0:
@@ -1843,13 +2012,13 @@ def main():
 
     tr = MemoryTrainer(args)
     tok_cache = {}
-    cursor = [0]
     if args.export_only:
         tr.mem.reset_state()
         tr.export(args.output)
         return
 
     t0 = time.time()
+    completed_steps = 0
     eval_every = args.valid_every or max(1, args.steps // 20)
     for step in range(args.steps):
         if tr.opt is None:
@@ -1861,10 +2030,9 @@ def main():
         for group in tr.opt.param_groups:
             group["lr"] = lr
         total_loss, total_tok, n_ok = 0.0, 0, 0
-        for b in range(args.batch):
-            ci = cursor[0] % len(tr.train_idx)
-            cursor[0] = (cursor[0] + 1) % len(tr.train_idx)
-            s_idx = tr.train_idx[ci]
+        batch_task, batch_indices, task_weights = tr.next_training_batch(
+            step, args.batch)
+        for s_idx in batch_indices:
             line = tr.train_strata[s_idx[0]][1][s_idx[1]]
             sample = json.loads(line)
             try:
@@ -1887,18 +2055,32 @@ def main():
                     tr.mem.M = None
                     tr.mem.S = None
                     tr.mem.discard_captured()
-                    torch.cuda.empty_cache()
+                    if tr.device == "cuda":
+                        torch.cuda.empty_cache()
+                    elif tr.device == "mps":
+                        torch.mps.empty_cache()
                 tr.mem.reset_state()
                 continue
         if total_tok == 0:
             continue
+        if n_ok > 1:
+            # Match ordinary batched CE semantics. Each sample is forwarded
+            # and backpropagated separately to cap activation memory, so the
+            # accumulated gradients must be averaged before the optimizer
+            # update rather than implicitly scaling the learning rate.
+            for parameter in tr.weight_parameters:
+                if parameter.grad is not None:
+                    parameter.grad.div_(n_ok)
         torch.nn.utils.clip_grad_norm_(tr.weight_parameters, args.clip)
         tr.opt.step()
+        completed_steps = step + 1
         mean_loss = total_loss / total_tok
         el = time.time() - t0
         sps = (step + 1) / el * 3600 if el > 0 else 0
         print(f'{{"step":{step},"split":"train","loss":{mean_loss:.6f},'
               f'"tokens":{total_tok},"samples":{n_ok},'
+              f'"task":{batch_task},'
+              f'"task_weight":{task_weights[batch_task]:.6f},'
               f'"self_prefix_used":{tr.self_prefix_used},'
               f'"contrastive_pairs_used":{tr.contrastive_pairs_used},'
               f'"steps_per_hour":{sps:.0f}}}', flush=True)
@@ -1943,12 +2125,24 @@ def main():
 
     if tr.best_valid == float("inf"):
         tr.export(args.output)
+    else:
+        # Report and hand off the same checkpoint selected by validation,
+        # rather than evaluating the potentially overfit early-stop state.
+        tr.mem.load_checkpoint(args.output)
     if args.final_output:
-        tr.export(args.final_output)
+        if os.path.abspath(args.final_output) != os.path.abspath(args.output):
+            shutil.copyfile(args.output, args.final_output)
+        print(json.dumps({
+            "final_output": args.final_output,
+            "source": "best_validation",
+        }, separators=(",", ":")), flush=True)
     v, vt, vn, vacc, vexact = tr.run_valid(
         min(args.valid_subset, 16), tok_cache)
-    print(f'{{"result":"done","final_valid_nll":{v:.6f},"steps":{args.steps}}}',
-          flush=True)
+    print(
+        f'{{"result":"done","final_valid_nll":{v:.6f},'
+        f'"best_valid_nll":{tr.best_valid:.6f},'
+        f'"steps":{completed_steps}}}',
+        flush=True)
 
 
 if __name__ == "__main__":

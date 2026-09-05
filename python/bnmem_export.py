@@ -1,4 +1,4 @@
-"""BNMEM1/2 reader/writer for low-rank-parameter memory models.
+"""BNMEM1/2 reader/writer for full- or low-rank memory models.
 
 File layout (src/metis/metis_file.c):
   magic "BNMEM1\\0\\0" (legacy unbound) or "BNMEM2\\0\\0" (bound)
@@ -39,7 +39,7 @@ KV_RANK_MASK = 0x7FFF0000
 
 
 def load_bnmem_v1(path: str) -> dict:
-    """Load a BNMEM1/2 backbone-plus-low-rank-delta checkpoint."""
+    """Load a BNMEM1/2 memory-model checkpoint."""
 
     def read_exact(handle, size):
         data = handle.read(size)
@@ -91,10 +91,6 @@ def load_bnmem_v1(path: str) -> dict:
         kv_rank = (encoded_rank & KV_RANK_MASK) >> KV_RANK_SHIFT
         backbone_sha256 = (
             read_exact(handle, 32) if version == 2 else None)
-        if query_rank <= 0:
-            raise ValueError(
-                "training resume requires a low-rank query checkpoint")
-
         tensors = {
             "gdu_ab": read_array(handle, (n_layers,)),
             "gdu_bb": read_array(handle, (n_layers,)),
@@ -120,12 +116,21 @@ def load_bnmem_v1(path: str) -> dict:
             "gdu_aw": read_array(handle, (n_layers, d_model)),
             "gdu_bw": read_array(handle, (n_layers, d_model)),
             "mem_norm": read_array(handle, (n_layers, q_dim)),
-            "query_norm": read_array(handle, (n_layers, head_dim)),
-            "query_a": read_array(
-                handle, (n_layers, q_dim, query_rank)),
-            "query_b": read_array(
-                handle, (n_layers, query_rank, d_model)),
         })
+        if query_rank > 0:
+            tensors.update({
+                "query_norm": read_array(handle, (n_layers, head_dim)),
+                "query_a": read_array(
+                    handle, (n_layers, q_dim, query_rank)),
+                "query_b": read_array(
+                    handle, (n_layers, query_rank, d_model)),
+            })
+        else:
+            tensors.update({
+                "query_norm": read_array(handle, (n_layers, head_dim)),
+                "query_proj": read_array(
+                    handle, (n_layers, q_dim, d_model)),
+            })
 
         manifest_count = read_u32(handle)
         manifest_names = []
@@ -140,13 +145,17 @@ def load_bnmem_v1(path: str) -> dict:
             expected_names = [
                 "wk_a", "wk_b", "wv_a", "wv_b",
                 "w_agg", "gdu_aw", "gdu_bw", "mem_norm",
-                "query_norm", "query_a", "query_b",
             ]
         else:
             expected_names = [
                 "wk", "wv", "w_agg", "gdu_aw", "gdu_bw", "mem_norm",
-                "query_norm", "query_a", "query_b",
             ]
+        if query_rank > 0:
+            expected_names.extend([
+                "query_norm", "query_a", "query_b",
+            ])
+        else:
+            expected_names.extend(["query_norm", "query_proj"])
         if manifest_names != expected_names or handle.read(1):
             raise ValueError(
                 f"unexpected BNMEM1 manifest: {manifest_names}")
@@ -287,8 +296,8 @@ def save_bnmem_v3(path: str, *, layer_ids: list[int], d_model: int,
         tensors.append(("query_a", nl, q_dim * query_a.shape[-1], f32(query_a)))
         tensors.append(("query_b", nl, query_a.shape[-1] * d_model, f32(query_b)))
     elif is_v4:
-        tensors.append(("query_proj", nl, q_dim * d_model, f32(query_proj)))
         tensors.append(("query_norm", nl, head_dim, f32(query_norm)))
+        tensors.append(("query_proj", nl, q_dim * d_model, f32(query_proj)))
 
     out = [bytes(hdr)]
     off = len(hdr)

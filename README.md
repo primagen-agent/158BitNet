@@ -578,31 +578,31 @@ Training uses those examples to teach a general memory model what to write,
 update, ignore, and retrieve. Evaluation conversations must remain independent
 from training conversations.
 
-The deployable training path updates only `.bnmem`:
+The current accuracy-first training path updates only `.bnmem`:
 
 ```sh
-scripts/train_locomo_v70_memory_model.sh
+scripts/train_memory_v73_05b_official_tasks.sh
 ```
 
 This run:
 
-- starts from the GGUF backbone's SVD initialization instead of a slot-trained
-  checkpoint;
+- initializes full-rank learned query/key/value projections from the matching
+  GGUF backbone;
 - freezes the GGUF backbone and trains only the memory parameters;
 - uses the same M/S delta state and signed-plus-one read denominator as the C
   runtime;
-- resets the transformer context between exchanges, so memory is the only
-  cross-exchange carrier;
-- disables `.bnanswer`, slot retrieval, retrieval-window prompt injection,
-  layer routers, LoRA, and self-generated answer-prefix training;
-- trains rank-64 query/key/value factors and NAS neuron/layer gates;
-- uses contrastive stale-answer loss to teach update and interference
-  handling.
+- keeps the complete differentiable graph across dialogue chunks while
+  disabling KV cache;
+- uses straight-through AlphaTopP selection and gated-delta writes;
+- dynamically mixes reconstruction, memory-operation, distractor,
+  multi-memory, and memory-irrelevant tasks;
+- disables SVD compression, NAS/neuron gates, LoRA, `.bnanswer`, slot
+  retrieval, and retrieval-window prompt injection.
 
 The output is a single deployable memory model:
 
 ```text
-build/locomo_v70_memory_model_delta.bnmem
+build/memory_v73_05b_official_tasks.bnmem
 ```
 
 At runtime, new conversation data produces per-session `.bnstate` files. The
@@ -688,9 +688,10 @@ The context must already be attached to a compatible memory model with
 
 ### Memory code map
 
-- `scripts/train_locomo_v70_memory_model.sh` — deployable memory-only training
-- `scripts/train_locomo_v56.sh` — historical V56 decoder experiment
+- `scripts/train_memory_v73_05b_official_tasks.sh` — current full-rank
+  memory-model training
 - `python/train_memory.py` — torch/GPU memory trainer
+- `python/eval_memory_curriculum.py` — no-KV curriculum accuracy evaluator
 - `python/answer_decoder.py` — experimental Python answer decoder
 - `python/memory_retrieval.py` — slot-attention excerpt retrieval
 - `python/train_memory_layer_router.py` — retrieval-layer router training

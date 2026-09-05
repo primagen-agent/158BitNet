@@ -46,6 +46,12 @@ def main():
         "wv_a": random(nl, kv_dim, kv_rank),
         "wv_b": random(nl, kv_rank, d_model),
     })
+    full_rank_tensors = {
+        key: value
+        for key, value in tensors.items()
+        if key not in {"query_a", "query_b"}
+    }
+    full_rank_tensors["query_proj"] = random(nl, q_dim, d_model)
     with tempfile.TemporaryDirectory() as temp_dir:
         path = str(Path(temp_dir) / "roundtrip.bnmem")
         backbone_sha256 = bytes(range(32))
@@ -103,6 +109,24 @@ def main():
             **low_rank_tensors,
         )
         low_rank = load_bnmem_v1(low_rank_path)
+        full_rank_path = str(Path(temp_dir) / "full-rank.bnmem")
+        save_bnmem_v3(
+            full_rank_path,
+            layer_ids=[1, 3],
+            d_model=d_model,
+            kv_dim=kv_dim,
+            q_dim=q_dim,
+            head_dim=head_dim,
+            gamma=0.9,
+            tau=1.0,
+            rho=0.9,
+            k_min=1,
+            beta_scale=0.9,
+            denom_mode=1,
+            query_add_backbone=False,
+            **full_rank_tensors,
+        )
+        full_rank = load_bnmem_v1(full_rank_path)
         model_a = Path(temp_dir) / "model-a.gguf"
         model_b = Path(temp_dir) / "model-b.gguf"
         model_a.write_bytes(b"a")
@@ -129,6 +153,11 @@ def main():
     assert low_rank["kv_rank"] == kv_rank
     for name, expected in low_rank_tensors.items():
         torch.testing.assert_close(low_rank["tensors"][name], expected)
+    assert full_rank["query_rank"] == 0
+    assert full_rank["kv_rank"] == 0
+    assert full_rank["query_add_backbone"] is False
+    for name, expected in full_rank_tensors.items():
+        torch.testing.assert_close(full_rank["tensors"][name], expected)
     print("python BNMEM1 roundtrip: PASS")
 
 

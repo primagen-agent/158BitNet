@@ -3,21 +3,47 @@
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "python"))
 
 from train_memory import (  # noqa: E402
+    MetisMemory,
     answer_token_slot_labels,
     balanced_truncated_svd,
     evidence_attention_loss,
     gated_delta_update,
+    memory_task_id,
     metis_rms_norm,
+    scheduled_task_weights,
     stale_answer_margin_loss,
     straight_through_binary_gate,
     straight_through_alpha_top_p,
 )
+
+
+class TinyBackbone:
+    def __init__(self):
+        self.cfg = SimpleNamespace(
+            hidden=8,
+            kv_dim=4,
+            q_dim=8,
+            head_dim=4,
+            n_heads=2,
+            rms_eps=1e-5,
+        )
+        generator = torch.Generator().manual_seed(23)
+        self.layers = [{
+            "q": torch.randn(8, 8, generator=generator),
+            "k": torch.randn(4, 8, generator=generator),
+            "v": torch.randn(4, 8, generator=generator),
+            "attn_norm": torch.ones(8),
+        }]
+
+    def model_sha256(self):
+        return bytes(range(32))
 
 
 def test_straight_through_alpha_top_p():
@@ -132,6 +158,73 @@ def test_answer_token_slot_labels_marks_longest_contiguous_match():
         [1, 42, 3], [42, 55], eos_id=55) == [0, 1, 0]
 
 
+def test_full_rank_projection_initialization_is_exact():
+    backbone = TinyBackbone()
+    memory = MetisMemory(
+        backbone,
+        [0],
+        query_rank=0,
+        query_mode="independent",
+        kv_rank=0,
+        query_gate_lambda=0.0,
+        kv_gate_lambda=0.0,
+        layer_gate_lambda=0.0,
+        device="cpu",
+    )
+    memory.init_from_backbone()
+    torch.testing.assert_close(memory.query_proj[0], backbone.layers[0]["q"])
+    torch.testing.assert_close(memory.wk[0], backbone.layers[0]["k"])
+    torch.testing.assert_close(memory.wv[0], backbone.layers[0]["v"])
+    assert memory.query_a is None
+    assert memory.wk_a is None
+
+
+def test_memory_commit_preserves_source_activation_graph():
+    backbone = TinyBackbone()
+    memory = MetisMemory(
+        backbone,
+        [0],
+        query_rank=0,
+        query_mode="independent",
+        kv_rank=0,
+        query_gate_lambda=0.0,
+        kv_gate_lambda=0.0,
+        layer_gate_lambda=0.0,
+        device="cpu",
+    )
+    memory.init_from_backbone()
+    memory.reset_state()
+    rows = torch.randn(3, 8, requires_grad=True)
+    memory.capture([rows])
+    assert memory.commit_all_grad_enabled()
+    (memory.M.sum() + memory.S.sum()).backward()
+    assert rows.grad is not None
+    assert torch.count_nonzero(rows.grad).item() > 0
+
+
+def test_official_five_task_mapping_and_schedule():
+    assert memory_task_id("reconstruction", {"metadata": {}}) == 0
+    assert memory_task_id("update_explicit", {"metadata": {}}) == 1
+    assert memory_task_id("remember_distract", {"metadata": {}}) == 2
+    assert memory_task_id("multi_entity", {"metadata": {}}) == 3
+    assert memory_task_id(
+        "anything", {"metadata": {"v2_task": "task4_normal"}}) == 4
+    starts = {task: pair[0] for task, pair in {
+        0: (0.25, 0.10), 1: (0.35, 0.25), 2: (0.20, 0.30),
+        3: (0.10, 0.20), 4: (0.10, 0.15)}.items()}
+    ends = {task: pair[1] for task, pair in {
+        0: (0.25, 0.10), 1: (0.35, 0.25), 2: (0.20, 0.30),
+        3: (0.10, 0.20), 4: (0.10, 0.15)}.items()}
+    initial = scheduled_task_weights(0.0, [0, 1, 2, 3, 4], starts, ends)
+    final = scheduled_task_weights(1.0, [0, 1, 2, 3, 4], starts, ends)
+    torch.testing.assert_close(
+        torch.tensor(sum(initial.values())), torch.tensor(1.0))
+    torch.testing.assert_close(
+        torch.tensor(sum(final.values())), torch.tensor(1.0))
+    assert initial[1] > final[1]
+    assert final[2] > initial[2]
+
+
 if __name__ == "__main__":
     test_straight_through_alpha_top_p()
     test_gated_delta_scales_both_states_by_alpha()
@@ -141,4 +234,7 @@ if __name__ == "__main__":
     test_stale_answer_margin_prefers_current_value()
     test_evidence_attention_loss_rewards_positive_mass()
     test_answer_token_slot_labels_marks_longest_contiguous_match()
+    test_full_rank_projection_initialization_is_exact()
+    test_memory_commit_preserves_source_activation_graph()
+    test_official_five_task_mapping_and_schedule()
     print("metis training formula tests: PASS")

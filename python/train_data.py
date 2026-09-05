@@ -353,6 +353,7 @@ WANTED_FILES = [
     "forget_explicit.jsonl", "forget_distract.jsonl",
     "reflect_explicit.jsonl", "reflect_distract.jsonl",
     "multi_entity.jsonl", "post_memory.jsonl",
+    "task3_multi_entity.jsonl", "task4_normal.jsonl",
 ]
 
 

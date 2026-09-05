@@ -41,6 +41,26 @@ def main():
             raise ValueError(f"checkpoint tensor shape mismatch: {name}")
         tensors[name] = base_tensor.lerp(other_tensor, args.alpha)
 
+    kv = (
+        {
+            "wk_a": tensors["wk_a"], "wk_b": tensors["wk_b"],
+            "wv_a": tensors["wv_a"], "wv_b": tensors["wv_b"],
+        }
+        if base["kv_rank"] > 0 else
+        {"wk": tensors["wk"], "wv": tensors["wv"]}
+    )
+    query = (
+        {
+            "query_a": tensors["query_a"],
+            "query_b": tensors["query_b"],
+            "query_norm": tensors["query_norm"],
+        }
+        if base["query_rank"] > 0 else
+        {
+            "query_proj": tensors["query_proj"],
+            "query_norm": tensors["query_norm"],
+        }
+    )
     save_bnmem_v3(
         args.output,
         layer_ids=base["layer_ids"],
@@ -55,20 +75,15 @@ def main():
         gdu_ab=tensors["gdu_ab"],
         gdu_bb=tensors["gdu_bb"],
         beta_scale=base["beta_scale"],
-        wk_a=tensors["wk_a"],
-        wk_b=tensors["wk_b"],
-        wv_a=tensors["wv_a"],
-        wv_b=tensors["wv_b"],
         w_agg=tensors["w_agg"],
         gdu_aw=tensors["gdu_aw"],
         gdu_bw=tensors["gdu_bw"],
         mem_norm=tensors["mem_norm"],
-        query_a=tensors["query_a"],
-        query_b=tensors["query_b"],
-        query_norm=tensors["query_norm"],
         denom_mode=base["denom_mode"],
         query_add_backbone=base["query_add_backbone"],
         backbone_sha256=base["backbone_sha256"],
+        **kv,
+        **query,
     )
     print({
         "base": args.base,
