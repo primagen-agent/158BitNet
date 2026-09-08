@@ -223,6 +223,10 @@ struct bitnet_context {
     float *value_cache_scales;
     float *logits;
     float *last_hidden;
+    float *last_pooled_hidden;
+    float *last_eval_hidden;
+    size_t last_eval_hidden_capacity;
+    int last_eval_hidden_count;
 
     /* pre-allocated eval buffers */
     float *hidden;
@@ -3089,6 +3093,8 @@ bitnet_context_t *bitnet_create_context(bitnet_model_t *model, int max_tokens) {
     ctx->value_cache = (float *)calloc(kv_size, sizeof(float));
     ctx->logits = (float *)calloc((size_t)model->vocab_size, sizeof(float));
     ctx->last_hidden = (float *)calloc((size_t)emb_dim, sizeof(float));
+    ctx->last_pooled_hidden = (float *)calloc(
+        (size_t)emb_dim, sizeof(float));
 
     /* pre-allocate eval buffers */
     ctx->hidden = (float *)calloc((size_t)emb_dim, sizeof(float));
@@ -3117,7 +3123,7 @@ bitnet_context_t *bitnet_create_context(bitnet_model_t *model, int max_tokens) {
     ctx->tq2_lut_count = tq2_lut_count;
 
     if (ctx->key_cache == NULL || ctx->value_cache == NULL || ctx->logits == NULL ||
-        ctx->last_hidden == NULL ||
+        ctx->last_hidden == NULL || ctx->last_pooled_hidden == NULL ||
         ctx->hidden == NULL || ctx->q == NULL || ctx->k == NULL || ctx->v == NULL ||
         ctx->attn_buffer == NULL || ctx->gate == NULL || ctx->up == NULL ||
         ctx->down == NULL || ctx->scores == NULL || ctx->tmp_out == NULL ||
@@ -3184,6 +3190,12 @@ int bitnet_reset_context(bitnet_context_t *ctx) {
     if (ctx->logits != NULL && ctx->model != NULL) {
         memset(ctx->logits, 0, (size_t)ctx->model->vocab_size * sizeof(*ctx->logits));
     }
+    if (ctx->last_pooled_hidden != NULL && ctx->model != NULL) {
+        memset(ctx->last_pooled_hidden, 0,
+               (size_t)ctx->model->embedding_length *
+               sizeof(*ctx->last_pooled_hidden));
+    }
+    ctx->last_eval_hidden_count = 0;
     return 0;
 }
 
@@ -4351,9 +4363,44 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     {
         const float *norm_w = (const float *)gguf_get_tensor_ptr(&model->gguf, cache->output_norm);
         if (norm_w == NULL) goto cleanup;
+        if (ctx->last_pooled_hidden != NULL) {
+            size_t needed = (size_t)n_tokens * (size_t)emb_dim;
+            if (ctx->last_eval_hidden_capacity < needed) {
+                float *grown = (float *)realloc(
+                    ctx->last_eval_hidden, needed * sizeof(float));
+                if (grown == NULL) goto cleanup;
+                ctx->last_eval_hidden = grown;
+                ctx->last_eval_hidden_capacity = needed;
+            }
+            memset(ctx->last_pooled_hidden, 0,
+                   (size_t)emb_dim * sizeof(*ctx->last_pooled_hidden));
+            for (int token_idx = 0; token_idx < n_tokens; ++token_idx) {
+                const float *row = n_tokens > 1 ?
+                    ctx->prefill_hidden +
+                    (size_t)token_idx * (size_t)emb_dim : ctx->hidden;
+                memcpy(ctx->tmp_out, row,
+                       (size_t)emb_dim * sizeof(*ctx->tmp_out));
+                bitnet_rms_norm_eps(
+                    ctx->tmp_out, norm_w, emb_dim,
+                    model->rms_norm_eps);
+                memcpy(
+                    ctx->last_eval_hidden +
+                    (size_t)token_idx * (size_t)emb_dim,
+                    ctx->tmp_out,
+                    (size_t)emb_dim * sizeof(*ctx->tmp_out));
+                for (int column = 0; column < emb_dim; ++column)
+                    ctx->last_pooled_hidden[column] +=
+                        ctx->tmp_out[column] / (float)n_tokens;
+            }
+            ctx->last_eval_hidden_count = n_tokens;
+        }
         bitnet_rms_norm_eps(hidden, norm_w, emb_dim, model->rms_norm_eps);
         if (ctx->last_hidden != NULL) {
             memcpy(ctx->last_hidden, hidden, (size_t)emb_dim * sizeof(*ctx->last_hidden));
+        }
+        if (ctx->last_pooled_hidden != NULL) {
+            for (int column = 0; column < emb_dim; ++column)
+                ctx->last_pooled_hidden[column] += hidden[column];
         }
     }
 
@@ -4509,6 +4556,20 @@ const float *bitnet_get_last_hidden(const bitnet_context_t *ctx) {
     return ctx->last_hidden;
 }
 
+const float *bitnet_get_last_pooled_hidden(const bitnet_context_t *ctx) {
+    if (ctx == NULL) return NULL;
+    return ctx->last_pooled_hidden;
+}
+
+const float *bitnet_get_last_eval_hidden(const bitnet_context_t *ctx) {
+    if (ctx == NULL || ctx->last_eval_hidden_count <= 0) return NULL;
+    return ctx->last_eval_hidden;
+}
+
+int bitnet_last_eval_hidden_count(const bitnet_context_t *ctx) {
+    return ctx == NULL ? 0 : ctx->last_eval_hidden_count;
+}
+
 void bitnet_free_context(bitnet_context_t *ctx) {
     if (ctx == NULL) return;
     free(ctx->key_cache);
@@ -4516,6 +4577,8 @@ void bitnet_free_context(bitnet_context_t *ctx) {
     bitnet_free_q8_kv_cache(ctx);
     free(ctx->logits);
     free(ctx->last_hidden);
+    free(ctx->last_pooled_hidden);
+    free(ctx->last_eval_hidden);
     free(ctx->hidden);
     free(ctx->q);
     free(ctx->k);

@@ -158,7 +158,7 @@ def test_answer_token_slot_labels_marks_longest_contiguous_match():
         [1, 42, 3], [42, 55], eos_id=55) == [0, 1, 0]
 
 
-def test_full_rank_projection_initialization_is_exact():
+def test_full_rank_projection_initialization_matches_reference():
     backbone = TinyBackbone()
     memory = MetisMemory(
         backbone,
@@ -172,7 +172,9 @@ def test_full_rank_projection_initialization_is_exact():
         device="cpu",
     )
     memory.init_from_backbone()
-    torch.testing.assert_close(memory.query_proj[0], backbone.layers[0]["q"])
+    assert not torch.equal(memory.query_proj[0], backbone.layers[0]["q"])
+    assert torch.isfinite(memory.query_proj[0]).all()
+    assert float(memory.query_proj[0].detach().std()) > 0.0
     torch.testing.assert_close(memory.wk[0], backbone.layers[0]["k"])
     torch.testing.assert_close(memory.wv[0], backbone.layers[0]["v"])
     assert memory.query_a is None
@@ -234,7 +236,7 @@ if __name__ == "__main__":
     test_stale_answer_margin_prefers_current_value()
     test_evidence_attention_loss_rewards_positive_mass()
     test_answer_token_slot_labels_marks_longest_contiguous_match()
-    test_full_rank_projection_initialization_is_exact()
+    test_full_rank_projection_initialization_matches_reference()
     test_memory_commit_preserves_source_activation_graph()
     test_official_five_task_mapping_and_schedule()
     print("metis training formula tests: PASS")

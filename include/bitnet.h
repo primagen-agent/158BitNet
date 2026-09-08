@@ -19,6 +19,14 @@ int bitnet_embedding_length(const bitnet_model_t *model);
 int bitnet_vocab_size(const bitnet_model_t *model);
 int bitnet_chat_template_kind(const bitnet_model_t *model);
 const float *bitnet_get_last_hidden(const bitnet_context_t *ctx);
+/* Mean of output-normalized hidden rows from the most recent bitnet_eval,
+ * plus its final row. This matches the portable memory-controller pooling
+ * used during training. */
+const float *bitnet_get_last_pooled_hidden(const bitnet_context_t *ctx);
+/* Output-normalized hidden rows from the most recent bitnet_eval, laid out as
+ * [bitnet_last_eval_hidden_count(ctx)][bitnet_embedding_length(model)]. */
+const float *bitnet_get_last_eval_hidden(const bitnet_context_t *ctx);
+int bitnet_last_eval_hidden_count(const bitnet_context_t *ctx);
 
 int bitnet_tokenize(bitnet_model_t *model, const char *text, int *tokens, int max_tokens);
 int bitnet_tokenize_ex(bitnet_model_t *model, const char *text, int *tokens, int max_tokens, int add_bos);

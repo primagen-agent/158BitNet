@@ -109,7 +109,9 @@ def scheduled_task_weights(progress, available_tasks, starts, ends):
     return {task: value / total for task, value in raw.items()}
 
 
-def straight_through_alpha_top_p(p, rho, k_min):
+def straight_through_alpha_top_p(
+    p, rho, k_min, max_tokens=0, max_fraction=0.0
+):
     """Sparse AlphaTopP forward weights with dense softmax gradients."""
     L = p.shape[-1]
     sorted_p, sorted_idx = torch.sort(
@@ -122,6 +124,13 @@ def straight_through_alpha_top_p(p, rho, k_min):
     else:
         k = L
     k = min(max(k, k_min), L)
+    k_max = L
+    if max_fraction > 0.0:
+        k_max = min(k_max, max(1, math.ceil(L * max_fraction)))
+    if max_tokens > 0:
+        k_max = min(k_max, max_tokens)
+    k_max = max(k_min, k_max)
+    k = min(k, k_max)
     selected = torch.zeros_like(p, dtype=torch.bool)
     selected[sorted_idx[:k]] = True
     mass = p[selected].sum().clamp_min(1e-6)
@@ -237,6 +246,7 @@ class MetisMemory(nn.Module):
 
     def __init__(self, backbone: TorchBackbone, layer_ids, gamma=0.9,
                  tau=1.0, rho=0.9, k_min=1, beta_scale=0.9,
+                 alpha_max_tokens=0, alpha_max_fraction=0.0,
                  query_rank=128, query_gate_lambda=0.0,
                  query_gate_temperature=1.0, query_gate_threshold=0.5,
                  query_gate_min_rank=1, query_mode="backbone_delta",
@@ -262,6 +272,12 @@ class MetisMemory(nn.Module):
         self.groups = cfg.q_dim // cfg.kv_dim
         self.heads_per_group = cfg.n_heads // self.groups
         self.gamma, self.tau, self.rho, self.k_min = gamma, tau, rho, k_min
+        self.alpha_max_tokens = int(alpha_max_tokens)
+        self.alpha_max_fraction = float(alpha_max_fraction)
+        if self.alpha_max_tokens < 0:
+            raise ValueError("alpha_max_tokens must be non-negative")
+        if not 0.0 <= self.alpha_max_fraction <= 1.0:
+            raise ValueError("alpha_max_fraction must be in [0, 1]")
         self.beta_scale = beta_scale
         # Paper/reference initialization: both gates start at sigmoid≈1.
         # They remain trainable and can learn forgetting/update behavior.
@@ -310,6 +326,13 @@ class MetisMemory(nn.Module):
             self.query_proj = nn.Parameter(
                 zeros(NL, self.q_dim, self.d_model))
             self.query_a = self.query_b = None
+            with torch.no_grad():
+                for layer in range(NL):
+                    query_init = torch.randn(
+                        self.q_dim, self.d_model, generator=g,
+                        dtype=torch.float32) / math.sqrt(self.d_model)
+                    self.query_proj[layer].copy_(query_init.to(
+                        device=device, dtype=dtype))
         else:
             self.query_proj = None
             self.query_a = nn.Parameter(
@@ -432,10 +455,9 @@ class MetisMemory(nn.Module):
                             device=factor_a.device, dtype=factor_a.dtype))
                         factor_b[s].copy_(b.to(
                             device=factor_b.device, dtype=factor_b.dtype))
-                if self.q_rank == 0:
-                    self.query_proj[s].copy_(lw["q"].float())
 
-    def load_checkpoint(self, path, allow_query_rank_expand=False):
+    def load_checkpoint(self, path, allow_query_rank_expand=False,
+                        allow_selection_mismatch=False):
         checkpoint = load_bnmem_v1(path)
         expected_sha256 = checkpoint["backbone_sha256"]
         actual_sha256 = self.backbone.model_sha256()
@@ -469,9 +491,10 @@ class MetisMemory(nn.Module):
         scalar_checks = {
             "gamma": self.gamma,
             "tau": self.tau,
-            "rho": self.rho,
             "beta_scale": self.beta_scale,
         }
+        if not allow_selection_mismatch:
+            scalar_checks["rho"] = self.rho
         for name, expected in scalar_checks.items():
             actual = checkpoint[name]
             if not math.isclose(
@@ -481,6 +504,26 @@ class MetisMemory(nn.Module):
                     f"checkpoint {name} {actual} != trainer {expected}")
         if checkpoint["k_min"] != self.k_min:
             raise ValueError("checkpoint k_min does not match trainer")
+        for name, expected in (
+            ("alpha_max_tokens", self.alpha_max_tokens),
+            ("alpha_max_fraction", self.alpha_max_fraction),
+        ):
+            actual = checkpoint.get(name, 0)
+            if not math.isclose(
+                float(actual), float(expected),
+                rel_tol=1e-5, abs_tol=1e-6
+            ):
+                raise ValueError(
+                    f"checkpoint {name} {actual} != trainer {expected}")
+        if allow_selection_mismatch and not math.isclose(
+            checkpoint["rho"], self.rho, rel_tol=1e-5, abs_tol=1e-6
+        ):
+            print(json.dumps({
+                "phase": "memory_init",
+                "selection_policy_changed": True,
+                "checkpoint_rho": checkpoint["rho"],
+                "training_rho": self.rho,
+            }, separators=(",", ":")), flush=True)
         if checkpoint["denom_mode"] != expected_denom:
             raise ValueError("checkpoint denominator mode does not match")
         expected_add_backbone = self.query_mode == "backbone_delta"
@@ -994,7 +1037,8 @@ class MetisMemory(nn.Module):
         scores = h @ self.w_agg[slot]                        # [L]
         p = F.softmax(scores / self.tau, dim=-1)
         w_sel = straight_through_alpha_top_p(
-            p, self.rho, self.k_min)
+            p, self.rho, self.k_min,
+            self.alpha_max_tokens, self.alpha_max_fraction)
 
         if self.kv_rank == 0:
             Kall = F.linear(h, self.wk[slot])                 # [L, kv]
@@ -1145,6 +1189,8 @@ class MetisMemory(nn.Module):
                       q_dim=self.q_dim, head_dim=self.head_dim,
                       gamma=self.gamma, tau=self.tau, rho=self.rho,
                       k_min=self.k_min,
+                      alpha_max_tokens=self.alpha_max_tokens,
+                      alpha_max_fraction=self.alpha_max_fraction,
                       gdu_ab=selected(self.gdu_ab.data),
                       gdu_bb=selected(self.gdu_bb.data),
                       beta_scale=self.beta_scale,
@@ -1281,6 +1327,8 @@ class MemoryTrainer:
         self.mem = MetisMemory(self.backbone, layer_ids,
                                 gamma=args.gamma, tau=args.tau,
                                 rho=args.rho, k_min=1,
+                                alpha_max_tokens=args.alpha_max_tokens,
+                                alpha_max_fraction=args.alpha_max_fraction,
                                 beta_scale=args.beta_scale,
                                 query_rank=args.query_rank,
                                 query_gate_lambda=args.query_gate_lambda,
@@ -1317,7 +1365,9 @@ class MemoryTrainer:
         if args.init_memory:
             self.mem.load_checkpoint(
                 args.init_memory,
-                allow_query_rank_expand=args.allow_query_rank_expand)
+                allow_query_rank_expand=args.allow_query_rank_expand,
+                allow_selection_mismatch=(
+                    args.allow_init_selection_mismatch))
             print(f'{{"phase":"memory_init","source":"checkpoint",'
                   f'"path":"{args.init_memory}",'
                   f'"query_rank":{self.mem.q_rank},'
@@ -1561,7 +1611,25 @@ class MemoryTrainer:
         gated to the current chunk), fresh-context query + teacher-forced
         target scoring. Returns (loss_sum, n_label)."""
         chunks = sample["messages"]
-        q = sample.get("query_turn_id", len(chunks) - 1)
+        query_value = sample.get("query_turn_id", len(chunks) - 1)
+        if isinstance(query_value, list):
+            query_indices = [int(index) for index in query_value]
+        else:
+            query_indices = [int(query_value)]
+        if not query_indices:
+            query_indices = [len(chunks) - 1]
+        query_index_set = set(query_indices)
+        if any(index < 0 or index >= len(chunks)
+               for index in query_indices):
+            raise ValueError("query_turn_id contains an invalid chunk index")
+        first_query = min(query_indices)
+        gradient_tail_commits = int(
+            sample.get("metadata", {}).get("gradient_tail_commits", 0))
+        if gradient_tail_commits < 0:
+            raise ValueError("gradient_tail_commits must be non-negative")
+        gradient_start = (
+            max(0, first_query - gradient_tail_commits)
+            if want_grads and gradient_tail_commits else 0)
         evidence_indices = {
             int(index)
             for index in sample.get("evidence_message_indices", [])}
@@ -1574,7 +1642,7 @@ class MemoryTrainer:
 
         prompts = []
         for c in range(len(chunks)):
-            is_q = c == q
+            is_q = c in query_index_set
             text, target = render_chunk(chunks[c], is_q)
             # Every chunk is evaluated in a fresh no-KV context, so every
             # chunk needs the same BOS treatment as a standalone request.
@@ -1583,9 +1651,7 @@ class MemoryTrainer:
             if ids is None:
                 ids = self.tok.encode(text, add_bos=True)
                 tok_cache[key] = ids
-            prompts.append((ids, is_q, target, text))
-        tgt_ids = None
-        for ids, is_q, target, _text in prompts:
+            tgt_ids = None
             if is_q:
                 tkey = ("t", target)
                 tgt_ids = tok_cache.get(tkey)
@@ -1593,8 +1659,12 @@ class MemoryTrainer:
                     tgt_ids = self.tok.encode(target, add_bos=False)
                     tgt_ids = tgt_ids + [self.eos]
                     tok_cache[tkey] = tgt_ids
-                break
-        if tgt_ids is None:
+            prompts.append((ids, is_q, target, text, tgt_ids))
+        evidence_target_ids = next(
+            (target_ids for _ids, is_q, _target, _text, target_ids in prompts
+             if is_q and target_ids is not None),
+            None)
+        if evidence_target_ids is None:
             return None, 0
 
         ctx = torch.enable_grad() if want_grads else torch.no_grad()
@@ -1603,14 +1673,26 @@ class MemoryTrainer:
         n_correct = 0
         sequence_exact = 0
         with ctx:
-            for chunk_index, (ids, is_q, target, text) in enumerate(prompts):
+            for chunk_index, (
+                ids, is_q, target, text, tgt_ids
+            ) in enumerate(prompts):
                 if not is_q:
+                    truncated_prefix = (
+                        want_grads and chunk_index < gradient_start)
                     # Official Metis keeps the complete multi-chunk graph:
                     # later query loss differentiates through every earlier
                     # memory read and write. The backbone weights remain
                     # frozen, but its activations must not be detached.
+                    # Very long local trajectories may explicitly request a
+                    # bounded gradient suffix. Prefix chunks still execute
+                    # and update the memory state, but are detached so a
+                    # 32/64-commit sample remains trainable on 16 GB MPS.
                     toks = torch.tensor(ids, device=self.device)
-                    _ = bb(toks, memory_v6=mem, fuse_start=0)
+                    if truncated_prefix:
+                        with torch.no_grad():
+                            _ = bb(toks, memory_v6=mem, fuse_start=0)
+                    else:
+                        _ = bb(toks, memory_v6=mem, fuse_start=0)
                     if chunk_index in distractor_indices:
                         slot_labels = [0] * len(ids)
                     elif chunk_index in evidence_indices:
@@ -1618,11 +1700,14 @@ class MemoryTrainer:
                             slot_labels = [1] * len(ids)
                         else:
                             slot_labels = answer_token_slot_labels(
-                                ids, tgt_ids, self.eos)
+                                ids, evidence_target_ids, self.eos)
                     else:
                         slot_labels = [-1] * len(ids)
                     mem.set_pending_slot_labels(slot_labels)
-                    mem.commit_all_grad_enabled()
+                    if truncated_prefix:
+                        mem.commit_all()
+                    else:
+                        mem.commit_all_grad_enabled()
                     append_pointer_token_ids(mem, ids, bb.device)
                     continue
                 # query: FRESH context (memory is the only fact source).
@@ -1745,6 +1830,31 @@ class MemoryTrainer:
                 n_correct += correct
                 sequence_exact += int(correct == len(tgt_ids))
                 mem.active = saved_active
+                mem.discard_captured()
+                if chunk_index + 1 < len(chunks):
+                    # A supervised exchange becomes ordinary conversation
+                    # history for later queries, matching deploy semantics:
+                    # score first, then commit the completed user+assistant
+                    # turn for the next exchange.
+                    complete_text, _ = render_chunk(
+                        chunks[chunk_index], False)
+                    ckey = ("complete", complete_text)
+                    complete_ids = tok_cache.get(ckey)
+                    if complete_ids is None:
+                        complete_ids = self.tok.encode(
+                            complete_text, add_bos=True)
+                        tok_cache[ckey] = complete_ids
+                    _ = bb(
+                        torch.tensor(complete_ids, device=self.device),
+                        memory_v6=mem, fuse_start=0)
+                    mem.set_pending_slot_labels(
+                        [-1] * len(complete_ids))
+                    if want_grads:
+                        mem.commit_all_grad_enabled()
+                    else:
+                        mem.commit_all()
+                    append_pointer_token_ids(
+                        mem, complete_ids, bb.device)
         return loss_sum, n_label, n_correct, sequence_exact
 
     def run_valid(self, n, tok_cache, query_memory_enabled=True):
@@ -1755,7 +1865,8 @@ class MemoryTrainer:
         subsets and can select a worse checkpoint merely because its batch was
         easier.
         """
-        total, tok, n_ok, correct, exact = 0.0, 0, 0, 0, 0
+        total, tok, n_ok, correct, exact, query_count = (
+            0.0, 0, 0, 0, 0, 0)
         for ci in range(min(n, len(self.valid_idx))):
             s_idx = self.valid_idx[ci]
             line = self.valid_strata[s_idx[0]][1][s_idx[1]]
@@ -1774,8 +1885,12 @@ class MemoryTrainer:
             n_ok += 1
             correct += nc
             exact += ne
+            query_value = sample.get(
+                "query_turn_id", len(sample["messages"]) - 1)
+            query_count += (
+                len(query_value) if isinstance(query_value, list) else 1)
         return (total / max(tok, 1), tok, n_ok,
-                correct / max(tok, 1), exact / max(n_ok, 1))
+                correct / max(tok, 1), exact / max(query_count, 1))
 
     def export(self, path):
         self.mem.export(path)
@@ -1813,6 +1928,10 @@ def main():
     ap.add_argument(
         "--allow-query-rank-expand", action="store_true",
         help="zero-pad a lower-rank checkpoint into --query-rank")
+    ap.add_argument(
+        "--allow-init-selection-mismatch", action="store_true",
+        help="load checkpoint weights while adopting the current --rho; "
+             "all backbone, geometry, layer, and query-mode checks remain")
     ap.add_argument(
         "--answer-decoder-width", type=int, default=0,
         help="width of the nonlinear full-rank memory answer decoder; "
@@ -1857,6 +1976,8 @@ def main():
     ap.add_argument("--gamma", type=float, default=0.9)
     ap.add_argument("--tau", type=float, default=1.0)
     ap.add_argument("--rho", type=float, default=0.9)
+    ap.add_argument("--alpha-max-tokens", type=int, default=0)
+    ap.add_argument("--alpha-max-fraction", type=float, default=0.0)
     ap.add_argument("--beta-scale", type=float, default=0.9)
     ap.add_argument("--query-rank", type=int, default=128,
                     help="query projection rank; zero selects full rank")
@@ -1960,6 +2081,10 @@ def main():
     args = ap.parse_args()
     if args.retrieval_windows < 0:
         ap.error("--retrieval-windows must be non-negative")
+    if args.alpha_max_tokens < 0:
+        ap.error("--alpha-max-tokens must be non-negative")
+    if not 0.0 <= args.alpha_max_fraction <= 1.0:
+        ap.error("--alpha-max-fraction must be in [0, 1]")
     if args.retrieval_window_size < 1:
         ap.error("--retrieval-window-size must be positive")
     if not 0.0 <= args.self_prefix_prob <= 1.0:

@@ -43,6 +43,8 @@ typedef struct metis_params {
     int head_dim;           /* per-head L2 normalize width (128) */
     float gamma, tau, rho;
     int k_min;
+    int alpha_max_tokens;       /* 0 disables the fixed AlphaTopP cap */
+    float alpha_max_fraction;   /* 0 disables the relative AlphaTopP cap */
     float gdu_ab, gdu_bb;   /* fixed scalar gate biases (reference init) */
     float beta_scale;       /* reference update_ratio */
     /* v4 (reference-trained direct-use models, version 4): per-layer trained

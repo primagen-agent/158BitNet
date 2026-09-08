@@ -1,4 +1,4 @@
-"""BNMEM1/2 reader/writer for full- or low-rank memory models.
+"""BNMEM1/2/6 reader/writer for full- or low-rank memory models.
 
 File layout (src/metis/metis_file.c):
   magic "BNMEM1\\0\\0" (legacy unbound) or "BNMEM2\\0\\0" (bound)
@@ -8,6 +8,7 @@ File layout (src/metis/metis_file.c):
   u32 d_model, kv_dim, q_dim, head_dim
   f32 gamma, tau, rho
   u32 k_min
+  BNMEM6 only: u32 alpha_max_tokens; f32 alpha_max_fraction
   f32 gdu_ab, gdu_bb, beta_scale
   BNMEM2 only: u8 backbone_sha256[32]
   tensor payloads in fixed order (f32 row-major, layer-major). K/V are
@@ -67,6 +68,7 @@ def load_bnmem_v1(path: str) -> dict:
             (magic == b"BNMEM1\x00\x00" and version == 1)
             or (magic == b"BNMEM2\x00\x00" and version == 2)
             or (magic == b"BNMEM5\x00\x00" and version == 5)
+            or (magic == b"BNMEM6\x00\x00" and version == 6)
         ):
             raise ValueError(
                 f"unsupported BNMEM magic/version {magic!r}/{version}")
@@ -81,6 +83,8 @@ def load_bnmem_v1(path: str) -> dict:
         tau = read_f32(handle)
         rho = read_f32(handle)
         k_min = read_u32(handle)
+        alpha_max_tokens = read_u32(handle) if version == 6 else 0
+        alpha_max_fraction = read_f32(handle) if version == 6 else 0.0
         _mean_ab = read_f32(handle)
         _mean_bb = read_f32(handle)
         beta_scale = read_f32(handle)
@@ -90,7 +94,7 @@ def load_bnmem_v1(path: str) -> dict:
         query_rank = encoded_rank & QUERY_RANK_MASK
         kv_rank = (encoded_rank & KV_RANK_MASK) >> KV_RANK_SHIFT
         backbone_sha256 = (
-            read_exact(handle, 32) if version == 2 else None)
+            read_exact(handle, 32) if version in (2, 6) else None)
         tensors = {
             "gdu_ab": read_array(handle, (n_layers,)),
             "gdu_bb": read_array(handle, (n_layers,)),
@@ -170,6 +174,8 @@ def load_bnmem_v1(path: str) -> dict:
         "tau": tau,
         "rho": rho,
         "k_min": k_min,
+        "alpha_max_tokens": alpha_max_tokens,
+        "alpha_max_fraction": alpha_max_fraction,
         "beta_scale": beta_scale,
         "denom_mode": denom_mode,
         "query_rank": query_rank,
@@ -189,6 +195,8 @@ def save_bnmem_v3(path: str, *, layer_ids: list[int], d_model: int,
                   gamma: float, tau: float, rho: float, k_min: int,
                   gdu_ab, gdu_bb, beta_scale: float,
                   w_agg, gdu_aw, gdu_bw, mem_norm,
+                  alpha_max_tokens: int = 0,
+                  alpha_max_fraction: float = 0.0,
                   wk=None, wv=None,
                   wk_a=None, wk_b=None, wv_a=None, wv_b=None,
                   query_a=None, query_b=None, query_norm=None,
@@ -219,10 +227,24 @@ def save_bnmem_v3(path: str, *, layer_ids: list[int], d_model: int,
         backbone_sha256 = bytes.fromhex(backbone_sha256)
     if backbone_sha256 is not None and len(backbone_sha256) != 32:
         raise ValueError("backbone SHA-256 must contain exactly 32 bytes")
+    if alpha_max_tokens < 0:
+        raise ValueError("alpha_max_tokens must be non-negative")
+    if not 0.0 <= alpha_max_fraction <= 1.0:
+        raise ValueError("alpha_max_fraction must be in [0, 1]")
+    bounded_selection = (
+        alpha_max_tokens > 0 or alpha_max_fraction > 0.0)
+    if bounded_selection and backbone_sha256 is None:
+        raise ValueError("BNMEM6 bounded selection requires backbone binding")
     hdr += (
-        b"BNMEM2\x00\x00"
-        if backbone_sha256 is not None else b"BNMEM1\x00\x00")
-    hdr += struct.pack("<I", 2 if backbone_sha256 is not None else 1)
+        b"BNMEM6\x00\x00" if bounded_selection
+        else (
+            b"BNMEM2\x00\x00"
+            if backbone_sha256 is not None else b"BNMEM1\x00\x00"
+        )
+    )
+    hdr += struct.pack(
+        "<I", 6 if bounded_selection
+        else (2 if backbone_sha256 is not None else 1))
     hdr += struct.pack("<I", nl)
     ids = list(layer_ids) + [UNUSED_LAYER] * (METIS_V6_MAX_LAYERS - nl)
     for i in ids:
@@ -230,6 +252,8 @@ def save_bnmem_v3(path: str, *, layer_ids: list[int], d_model: int,
     hdr += struct.pack("<IIII", d_model, kv_dim, q_dim, head_dim)
     hdr += struct.pack("<fff", gamma, tau, rho)
     hdr += struct.pack("<I", k_min)
+    if bounded_selection:
+        hdr += struct.pack("<If", alpha_max_tokens, alpha_max_fraction)
     # v8: per-layer trainable biases ([NL] tensors) — mean-fold into the
     # per-layer tensor payloads below; header keeps a representative
     # scalar (mean) for v3 backcompat readers.

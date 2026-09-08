@@ -88,64 +88,74 @@ def main() -> None:
     })
     for index, sample in enumerate(load_samples(args.data, args.samples)):
         chunks = sample["messages"]
-        query_index = sample.get("query_turn_id", len(chunks) - 1)
+        query_value = sample.get("query_turn_id", len(chunks) - 1)
+        query_indices = set(
+            int(value) for value in query_value
+        ) if isinstance(query_value, list) else {int(query_value)}
         memory.reset_state()
-        query_ids = None
-        target = None
         for chunk_index, chunk in enumerate(chunks):
-            is_query = chunk_index == query_index
+            is_query = chunk_index in query_indices
             text, chunk_target = render_chunk(chunk, is_query)
             ids = tokenizer.encode(text, add_bos=True)
-            if is_query:
-                query_ids = ids
-                target = chunk_target.strip()
-                break
-            forward_chunk(backbone, memory, ids)
+            if not is_query:
+                forward_chunk(backbone, memory, ids)
+                memory.commit_all()
+                continue
+
+            target = chunk_target.strip()
+            saved_state = memory.clone_runtime_state()
+            prediction = generate(
+                backbone, memory, ids, decoder, stop_ids,
+                args.max_answer_tokens)
+            memory.restore_runtime_state(saved_state)
+            memory.active = False
+            no_memory_prediction = generate(
+                backbone, memory, ids, decoder, stop_ids,
+                args.max_answer_tokens)
+            memory.active = True
+
+            target_ids = tokenizer.encode(target, add_bos=False)
+            prediction_ids = tokenizer.encode(
+                prediction, add_bos=False)
+            no_memory_ids = tokenizer.encode(
+                no_memory_prediction, add_bos=False)
+            kind = sample.get("metadata", {}).get("type", "unknown")
+            row = {
+                "sample_id": sample.get("sample_id"),
+                "query_chunk_index": chunk_index,
+                "type": kind,
+                "target": target,
+                "prediction": prediction,
+                "no_memory_prediction": no_memory_prediction,
+                "memory_exact": prediction == target,
+                "no_memory_exact": no_memory_prediction == target,
+                "memory_token_accuracy": position_accuracy(
+                    prediction_ids, target_ids),
+                "no_memory_token_accuracy": position_accuracy(
+                    no_memory_ids, target_ids),
+            }
+            results.append(row)
+            group = totals[kind]
+            group["samples"] += 1
+            group["memory_exact"] += int(row["memory_exact"])
+            group["no_memory_exact"] += int(row["no_memory_exact"])
+            group["memory_token_accuracy"] += row[
+                "memory_token_accuracy"]
+            group["no_memory_token_accuracy"] += row[
+                "no_memory_token_accuracy"]
+            print(json.dumps({
+                "sample": index + 1,
+                **row,
+            }, ensure_ascii=False, separators=(",", ":")), flush=True)
+
+            # Use the gold completed exchange as subsequent conversation
+            # history so each query measures memory rather than accumulated
+            # generation errors from earlier queries.
+            complete_text, _ = render_chunk(chunk, False)
+            complete_ids = tokenizer.encode(
+                complete_text, add_bos=True)
+            forward_chunk(backbone, memory, complete_ids)
             memory.commit_all()
-
-        if query_ids is None or target is None:
-            continue
-        saved_state = memory.clone_runtime_state()
-        prediction = generate(
-            backbone, memory, query_ids, decoder, stop_ids,
-            args.max_answer_tokens)
-        memory.restore_runtime_state(saved_state)
-        memory.active = False
-        no_memory_prediction = generate(
-            backbone, memory, query_ids, decoder, stop_ids,
-            args.max_answer_tokens)
-        memory.active = True
-
-        target_ids = tokenizer.encode(target, add_bos=False)
-        prediction_ids = tokenizer.encode(prediction, add_bos=False)
-        no_memory_ids = tokenizer.encode(
-            no_memory_prediction, add_bos=False)
-        kind = sample.get("metadata", {}).get("type", "unknown")
-        row = {
-            "sample_id": sample.get("sample_id"),
-            "type": kind,
-            "target": target,
-            "prediction": prediction,
-            "no_memory_prediction": no_memory_prediction,
-            "memory_exact": prediction == target,
-            "no_memory_exact": no_memory_prediction == target,
-            "memory_token_accuracy": position_accuracy(
-                prediction_ids, target_ids),
-            "no_memory_token_accuracy": position_accuracy(
-                no_memory_ids, target_ids),
-        }
-        results.append(row)
-        group = totals[kind]
-        group["samples"] += 1
-        group["memory_exact"] += int(row["memory_exact"])
-        group["no_memory_exact"] += int(row["no_memory_exact"])
-        group["memory_token_accuracy"] += row["memory_token_accuracy"]
-        group["no_memory_token_accuracy"] += row[
-            "no_memory_token_accuracy"]
-        print(json.dumps({
-            "sample": index + 1,
-            **row,
-        }, ensure_ascii=False, separators=(",", ":")), flush=True)
 
     summary = {}
     for kind, values in sorted(totals.items()):

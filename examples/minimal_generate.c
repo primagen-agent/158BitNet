@@ -102,7 +102,8 @@ static int read_le_u32(FILE *f, unsigned int *out) {
  * validated by bitnet_load_memory_model) to list its memory layer ids.
  * v1/v2 layout: 8-byte magic, u32 version (1 or 2), u32 n_layers, then u32
  * layer_ids[4] (0xFFFFFFFF = unused slot), all little-endian.
- * v3/v4 layout: magic "BNMEM3"/"BNMEM4", u32 version, u32 n_layers, then
+ * v3/v4/v6 layout: magic "BNMEM3"/"BNMEM4"/"BNMEM6", u32 version,
+ * u32 n_layers, then
  * u32 layer_ids[32]. Range-compressed display for the 32-layer full-path
  * file; v4 files append " v4" to flag reference-trained direct-use models. */
 static void print_memory_model_banner(const char *path) {
@@ -115,7 +116,8 @@ static void print_memory_model_banner(const char *path) {
 
     if (ok) ok = (fread(magic, 1, sizeof magic, f) == (size_t)sizeof magic);
     if (ok) ok = read_le_u32(f, &version);
-    if (ok) ok = (version >= 1u && version <= 4u);
+    if (ok) ok = (
+        (version >= 1u && version <= 4u) || version == 6u);
     if (ok) ok = read_le_u32(f, &n_layers);
     const int slots = version >= 3u ? 32 : 4;
     for (int i = 0; i < kMaxLayers; ++i) {
@@ -125,7 +127,7 @@ static void print_memory_model_banner(const char *path) {
     if (f != NULL) fclose(f);
 
     fprintf(stderr, "[bitnet] memory model: %s%s layers=[", path,
-            version == 4u ? " v4" : "");
+            version == 4u ? " v4" : (version == 6u ? " v6" : ""));
     if (ok && n_layers >= 1u && n_layers <= (unsigned int)slots) {
         if (version >= 3u && n_layers > 6) {
             fprintf(stderr, "%u..%u x%u", ids[0], ids[n_layers - 1],

@@ -80,6 +80,43 @@ DISTRACTORS = [
     ),
 ]
 
+LONG_FILLER_SENTENCES = [
+    "The discussion then moved to ordinary scheduling details and routine plans.",
+    "Several unrelated observations were exchanged before the next topic came up.",
+    "They briefly talked about errands, weather, meals, and the coming weekend.",
+    "Nothing in that part of the conversation changed the previously stated fact.",
+    "The speakers continued naturally with small updates about their day.",
+    "A few practical details were mentioned only as background information.",
+    "The conversation included casual remarks that were not important later.",
+    "They paused to compare options and then returned to everyday matters.",
+]
+
+LONG_PROFILES = [
+    # (commits before query, approximate user-message word target)
+    # The first accuracy pass centers on roughly 100 tokenizer tokens per
+    # write while extending the trajectory to 64 commits. Longer 256/512
+    # token blocks are deferred until this stage passes its recall gates.
+    (2, 72),
+    (4, 60),
+    (8, 48),
+]
+
+VALUE_ADJECTIVES = [
+    "amber", "blue", "copper", "green", "ivory", "silver", "violet",
+]
+VALUE_OBJECTS = [
+    "ceramic mug", "canvas folder", "travel notebook", "wool scarf",
+    "wooden case", "glass lantern", "paper envelope", "metal compass",
+]
+VALUE_PLACES = [
+    "Alder Lane", "Birch Harbor", "Cedar Square", "Juniper Road",
+    "Maple Station", "Willow Court", "Orchid Street",
+]
+VALUE_TIMES = [
+    "Monday morning", "Tuesday afternoon", "Wednesday evening",
+    "Thursday before noon", "Friday after lunch", "Saturday at nine",
+]
+
 
 def chunk(user: str, assistant: str) -> list[dict[str, str]]:
     return [
@@ -332,6 +369,110 @@ def memory_irrelevant_sample(
     }
 
 
+def expand_to_words(text: str, target_words: int, rng: random.Random) -> str:
+    """Add neutral conversational context up to an approximate word target."""
+    parts = [text]
+    while len(" ".join(parts).split()) < target_words:
+        parts.append(rng.choice(LONG_FILLER_SENTENCES))
+    return " ".join(parts)
+
+
+def natural_value(index: int, turn: int, split_salt: int) -> str:
+    """Large compositional value space prevents answer-frequency shortcuts."""
+    code = index * 1009 + turn * 9176 + split_salt * 65537
+    adjective = VALUE_ADJECTIVES[code % len(VALUE_ADJECTIVES)]
+    obj = VALUE_OBJECTS[(code // 7) % len(VALUE_OBJECTS)]
+    place = VALUE_PLACES[(code // 53) % len(VALUE_PLACES)]
+    when = VALUE_TIMES[(code // 371) % len(VALUE_TIMES)]
+    reference = f"reference {split_salt:02d}-{index:05d}-{turn:02d}"
+    variant = code % 4
+    if variant == 0:
+        return f"the {adjective} {obj}, {reference}"
+    if variant == 1:
+        return f"{when} near {place}, {reference}"
+    if variant == 2:
+        serial = (code * 37 + 113) % 10000
+        return (
+            f"the {adjective} {obj} numbered {serial:04d}, {reference}")
+    return f"{place}, then {when.lower()}, {reference}"
+
+
+def long_memory_sample(
+    index: int, split_salt: int, rng: random.Random
+) -> dict:
+    """Natural long-context sample with old/middle/recent recall targets.
+
+    Separate samples supervise different query ages. This is equivalent to
+    multiple query checkpoints while retaining the trainer's one-query-per-
+    sample contract and keeping each backward graph independently bounded.
+    """
+    commits, target_words = LONG_PROFILES[index % len(LONG_PROFILES)]
+    facts = []
+    messages = []
+    fact_message_indices = []
+    query_indices = []
+    evidence_indices = []
+    checkpoints = sorted({
+        max(1, commits // 4),
+        max(1, commits // 2),
+        commits,
+    })
+    for turn in range(commits):
+        name = f"Contact{split_salt:02d}{index:05d}_{turn:02d}"
+        attribute = ATTRIBUTES[(index + turn * 3) % len(ATTRIBUTES)]
+        value = natural_value(index, turn, split_salt)
+        facts.append((name, attribute, value))
+        statement = (
+            f"While we are planning, please remember one specific detail: "
+            f"{name}'s {attribute} is {value}."
+        )
+        fact_message_indices.append(len(messages))
+        messages.append(chunk(
+            expand_to_words(statement, target_words, rng),
+            rng.choice(ACK_TEMPLATES),
+        ))
+        written = turn + 1
+        if written in checkpoints:
+            checkpoint_order = checkpoints.index(written)
+            if checkpoint_order == 0:
+                target_index = written - 1
+            elif checkpoint_order == 1:
+                target_index = 0
+            else:
+                target_index = written // 2
+            name_q, attribute_q, value_q = facts[target_index]
+            query_indices.append(len(messages))
+            evidence_indices.append(fact_message_indices[target_index])
+            messages.append(chunk(
+                (
+                    f"Earlier in this conversation, what was "
+                    f"{name_q}'s {attribute_q}? Answer with the remembered "
+                    "detail only."
+                ),
+                value_q,
+            ))
+    return {
+        "sample_id": f"long-memory-{split_salt}-{index:06d}",
+        "messages": messages,
+        "query_turn_id": query_indices,
+        "evidence_message_indices": sorted(set(evidence_indices)),
+        "distractor_message_indices": [
+            message_index for message_index in fact_message_indices
+            if message_index not in evidence_indices
+        ],
+        "metadata": {
+            "type": "remember",
+            "style": "natural_long_context",
+            "v2_task": "task3_long_memory",
+            "stage": 4,
+            "commits": commits,
+            "target_words": target_words,
+            "query_count": len(query_indices),
+            "full_trajectory_gradient": True,
+        },
+    }
+
+
 def write_jsonl(path: Path, samples: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
@@ -341,7 +482,7 @@ def write_jsonl(path: Path, samples: list[dict]) -> None:
 
 def build_split(
     output: Path, split: str, count: int, stage2_count: int,
-    stage3_count: int, seed: int, split_salt: int
+    stage3_count: int, long_count: int, seed: int, split_salt: int
 ) -> None:
     rng = random.Random(seed + split_salt)
     if count:
@@ -384,6 +525,12 @@ def build_split(
         write_jsonl(output / split / "update_explicit.jsonl", updates)
         write_jsonl(output / split / "forget_explicit.jsonl", forgets)
         write_jsonl(output / split / "task4_normal.jsonl", normal)
+    if long_count:
+        long_memory = [
+            long_memory_sample(i, split_salt, rng)
+            for i in range(long_count)
+        ]
+        write_jsonl(output / split / "long_memory.jsonl", long_memory)
 
 
 def main() -> None:
@@ -403,23 +550,32 @@ def main() -> None:
     parser.add_argument(
         "--stage3-valid", type=int, default=0,
         help="contrastive update and forget samples per validation stratum")
+    parser.add_argument(
+        "--long-train", type=int, default=0,
+        help="natural long-context training samples")
+    parser.add_argument(
+        "--long-valid", type=int, default=0,
+        help="natural long-context validation samples")
     parser.add_argument("--seed", type=int, default=20260903)
     args = parser.parse_args()
     if min(args.train, args.valid, args.stage2_train, args.stage2_valid,
-           args.stage3_train, args.stage3_valid) < 0:
+           args.stage3_train, args.stage3_valid,
+           args.long_train, args.long_valid) < 0:
         parser.error("sample counts must be non-negative")
-    if args.train + args.stage2_train + args.stage3_train < 1:
+    if (args.train + args.stage2_train + args.stage3_train
+            + args.long_train) < 1:
         parser.error("training sample counts must be positive")
-    if args.valid + args.stage2_valid + args.stage3_valid < 1:
+    if (args.valid + args.stage2_valid + args.stage3_valid
+            + args.long_valid) < 1:
         parser.error("validation sample counts must be positive")
 
     output = Path(args.output)
     build_split(
         output, "train", args.train, args.stage2_train,
-        args.stage3_train, args.seed, split_salt=11)
+        args.stage3_train, args.long_train, args.seed, split_salt=11)
     build_split(
         output, "valid", args.valid, args.stage2_valid,
-        args.stage3_valid, args.seed, split_salt=29)
+        args.stage3_valid, args.long_valid, args.seed, split_salt=29)
     print(
         json.dumps(
             {
@@ -430,15 +586,21 @@ def main() -> None:
                 "stage2_valid": args.stage2_valid * 2,
                 "stage3_train": args.stage3_train * 3,
                 "stage3_valid": args.stage3_valid * 3,
+                "long_train": args.long_train,
+                "long_valid": args.long_valid,
                 "train_valid_entity_overlap": 0,
                 "stage": (
-                    "reconstruction_remember_multi_entity_distract_"
-                    "update_forget_contrastive"
-                    if args.stage3_train or args.stage3_valid
+                    "long_context_curriculum"
+                    if args.long_train or args.long_valid
                     else (
-                        "reconstruction_remember_multi_entity_distract"
-                        if args.stage2_train or args.stage2_valid
-                        else "reconstruction_and_explicit_remember"
+                        "reconstruction_remember_multi_entity_distract_"
+                        "update_forget_contrastive"
+                        if args.stage3_train or args.stage3_valid
+                        else (
+                            "reconstruction_remember_multi_entity_distract"
+                            if args.stage2_train or args.stage2_valid
+                            else "reconstruction_and_explicit_remember"
+                        )
                     )
                 ),
             },

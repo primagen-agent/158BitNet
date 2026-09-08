@@ -85,6 +85,9 @@ add_library(bitnet STATIC
     src/sha256.c
     src/bitnet_dispatch.c
     src/metis/metis_file.c
+    src/metis/episodic_store.c
+    src/metis/memory_controller.c
+    src/metis/memory_pointer.c
     src/x86/kernel_registry.c
     src/x86/ops_x86.c
     src/x86/bitnet_hotpath_x86.c
@@ -296,6 +299,21 @@ target_compile_definitions(test_metis_memory PRIVATE BITNET_SOURCE_DIR="${CMAKE_
 target_compile_definitions(test_metis_memory PRIVATE BITNET_BINARY_DIR="${CMAKE_BINARY_DIR}")
 target_link_libraries(test_metis_memory PRIVATE bitnet m)
 add_test(NAME test_metis_memory COMMAND test_metis_memory)
+
+add_executable(test_episodic_store tests/test_episodic_store.c)
+target_include_directories(test_episodic_store PRIVATE src)
+target_link_libraries(test_episodic_store PRIVATE bitnet)
+add_test(NAME test_episodic_store COMMAND test_episodic_store)
+
+add_executable(test_memory_controller tests/test_memory_controller.c)
+target_include_directories(test_memory_controller PRIVATE src)
+target_link_libraries(test_memory_controller PRIVATE bitnet m)
+add_test(NAME test_memory_controller COMMAND test_memory_controller)
+
+add_executable(test_memory_pointer tests/test_memory_pointer.c)
+target_include_directories(test_memory_pointer PRIVATE src)
+target_link_libraries(test_memory_pointer PRIVATE bitnet m)
+add_test(NAME test_memory_pointer COMMAND test_memory_pointer)
 
 
 

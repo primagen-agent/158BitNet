@@ -573,10 +573,10 @@ a complete NGMA implementation.
 
 ### Memory-model training
 
-LoCoMo supplies diverse episodic examples, but its facts are not the product.
-Training uses those examples to teach a general memory model what to write,
-update, ignore, and retrieve. Evaluation conversations must remain independent
-from training conversations.
+LoCoMo is an evaluation set, not a collection of facts for the deployed model
+to memorize during training. The current curriculum uses independent synthetic
+examples to teach the memory model what to write, update, ignore, and retrieve.
+LoCoMo conversations remain held out until evaluation.
 
 The current accuracy-first training path updates only `.bnmem`:
 
@@ -607,6 +607,43 @@ build/memory_v73_05b_official_tasks.bnmem
 
 At runtime, new conversation data produces per-session `.bnstate` files. The
 training set's conversation facts are not stored in `.bnmem`.
+
+### V73 full LoCoMo validation
+
+The V73 accuracy-first model was evaluated on September 5, 2026 using the
+matching `bitcpm4-0.5b-tq2_0.gguf` backbone and the pure-C server. The run
+covered all 10 LoCoMo conversations and all 1,986 questions. Each conversation
+was committed to memory, exported and imported as `.bnstate`, and then queried
+only after restarting the server. The evaluator rejected any QA request with
+non-zero cached or reused KV tokens.
+
+| Category | Questions | Mean F1 | Perfect-answer rate |
+| --- | ---: | ---: | ---: |
+| 1 — single-hop | 282 | 2.35% | 0.00% |
+| 2 — multi-hop | 321 | 0.95% | 0.31% |
+| 3 — temporal | 96 | 9.72% | 2.08% |
+| 4 — open-domain | 841 | 2.30% | 0.24% |
+| 5 — no-answer | 446 | 60.54% | 60.54% |
+| Official categories 1–4, question-weighted | 1,540 | 2.49% | — |
+| Official categories 1–4, category macro-average | 1,540 | 3.83% | — |
+| All categories | 1,986 | 15.52% | 13.85% |
+
+Configuration:
+
+- full-rank query, key, and value projections on all 24 backbone layers;
+- no SVD compression, NAS/neuron gates, LoRA, answer decoder, retrieval prompt
+  injection, or KV cache;
+- maximum 24 generated answer tokens;
+- lexical F1 with Porter stemming;
+- persistent memory exported/imported between ingestion steps and restored
+  after a server restart.
+
+The same checkpoint reached 88/90 exact answers on the held-out synthetic
+curriculum test, but that result did not transfer to natural long
+conversations. Category 5 also inflates the all-category result through
+successful unknown-answer responses. The categories 1–4 score is therefore the
+meaningful memory-recall result, and V73 is not yet a successful LoCoMo memory
+model.
 
 ### V70 validation status
 
@@ -652,11 +689,50 @@ The C-compatible `.bnmem` path can be served without Python:
 mkdir -p build/memory-states
 ./build/openai_server models/bitcpm4-3b-tq2_0.gguf \
   --memory-model build/memory-model.bnmem \
-  --memory-state-dir build/memory-states
+  --memory-state-dir build/memory-states \
+  --episodic-memory \
+  --episodic-top-k 3 \
+  --memory-controller build/retriever.bnctrl \
+  --memory-pointer build/pointer.bnptr \
+  --episodic-lexical-weight 0.75
 ```
 
 Each HTTP session gets independent committed memory state. Without
 `--memory-model`, the normal inference path remains unchanged.
+
+`--episodic-memory` enables the two-level V80 path. The matrix state remains
+the short working memory, while exact user records are retained independently
+for long-term retrieval. In this mode every request starts with a fresh
+inference context, so `cached_tokens` and `reused_tokens` remain zero.
+
+An optional backbone-bound `.bnctrl` adds semantic record keys. Retrieval uses
+reciprocal-rank fusion between BM25 and the controller score; the lexical
+weight defaults to `0.75`. Controller loading verifies tensor CRCs, dimensions,
+pooling mode, and the exact GGUF SHA-256. Records created before a controller
+was installed remain compatible; their semantic keys are rebuilt from the
+lossless text after import.
+
+An optional `.bnptr` is an extractive copy head bound to the same exact GGUF
+backbone. It evaluates `Question: ...\nMemory record:\n...`, predicts inclusive
+start/end token positions, and decodes those original record tokens without
+language-model generation. Version 2 also learns a null/no-answer score from
+hard negative records. This path never uses LoRA or KV reuse.
+
+Pointer copying is opt-in while its precision is being validated. Set
+`"memory_copy":true` on a non-streaming chat request. A span accepted by the
+null gate is returned directly and described by the response's `memory_copy`
+object; otherwise the server falls back to the normal memory-augmented
+generation path.
+
+The server automatically recognizes common remember/update/delete wording.
+Applications can override that heuristic for arbitrary content:
+
+```json
+{"memory_action":"store"}
+```
+
+Use `"memory_action":"ignore"` to prevent a request from becoming an episodic
+record.
 
 The server exposes persistence endpoints only when `--memory-state-dir` is set:
 
@@ -671,10 +747,29 @@ curl -sS http://127.0.0.1:8080/v1/memory/import \
   -d '{"session_id":"demo-session"}'
 ```
 
-Snapshots contain committed M/S state only; pending capture rows and KV cache
-are not persisted. Import validates the format, memory geometry, layer IDs,
-payload sizes, and CRCs before replacing the current state. A failed import
-leaves the existing state unchanged.
+Without episodic memory, snapshots contain committed M/S state only. With
+`--episodic-memory`, export writes both `<session>.bnstate` and
+`<session>.bnepisodic`. The latter contains the independent exact records.
+Pending capture rows and KV cache are not persisted. Import validates memory
+geometry, layer IDs, payload sizes, complete-file boundaries, and CRCs before
+replacing the current state.
+
+Exact retrieved records can be inspected independently from language-model
+generation:
+
+```sh
+curl -sS http://127.0.0.1:8080/v1/memory/search \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id":"demo-session","query":"Mira locker code","top_k":3}'
+```
+
+The pointer decision can also be inspected without running answer generation:
+
+```sh
+curl -sS http://127.0.0.1:8080/v1/memory/extract \
+  -H 'Content-Type: application/json' \
+  -d '{"session_id":"demo-session","query":"Where did Caroline move from?"}'
+```
 
 Embedding applications can use the same operations directly:
 
@@ -688,10 +783,14 @@ The context must already be attached to a compatible memory model with
 
 ### Memory code map
 
-- `scripts/train_memory_v73_05b_official_tasks.sh` — current full-rank
-  memory-model training
+- `scripts/train_memory_v73_05b_official_tasks.sh` — V73 full-rank baseline
+- `scripts/train_memory_v75_05b_paper_aligned_pilot.sh` — bounded-selection,
+  multi-query, paper-aligned training pilot
 - `python/train_memory.py` — torch/GPU memory trainer
+- `python/train_memory_pointer.py` — hard-negative extractive copy/null-head
+  trainer and portable `.bnptr` exporter
 - `python/eval_memory_curriculum.py` — no-KV curriculum accuracy evaluator
+- `tests/eval_locomo.py` — C-runtime LoCoMo persistence evaluator
 - `python/answer_decoder.py` — experimental Python answer decoder
 - `python/memory_retrieval.py` — slot-attention excerpt retrieval
 - `python/train_memory_layer_router.py` — retrieval-layer router training
@@ -703,3 +802,9 @@ The context must already be attached to a compatible memory model with
 - `python/tok_probe.c` — persistent C tokenizer bridge
 - `src/metis/metis_file.{h,c}` — C model loading, runtime math, and `.bnstate`
   serialization
+- `src/metis/episodic_store.{h,c}` — exact-record long-term storage,
+  retrieval, and `.bnepisodic` serialization
+- `src/metis/memory_controller.{h,c}` — backbone-bound semantic query/record
+  projection and portable `.bnctrl` loading
+- `src/metis/memory_pointer.{h,c}` — backbone-bound `.bnptr` loading,
+  no-answer gating, and exact token-span selection

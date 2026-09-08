@@ -66,6 +66,8 @@ def main():
             tau=1.0,
             rho=0.9,
             k_min=1,
+            alpha_max_tokens=16,
+            alpha_max_fraction=0.25,
             beta_scale=0.9,
             denom_mode=1,
             query_add_backbone=True,
@@ -143,6 +145,8 @@ def main():
     assert loaded["query_rank"] == rank
     assert loaded["kv_rank"] == 0
     assert loaded["query_add_backbone"]
+    assert loaded["alpha_max_tokens"] == 16
+    assert abs(loaded["alpha_max_fraction"] - 0.25) < 1e-6
     assert loaded["denom_mode"] == 1
     assert loaded["backbone_sha256"] == backbone_sha256
     assert independent["backbone_sha256"] is None

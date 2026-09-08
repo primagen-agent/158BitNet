@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import random
+import struct
 import sys
 import time
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -30,13 +33,33 @@ from torch_backbone import TorchBackbone  # noqa: E402
 from train_data import CTokenizer  # noqa: E402
 
 
-class DualProjection(nn.Module):
-    def __init__(self, hidden, rank):
+class ProjectionTower(nn.Module):
+    def __init__(self, hidden, rank, width):
         super().__init__()
-        self.query = nn.Linear(hidden, rank, bias=False)
-        self.entry = nn.Linear(hidden, rank, bias=False)
-        nn.init.orthogonal_(self.query.weight)
-        nn.init.orthogonal_(self.entry.weight)
+        self.width = int(width)
+        if self.width > 0:
+            self.input = nn.Linear(hidden, self.width)
+            self.output = nn.Linear(self.width, rank)
+            nn.init.kaiming_uniform_(self.input.weight, nonlinearity="linear")
+            nn.init.orthogonal_(self.output.weight)
+        else:
+            self.input = nn.Linear(hidden, rank, bias=False)
+            self.output = None
+            nn.init.orthogonal_(self.input.weight)
+
+    def forward(self, hidden):
+        value = self.input(hidden)
+        if self.output is not None:
+            value = self.output(F.silu(value))
+        return value
+
+
+class DualProjection(nn.Module):
+    def __init__(self, hidden, rank, width=0):
+        super().__init__()
+        self.width = int(width)
+        self.query = ProjectionTower(hidden, rank, self.width)
+        self.entry = ProjectionTower(hidden, rank, self.width)
 
     def scores(self, queries, entries, temperature):
         q = F.normalize(self.query(queries), dim=-1)
@@ -46,11 +69,12 @@ class DualProjection(nn.Module):
 
 def build_conversation_embeddings(
     backbone, tokenizer, sample, include_derived_context,
-    max_entry_tokens, max_query_tokens
+    max_entry_tokens, max_query_tokens, pooling
 ):
     entries = make_entries(sample, include_derived_context)
     entry_vectors = np.stack([
-        encode_text(backbone, tokenizer, entry["text"], max_entry_tokens)
+        encode_text(
+            backbone, tokenizer, entry["text"], max_entry_tokens, pooling)
         for entry in entries
     ])
     entry_index = {
@@ -71,7 +95,7 @@ def build_conversation_embeddings(
         questions.append((question_index, qa))
         query_vectors.append(encode_text(
             backbone, tokenizer, query_text(qa["question"]),
-            max_query_tokens))
+            max_query_tokens, pooling))
         positive_indices.append(positives)
     return {
         "entries": entries,
@@ -80,6 +104,85 @@ def build_conversation_embeddings(
         "query_vectors": np.asarray(query_vectors, dtype=np.float32),
         "positive_indices": positive_indices,
     }
+
+
+def save_portable_controller(
+    path, model, model_path, hidden, rank, temperature, pooling
+):
+    pooling_id = {"last": 1, "mean_last": 2}.get(pooling)
+    if pooling_id is None:
+        raise ValueError(f"unsupported portable pooling mode {pooling}")
+    with open(model_path, "rb") as handle:
+        model_sha256 = hashlib.sha256(handle.read()).digest()
+    if model.width == 0:
+        tensors = [
+            model.query.input.weight,
+            model.entry.input.weight,
+        ]
+        header = bytearray(b"BNCTRL1\x00")
+        header += struct.pack(
+            "<IIIIf", 1, hidden, rank, pooling_id, float(temperature))
+        payloads = [
+            tensor.detach().float().cpu().contiguous().numpy()
+            .astype("<f4", copy=False).tobytes()
+            for tensor in tensors
+        ]
+        header += model_sha256
+        header += struct.pack(
+            "<II",
+            zlib.crc32(payloads[0]) & 0xFFFFFFFF,
+            zlib.crc32(payloads[1]) & 0xFFFFFFFF)
+        Path(path).write_bytes(header + b"".join(payloads))
+        return
+    else:
+        tensors = [
+            model.query.input.weight,
+            model.query.input.bias,
+            model.query.output.weight,
+            model.query.output.bias,
+            model.entry.input.weight,
+            model.entry.input.bias,
+            model.entry.output.weight,
+            model.entry.output.bias,
+        ]
+        header = bytearray(b"BNCTRL2\x00")
+        header += struct.pack(
+            "<IIIIIf", 2, hidden, rank, pooling_id,
+            model.width, float(temperature))
+    payloads = [
+        tensor.detach().float().cpu().contiguous().numpy()
+        .astype("<f4", copy=False).tobytes()
+        for tensor in tensors
+    ]
+    header += model_sha256
+    header += struct.pack("<I", len(payloads))
+    for payload in payloads:
+        header += struct.pack(
+            "<II", len(payload), zlib.crc32(payload) & 0xFFFFFFFF)
+    Path(path).write_bytes(header + b"".join(payloads))
+
+
+def global_training_tensors(conversations, ids, device):
+    entry_parts = []
+    query_parts = []
+    positives = []
+    entry_offset = 0
+    for conversation_index in ids:
+        data = conversations[conversation_index]
+        entries = torch.from_numpy(data["entry_vectors"])
+        queries = torch.from_numpy(data["query_vectors"])
+        entry_parts.append(entries)
+        query_parts.append(queries)
+        positives.extend([
+            [entry_offset + index for index in row]
+            for row in data["positive_indices"]
+        ])
+        entry_offset += entries.shape[0]
+    return (
+        torch.cat(query_parts).to(device),
+        torch.cat(entry_parts).to(device),
+        positives,
+    )
 
 
 def save_cache(path, conversations):
@@ -218,6 +321,7 @@ def main():
     parser.add_argument("--lora")
     parser.add_argument("--cache", required=True)
     parser.add_argument("--rank", type=int, default=128)
+    parser.add_argument("--mlp-width", type=int, default=0)
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--temperature", type=float, default=0.07)
@@ -227,6 +331,15 @@ def main():
     parser.add_argument("--valid-conversations", type=int, default=2)
     parser.add_argument("--include-derived-context", action="store_true")
     parser.add_argument("--seed", type=int, default=20260822)
+    parser.add_argument("--hard-negative-k", type=int, default=16)
+    parser.add_argument("--hard-negative-lambda", type=float, default=0.2)
+    parser.add_argument("--hard-negative-margin", type=float, default=0.5)
+    parser.add_argument("--early-stop-rounds", type=int, default=6)
+    parser.add_argument(
+        "--device", choices=("auto", "cuda", "mps", "cpu"),
+        default="auto")
+    parser.add_argument(
+        "--pooling", choices=("last", "mean_last"), default="last")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -247,11 +360,17 @@ def main():
         }), flush=True)
     else:
         weights = GGUFWeights(args.gguf, args.lib)
+        if args.device == "auto":
+            device = (
+                "cuda" if torch.cuda.is_available()
+                else ("mps" if torch.backends.mps.is_available() else "cpu"))
+        else:
+            device = args.device
         backbone = TorchBackbone(
-            weights, device="cuda", dtype=torch.bfloat16)
+            weights, device=device, dtype=torch.bfloat16)
         if args.lora:
             backbone_lora, output_lora = load_lora_bundle(
-                args.lora, backbone.cfg, device="cuda")
+                args.lora, backbone.cfg, device=device)
             backbone.backbone_lora = backbone_lora
             if output_lora is not None:
                 backbone.output_lora = output_lora
@@ -262,7 +381,8 @@ def main():
                 build_conversation_embeddings(
                     backbone, tokenizer, sample,
                     args.include_derived_context,
-                    args.max_entry_tokens, args.max_query_tokens))
+                    args.max_entry_tokens, args.max_query_tokens,
+                    args.pooling))
             print(json.dumps({
                 "phase": "conversation_encoded",
                 "conversation": conversation_index,
@@ -274,35 +394,51 @@ def main():
             }), flush=True)
         save_cache(cache_path, conversations)
         del backbone
-        torch.cuda.empty_cache()
+        if device == "cuda":
+            torch.cuda.empty_cache()
+        elif device == "mps":
+            torch.mps.empty_cache()
 
     hidden = next(iter(conversations.values()))["entry_vectors"].shape[1]
-    device = "cuda"
-    model = DualProjection(hidden, args.rank).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    if args.device == "auto":
+        device = (
+            "cuda" if torch.cuda.is_available()
+            else ("mps" if torch.backends.mps.is_available() else "cpu"))
+    else:
+        device = args.device
+    model = DualProjection(hidden, args.rank, args.mlp_width).to(device)
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=args.lr, weight_decay=0.02)
+    train_queries, train_entries, train_positives = (
+        global_training_tensors(conversations, train_ids, device))
+    positive_mask = torch.zeros(
+        train_queries.shape[0], train_entries.shape[0],
+        dtype=torch.bool, device=device)
+    for row, indices in enumerate(train_positives):
+        positive_mask[row, indices] = True
     best_recall = -1.0
     best_state = None
+    stale_rounds = 0
     for epoch in range(args.epochs):
         optimizer.zero_grad(set_to_none=True)
-        losses = []
-        for conversation_index in train_ids:
-            data = conversations[conversation_index]
-            queries = torch.from_numpy(
-                data["query_vectors"]).to(device)
-            entries = torch.from_numpy(
-                data["entry_vectors"]).to(device)
-            scores = model.scores(queries, entries, args.temperature)
-            positive_mask = torch.zeros_like(scores, dtype=torch.bool)
-            for row, positives in enumerate(data["positive_indices"]):
-                positive_mask[row, positives] = True
-            positive_scores = scores.masked_fill(
-                ~positive_mask, float("-inf"))
-            loss = (
-                torch.logsumexp(scores, dim=1)
-                - torch.logsumexp(positive_scores, dim=1)
-            ).mean()
-            losses.append(loss)
-        objective = torch.stack(losses).mean()
+        scores = model.scores(
+            train_queries, train_entries, args.temperature)
+        positive_scores = scores.masked_fill(
+            ~positive_mask, float("-inf"))
+        positive_lse = torch.logsumexp(positive_scores, dim=1)
+        objective = (
+            torch.logsumexp(scores, dim=1) - positive_lse
+        ).mean()
+        if args.hard_negative_lambda > 0.0:
+            negative_scores = scores.masked_fill(
+                positive_mask, float("-inf"))
+            hard_k = min(args.hard_negative_k, negative_scores.shape[1])
+            hard_lse = torch.logsumexp(
+                negative_scores.topk(hard_k, dim=1).values, dim=1)
+            hard_loss = F.relu(
+                args.hard_negative_margin + hard_lse - positive_lse).mean()
+            objective = (
+                objective + args.hard_negative_lambda * hard_loss)
         objective.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
@@ -317,19 +453,44 @@ def main():
             }), flush=True)
             if metrics["evidence_recall"] > best_recall:
                 best_recall = metrics["evidence_recall"]
+                stale_rounds = 0
                 best_state = {
                     key: value.detach().cpu().clone()
                     for key, value in model.state_dict().items()}
+            else:
+                stale_rounds += 1
+            if stale_rounds >= args.early_stop_rounds:
+                print(json.dumps({
+                    "early_stop": True,
+                    "epoch": epoch,
+                    "best_evidence_recall": best_recall,
+                }), flush=True)
+                break
     if best_state is not None:
         model.load_state_dict(best_state)
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     torch.save({
         "state_dict": model.state_dict(),
         "rank": args.rank,
+        "mlp_width": args.mlp_width,
         "hidden": hidden,
         "temperature": args.temperature,
+        "pooling": args.pooling,
+        "backbone_sha256": hashlib.sha256(
+            Path(args.gguf).read_bytes()).hexdigest(),
         "valid_conversation_ids": valid_ids,
     }, Path(args.output_dir) / "retriever.pt")
+    if model.width == 0:
+        save_portable_controller(
+            Path(args.output_dir) / "retriever.bnctrl",
+            model, args.gguf, hidden, args.rank,
+            args.temperature, args.pooling)
+    else:
+        print(json.dumps({
+            "portable_export": "skipped",
+            "reason": "BNCTRL2 MLP runtime is not enabled",
+            "mlp_width": model.width,
+        }), flush=True)
     metrics = retrieval_metrics(
         model, conversations, valid_ids, args.top_k,
         args.temperature, device)

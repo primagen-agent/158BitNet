@@ -354,6 +354,7 @@ WANTED_FILES = [
     "reflect_explicit.jsonl", "reflect_distract.jsonl",
     "multi_entity.jsonl", "post_memory.jsonl",
     "task3_multi_entity.jsonl", "task4_normal.jsonl",
+    "long_memory.jsonl",
 ]
 
 

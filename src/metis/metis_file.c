@@ -44,6 +44,7 @@
 #define METIS_FILE_VERSION_3 3u
 #define METIS_FILE_VERSION 1u
 #define METIS_BOUND_FILE_VERSION 2u
+#define METIS_BOUNDED_FILE_VERSION 6u
 #define METIS_MAX_LAYERS 32
 #define METIS_HDR_MAGIC_LEN 8u
 #define METIS_UNUSED_LAYER 0xFFFFFFFFu
@@ -60,6 +61,8 @@ static const uint8_t METIS_BOUND_MAGIC[METIS_HDR_MAGIC_LEN] =
  * the rename from v5 to v1; the writer now emits BNMEM1). */
 static const uint8_t METIS_MAGIC_5[METIS_HDR_MAGIC_LEN] =
     { 'B', 'N', 'M', 'E', 'M', '5', 0, 0 };
+static const uint8_t METIS_MAGIC_6[METIS_HDR_MAGIC_LEN] =
+    { 'B', 'N', 'M', 'E', 'M', '6', 0, 0 };
 
 /* ------------------------------------------------------------------ */
 /* little-endian primitives (shared shape with metis_model.c)          */
@@ -297,6 +300,8 @@ int metis_model_alloc(metis_file_model_t *m, int n_layers,
     p->head_dim = head_dim;
     p->gamma = gamma; p->tau = tau; p->rho = rho; p->k_min = k_min;
     p->beta_scale = beta_scale;
+    p->alpha_max_tokens = 0;
+    p->alpha_max_fraction = 0.0f;
     if (metis_validate(n_layers, layer_ids, d_model, kv_dim, q_dim, head_dim,
                        gamma, tau, rho) != 0)
         return -1;
@@ -398,11 +403,16 @@ int metis_model_save(const metis_file_model_t *m, const char *path) {
     metis_build_tinfo((metis_params_t *)p, ti);
 
     uint64_t off = 0;
+    int bounded_selection =
+        p->alpha_max_tokens > 0 || p->alpha_max_fraction > 0.0f;
+    if (bounded_selection && !p->has_backbone_sha256) goto io_fail;
     const uint8_t *magic =
-        p->has_backbone_sha256 ? METIS_BOUND_MAGIC : METIS_MAGIC;
+        bounded_selection ? METIS_MAGIC_6 :
+        (p->has_backbone_sha256 ? METIS_BOUND_MAGIC : METIS_MAGIC);
     uint32_t version =
-        p->has_backbone_sha256 ? METIS_BOUND_FILE_VERSION :
-                                 METIS_FILE_VERSION;
+        bounded_selection ? METIS_BOUNDED_FILE_VERSION :
+        (p->has_backbone_sha256 ? METIS_BOUND_FILE_VERSION :
+                                  METIS_FILE_VERSION);
     if (metis_w_bytes(f, magic, METIS_HDR_MAGIC_LEN) != 0) goto io_fail;
     off += METIS_HDR_MAGIC_LEN;
     if (metis_w_u32(f, version) != 0) goto io_fail;   off += 4;
@@ -421,6 +431,12 @@ int metis_model_save(const metis_file_model_t *m, const char *path) {
     if (metis_w_f32(f, p->tau) != 0) goto io_fail;                  off += 4;
     if (metis_w_f32(f, p->rho) != 0) goto io_fail;                  off += 4;
     if (metis_w_u32(f, (uint32_t)p->k_min) != 0) goto io_fail;      off += 4;
+    if (bounded_selection) {
+        if (metis_w_u32(
+                f, (uint32_t)p->alpha_max_tokens) != 0) goto io_fail;
+        if (metis_w_f32(f, p->alpha_max_fraction) != 0) goto io_fail;
+        off += 8;
+    }
     if (metis_w_f32(f, p->gdu_ab) != 0) goto io_fail;               off += 4;
     if (metis_w_f32(f, p->gdu_bb) != 0) goto io_fail;               off += 4;
     if (metis_w_f32(f, p->beta_scale) != 0) goto io_fail;           off += 4;
@@ -490,7 +506,8 @@ int metis_file_probe(const char *path) {
     int ok = metis_r_bytes(f, magic, sizeof magic) == 0 &&
              (memcmp(magic, METIS_MAGIC, sizeof magic) == 0 ||
               memcmp(magic, METIS_BOUND_MAGIC, sizeof magic) == 0 ||
-              memcmp(magic, METIS_MAGIC_5, sizeof magic) == 0);
+              memcmp(magic, METIS_MAGIC_5, sizeof magic) == 0 ||
+              memcmp(magic, METIS_MAGIC_6, sizeof magic) == 0);
     fclose(f);
     return ok ? 1 : 0;
 }
@@ -529,7 +546,8 @@ metis_file_model_t *metis_model_load(const char *path,
     off += sizeof magic;
     if (memcmp(magic, METIS_MAGIC, sizeof magic) != 0 &&
     memcmp(magic, METIS_BOUND_MAGIC, sizeof magic) != 0 &&
-    memcmp(magic, METIS_MAGIC_5, sizeof magic) != 0)
+    memcmp(magic, METIS_MAGIC_5, sizeof magic) != 0 &&
+    memcmp(magic, METIS_MAGIC_6, sizeof magic) != 0)
         METIS_FAIL("bad magic (not a metis bnmem file)");
 
     uint32_t version = 0, n_layers = 0;
@@ -541,7 +559,9 @@ metis_file_model_t *metis_model_load(const char *path,
     if (version != METIS_FILE_VERSION &&
         !(version == METIS_BOUND_FILE_VERSION &&
           memcmp(magic, METIS_BOUND_MAGIC, sizeof magic) == 0) &&
-        !(version == 5u && memcmp(magic, METIS_MAGIC_5, sizeof magic) == 0))
+        !(version == 5u && memcmp(magic, METIS_MAGIC_5, sizeof magic) == 0) &&
+        !(version == METIS_BOUNDED_FILE_VERSION &&
+          memcmp(magic, METIS_MAGIC_6, sizeof magic) == 0))
         METIS_FAIL("unsupported version %u", version);
     if (metis_r_u32(f, &n_layers) != 0) METIS_FAIL("truncated header");
     off += 4;
@@ -580,6 +600,15 @@ metis_file_model_t *metis_model_load(const char *path,
     uint32_t k_min = 0;
     if (metis_r_u32(f, &k_min) != 0) METIS_FAIL("truncated header");
     off += 4;
+    uint32_t alpha_max_tokens = 0;
+    float alpha_max_fraction = 0.0f;
+    if (version == METIS_BOUNDED_FILE_VERSION) {
+        if (metis_r_u32(f, &alpha_max_tokens) != 0)
+            METIS_FAIL("truncated selection cap");
+        if (metis_r_f32(f, &alpha_max_fraction) != 0)
+            METIS_FAIL("truncated selection fraction");
+        off += 8;
+    }
     float gdu_ab = 0, gdu_bb = 0, beta_scale = 0;
     if (metis_r_f32(f, &gdu_ab) != 0) METIS_FAIL("truncated header");
     if (metis_r_f32(f, &gdu_bb) != 0) METIS_FAIL("truncated header");
@@ -609,7 +638,8 @@ metis_file_model_t *metis_model_load(const char *path,
     off += 4;
     uint8_t backbone_sha256[32];
     int has_backbone_sha256 =
-        version == METIS_BOUND_FILE_VERSION;
+        version == METIS_BOUND_FILE_VERSION ||
+        version == METIS_BOUNDED_FILE_VERSION;
     memset(backbone_sha256, 0, sizeof backbone_sha256);
     if (has_backbone_sha256) {
         if (metis_r_bytes(f, backbone_sha256, sizeof backbone_sha256) != 0)
@@ -632,6 +662,10 @@ metis_file_model_t *metis_model_load(const char *path,
     if (!(beta_scale > 0.0f && beta_scale <= 1.0f))
         METIS_FAIL("beta_scale out of range");
     if (k_min > 1000000000u) METIS_FAIL("k_min out of range");
+    if (alpha_max_tokens > METIS_CAP_ROWS)
+        METIS_FAIL("alpha_max_tokens out of range");
+    if (!(alpha_max_fraction >= 0.0f && alpha_max_fraction <= 1.0f))
+        METIS_FAIL("alpha_max_fraction out of range");
 
     int ids[METIS_MAX_LAYERS];
     for (int i = 0; i < METIS_MAX_LAYERS; ++i)
@@ -644,6 +678,8 @@ metis_file_model_t *metis_model_load(const char *path,
                           (int)denom_plus_one, (int)query_rank) != 0)
         METIS_FAIL("model allocation failed");
     m->params.query_add_backbone = query_add_backbone;
+    m->params.alpha_max_tokens = (int)alpha_max_tokens;
+    m->params.alpha_max_fraction = alpha_max_fraction;
     m->params.has_backbone_sha256 = has_backbone_sha256;
     if (has_backbone_sha256)
         memcpy(m->params.backbone_sha256, backbone_sha256,
@@ -937,6 +973,20 @@ int metis_commit_states(const metis_params_t *p, int slot,
         }
         if (k < p->k_min) k = p->k_min;
         if (k > L) k = L;
+        {
+            int k_max = L;
+            if (p->alpha_max_fraction > 0.0f) {
+                int cap = (int)ceilf(
+                    (float)L * p->alpha_max_fraction);
+                if (cap < 1) cap = 1;
+                if (cap < k_max) k_max = cap;
+            }
+            if (p->alpha_max_tokens > 0 &&
+                p->alpha_max_tokens < k_max)
+                k_max = p->alpha_max_tokens;
+            if (k_max < p->k_min) k_max = p->k_min;
+            if (k > k_max) k = k_max;
+        }
         float mass = 0.0f;
         for (int l = 0; l < k; ++l) mass += probs[idx[l]];
         if (mass < 1e-6f) mass = 1e-6f;

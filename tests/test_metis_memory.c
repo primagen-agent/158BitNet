@@ -56,6 +56,38 @@ static void test_bound_backbone_roundtrip(void) {
     metis_model_free_arrays(&m);
 }
 
+static void test_bounded_selection_roundtrip(void) {
+    metis_file_model_t m;
+    const int ids[1] = {0};
+    const int D = 4, KV = 2, Q = 4, HD = 2;
+    char err[128];
+    CHECK(metis_model_alloc(&m, 1, ids, D, KV, Q, HD, 0.9f, 1.0f,
+                            0.9f, 1, 0.9f, 1, 0) == 0,
+          "bounded selection alloc");
+    m.params.has_backbone_sha256 = 1;
+    memset(m.params.backbone_sha256, 0x5a,
+           sizeof m.params.backbone_sha256);
+    m.params.alpha_max_tokens = 16;
+    m.params.alpha_max_fraction = 0.2f;
+    CHECK(metis_model_save(&m, "/tmp/test_bounded.bnmem") == 0,
+          "save BNMEM6 bounded selection");
+    metis_file_model_t *loaded = metis_model_load(
+        "/tmp/test_bounded.bnmem", D, Q, KV, HD, 1, err, sizeof err);
+    CHECK(loaded != NULL, "load BNMEM6 bounded selection");
+    if (loaded != NULL) {
+        CHECK(loaded->version == 1, "loaded bounded model runtime version");
+        CHECK(loaded->params.alpha_max_tokens == 16,
+              "bounded max tokens roundtrip");
+        CHECK(fabsf(loaded->params.alpha_max_fraction - 0.2f) < 1e-6f,
+              "bounded max fraction roundtrip");
+        CHECK(loaded->params.has_backbone_sha256 == 1,
+              "bounded model remains backbone bound");
+        metis_model_free_loaded(loaded);
+    }
+    remove("/tmp/test_bounded.bnmem");
+    metis_model_free_arrays(&m);
+}
+
 static void test_v5_roundtrip(void) {
     metis_file_model_t m;
     int ids[3] = {0, 15, 31};
@@ -364,6 +396,7 @@ static void test_cli_flags(void) {
 
 int main(void) {
     test_bound_backbone_roundtrip();
+    test_bounded_selection_roundtrip();
     test_v5_roundtrip();
     test_full_query_roundtrip();
     test_backbone_delta_query_read();

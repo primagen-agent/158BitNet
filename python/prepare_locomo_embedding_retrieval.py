@@ -24,16 +24,21 @@ from train_data import CTokenizer  # noqa: E402
 
 
 @torch.inference_mode()
-def encode_text(backbone, tokenizer, text, max_tokens):
+def encode_text(backbone, tokenizer, text, max_tokens, pooling="mean_last"):
     ids = tokenizer.encode(text, add_bos=True)
     if len(ids) > max_tokens:
         ids = ids[:max_tokens]
     hidden = backbone(
         torch.tensor(ids, device=backbone.device, dtype=torch.long),
         return_hidden=True)
-    # Mean pooling preserves entities that do not occur at the final token;
-    # mixing in the final row retains the backbone's sequence summary.
-    vector = hidden.float().mean(dim=0) + hidden[-1].float()
+    if pooling == "last":
+        vector = hidden[-1].float()
+    elif pooling == "mean_last":
+        # Mean pooling preserves entities that do not occur at the final
+        # token; mixing in the final row retains the sequence summary.
+        vector = hidden.float().mean(dim=0) + hidden[-1].float()
+    else:
+        raise ValueError(f"unsupported pooling mode {pooling}")
     return torch.nn.functional.normalize(vector, dim=0).cpu().numpy()
 
 
