@@ -62,6 +62,7 @@ def load_memory(path, backbone, device=None, state_mode="delta",
         kv_rank=checkpoint["kv_rank"], denom_mode=denom_name,
         query_gate_lambda=0.0, kv_gate_lambda=0.0,
         layer_gate_lambda=0.0,
+        fusion_mode=checkpoint.get("fusion_mode", "fixed"),
         state_mode=state_mode, max_memory_slots=max_memory_slots,
         slot_temperature=slot_temperature,
         device=device, dtype=torch.float32, seed=0)

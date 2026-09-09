@@ -41,11 +41,22 @@ def find_port():
 
 
 def start_server(args, port, state_dir):
-    proc = subprocess.Popen([
-        args.server, args.model, "--memory-model", args.memory_model,
+    command = [
+        args.server, args.model,
         "--memory-state-dir", state_dir, "--host", "127.0.0.1",
         "--port", str(port), "--ctx", "2048", "--max-tokens", "64",
-    ], stdout=subprocess.DEVNULL)
+    ]
+    if args.memory_model != "-":
+        command += ["--memory-model", args.memory_model]
+    if args.addressed:
+        command += [
+            "--episodic-memory", "--memory-controller", args.controller,
+            "--episodic-top-k", str(args.top_k),
+            "--episodic-lexical-weight", str(args.lexical_weight),
+        ]
+        if args.pointer:
+            command += ["--memory-pointer", args.pointer]
+    proc = subprocess.Popen(command, stdout=subprocess.DEVNULL)
     deadline = time.time() + 120
     while time.time() < deadline:
         if proc.poll() is not None:
@@ -135,7 +146,16 @@ def main():
                         help="smoke-test limit; zero evaluates every session")
     parser.add_argument("--conversation", type=int, default=-1)
     parser.add_argument("--max-answer-tokens", type=int, default=24)
+    parser.add_argument("--addressed", action="store_true")
+    parser.add_argument("--controller")
+    parser.add_argument("--pointer")
+    parser.add_argument("--oracle-write", action="store_true")
+    parser.add_argument("--turn-level", action="store_true")
+    parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument("--lexical-weight", type=float, default=0.25)
     args = parser.parse_args()
+    if args.addressed and not args.controller:
+        parser.error("--addressed requires --controller")
 
     if STEMMER is None:
         print("warning: nltk is unavailable; scoring without official Porter stemming",
@@ -161,40 +181,48 @@ def main():
                 session_keys = session_keys[:args.max_sessions]
             for si, key in enumerate(session_keys):
                 date = conversation.get(key + "_date_time", "unknown date")
-                chunks = chunk_turns(conversation[key])
+                chunks = (
+                    [[turn] for turn in conversation[key]]
+                    if args.turn_level else chunk_turns(conversation[key]))
                 for chunk_index, turns in enumerate(chunks):
                     transcript = "\n".join(
                         f"{turn['speaker']}: {turn['text']}" for turn in turns)
                     prompt = (f"Conversation session on {date} "
                               f"(part {chunk_index+1}/{len(chunks)}):\n{transcript}\n\n"
                               "Store this conversation in long-term memory. Reply OK.")
-                    request_json(chat, {"session_id": sid, "max_tokens": 1,
-                                        "messages": [{"role": "user", "content": prompt}]})
-                    request_json(root + "/v1/memory/export", {"session_id": sid})
-                    request_json(root + "/v1/memory/import", {"session_id": sid})
+                    payload = {
+                        "session_id": sid, "max_tokens": 1,
+                        "messages": [{"role": "user", "content": prompt}],
+                    }
+                    if args.addressed and args.oracle_write:
+                        payload["memory_action"] = "write"
+                    request_json(chat, payload)
                 print(f"[conversation {ci+1}/{len(samples)} session {si+1}/{len(session_keys)}]",
                       flush=True)
+            request_json(root + "/v1/memory/export", {"session_id": sid})
 
             # Deliberately destroy the process and its KV cache.  The QA phase
             # can recover only the exported persistent-memory snapshot.
             stop_server(proc)
             proc = start_server(args, port, state_dir)
             print(f"[conversation {ci+1} server restarted; KV cache discarded]", flush=True)
+            request_json(root + "/v1/memory/import", {"session_id": sid})
 
             qas = sample["qa"]
             if args.max_questions:
                 qas = qas[:args.max_questions]
             for qi, qa in enumerate(qas):
-                request_json(root + "/v1/memory/import", {"session_id": sid})
                 prompt = ("Answer the question using only the stored conversation memory. "
                           "Give only the shortest direct answer. If the conversation does not "
                           "contain the answer, reply exactly: No information available.\n"
                           f"Question: {qa['question']}")
                 response = request_json(chat, {
                     "session_id": sid, "max_tokens": args.max_answer_tokens,
+                    **({"memory_action": "ignore"} if args.addressed else {}),
+                    **({"memory_copy": True} if args.pointer else {}),
                     "messages": [{"role": "user", "content": prompt}],
                 })
-                session_stats = response.get("session", {})
+                session_stats = response.get("bitnet_session", {})
                 if session_stats.get("cached_tokens", 0) != 0 or \
                         session_stats.get("reused_tokens", 0) != 0:
                     raise RuntimeError("QA request reused KV-cache tokens")

@@ -161,6 +161,8 @@ def reconstruction_sample(
             chunk(query, value),
         ],
         "query_turn_id": 1,
+        "evidence_message_indices": [0],
+        "distractor_message_indices": [],
         "metadata": {
             "type": "reconstruction",
             "style": "opaque_exact",
@@ -186,6 +188,8 @@ def remember_sample(index: int, split_salt: int, rng: random.Random) -> dict:
             chunk(query, value),
         ],
         "query_turn_id": 1,
+        "evidence_message_indices": [0],
+        "distractor_message_indices": [],
         "metadata": {
             "type": "remember",
             "style": "explicit_opaque",
@@ -225,6 +229,8 @@ def multi_entity_sample(
             ),
         ],
         "query_turn_id": 2,
+        "evidence_message_indices": [0, 1],
+        "distractor_message_indices": [],
         "metadata": {
             "type": "remember",
             "style": "multi_entity_opaque",
@@ -261,6 +267,9 @@ def distract_sample(
         "sample_id": f"distract-{split_salt}-{index:06d}",
         "messages": messages,
         "query_turn_id": len(messages) - 1,
+        "evidence_message_indices": [0],
+        "distractor_message_indices": list(
+            range(1, len(messages) - 1)),
         "metadata": {
             "type": "remember",
             "style": "distract_opaque",
@@ -294,6 +303,8 @@ def update_sample(index: int, split_salt: int, rng: random.Random) -> dict:
             ),
         ],
         "query_turn_id": 2,
+        "evidence_message_indices": [0, 1],
+        "distractor_message_indices": [],
         "negative_answers": [old_value],
         "metadata": {
             "type": "update",
@@ -327,6 +338,8 @@ def forget_sample(index: int, split_salt: int, rng: random.Random) -> dict:
             ),
         ],
         "query_turn_id": 2,
+        "evidence_message_indices": [0, 1],
+        "distractor_message_indices": [],
         "negative_answers": [old_value],
         "metadata": {
             "type": "forget",
@@ -360,6 +373,8 @@ def memory_irrelevant_sample(
             ),
         ],
         "query_turn_id": 1,
+        "evidence_message_indices": [0],
+        "distractor_message_indices": [],
         "metadata": {
             "type": "normal",
             "style": "memory_irrelevant",

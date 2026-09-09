@@ -19,6 +19,23 @@ int metis_episodic_configure_keys(
     metis_episodic_store_t *store, int key_dim);
 int metis_episodic_add_with_key(
     metis_episodic_store_t *store, const char *text, const float *key);
+/* Addressed long-term-memory operations. Keys are expected to be L2
+ * normalized. UPDATE replaces the closest active record when its cosine
+ * similarity reaches min_similarity, otherwise it appends a new record.
+ * DELETE removes the closest matching record. replaced/deleted may be NULL. */
+int metis_episodic_upsert_with_key(
+    metis_episodic_store_t *store, const char *text, const float *key,
+    float min_similarity, size_t *replaced);
+int metis_episodic_delete_with_key(
+    metis_episodic_store_t *store, const float *key,
+    float min_similarity, size_t *deleted);
+/* Replace the closest record with an explicit deletion instruction. Unlike
+ * physical deletion, the tombstone remains retrievable so the generator can
+ * distinguish "forgotten" from "never mentioned" and avoid hallucinating a
+ * stale/default value. */
+int metis_episodic_tombstone_with_key(
+    metis_episodic_store_t *store, const char *text, const float *key,
+    float min_similarity, size_t *replaced);
 size_t metis_episodic_count(const metis_episodic_store_t *store);
 
 /* Returns a newly allocated, newline-delimited exact-record context ordered

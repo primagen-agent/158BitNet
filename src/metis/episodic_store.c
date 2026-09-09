@@ -141,6 +141,107 @@ int metis_episodic_add(metis_episodic_store_t *store, const char *text) {
     return metis_episodic_add_with_key(store, text, NULL);
 }
 
+static int closest_key(
+    const metis_episodic_store_t *store, const float *key,
+    float *score_out, size_t *index_out) {
+    float best = -INFINITY;
+    size_t best_index = 0;
+    int found = 0;
+    if (store == NULL || key == NULL || store->key_dim <= 0 ||
+        score_out == NULL || index_out == NULL)
+        return -1;
+    if (store->count == 0) return 0;
+    if (store->keys == NULL) return -1;
+    for (size_t index = 0; index < store->count; ++index) {
+        float score = 0.0f;
+        if (store->keys[index] == NULL) continue;
+        for (int column = 0; column < store->key_dim; ++column)
+            score += key[column] * store->keys[index][column];
+        if (!found || score > best) {
+            best = score;
+            best_index = index;
+            found = 1;
+        }
+    }
+    if (!found) return 0;
+    *score_out = best;
+    *index_out = best_index;
+    return 1;
+}
+
+int metis_episodic_upsert_with_key(
+    metis_episodic_store_t *store, const char *text, const float *key,
+    float min_similarity, size_t *replaced) {
+    float score = -INFINITY;
+    size_t index = 0;
+    int found;
+    char *copy;
+    if (replaced != NULL) *replaced = SIZE_MAX;
+    if (store == NULL || text == NULL || text[0] == '\0' || key == NULL ||
+        store->key_dim <= 0 || !isfinite(min_similarity) ||
+        min_similarity < -1.0f || min_similarity > 1.0f)
+        return -1;
+    found = closest_key(store, key, &score, &index);
+    if (found < 0) return -1;
+    if (found == 0 || score < min_similarity)
+        return metis_episodic_add_with_key(store, text, key);
+    copy = duplicate_text(text);
+    if (copy == NULL) return -1;
+    free(store->records[index]);
+    store->records[index] = copy;
+    memcpy(store->keys[index], key,
+           (size_t)store->key_dim * sizeof(float));
+    if (replaced != NULL) *replaced = index;
+    return 0;
+}
+
+int metis_episodic_delete_with_key(
+    metis_episodic_store_t *store, const float *key,
+    float min_similarity, size_t *deleted) {
+    float score = -INFINITY;
+    size_t index = 0;
+    int found;
+    if (deleted != NULL) *deleted = SIZE_MAX;
+    if (store == NULL || key == NULL || store->key_dim <= 0 ||
+        !isfinite(min_similarity) || min_similarity < -1.0f ||
+        min_similarity > 1.0f)
+        return -1;
+    found = closest_key(store, key, &score, &index);
+    if (found < 0) return -1;
+    if (found == 0 || score < min_similarity) return 0;
+    free(store->records[index]);
+    free(store->keys[index]);
+    for (size_t next = index + 1; next < store->count; ++next) {
+        store->records[next - 1] = store->records[next];
+        store->keys[next - 1] = store->keys[next];
+    }
+    --store->count;
+    store->records[store->count] = NULL;
+    store->keys[store->count] = NULL;
+    if (deleted != NULL) *deleted = index;
+    return 1;
+}
+
+int metis_episodic_tombstone_with_key(
+    metis_episodic_store_t *store, const char *text, const float *key,
+    float min_similarity, size_t *replaced) {
+    static const char prefix[] =
+        "DELETED MEMORY — do not answer with the previous value. ";
+    size_t length;
+    char *tombstone;
+    int result;
+    if (text == NULL) return -1;
+    length = strlen(prefix) + strlen(text) + 1;
+    if (length > EPISODIC_MAX_RECORD_BYTES) return -1;
+    tombstone = (char *)malloc(length);
+    if (tombstone == NULL) return -1;
+    snprintf(tombstone, length, "%s%s", prefix, text);
+    result = metis_episodic_upsert_with_key(
+        store, tombstone, key, min_similarity, replaced);
+    free(tombstone);
+    return result;
+}
+
 size_t metis_episodic_count(const metis_episodic_store_t *store) {
     return store == NULL ? 0 : store->count;
 }

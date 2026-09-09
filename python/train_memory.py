@@ -255,6 +255,8 @@ class MetisMemory(nn.Module):
                  kv_gate_min_rank=1,
                  layer_gate_lambda=0.0, layer_gate_temperature=1.0,
                  layer_gate_threshold=0.5, layer_gate_min_layers=1,
+                 fusion_mode="fixed",
+                 gdu_alpha_init=1.0, gdu_beta_init=1.0,
                  denom_mode="signed_plus_one",
                  state_mode="delta", max_memory_slots=4096,
                  slot_temperature=0.07,
@@ -272,6 +274,9 @@ class MetisMemory(nn.Module):
         self.groups = cfg.q_dim // cfg.kv_dim
         self.heads_per_group = cfg.n_heads // self.groups
         self.gamma, self.tau, self.rho, self.k_min = gamma, tau, rho, k_min
+        if fusion_mode not in {"fixed", "residual_gate"}:
+            raise ValueError(f"unsupported fusion mode {fusion_mode}")
+        self.fusion_mode = fusion_mode
         self.alpha_max_tokens = int(alpha_max_tokens)
         self.alpha_max_fraction = float(alpha_max_fraction)
         if self.alpha_max_tokens < 0:
@@ -282,10 +287,13 @@ class MetisMemory(nn.Module):
         # Paper/reference initialization: both gates start at sigmoid≈1.
         # They remain trainable and can learn forgetting/update behavior.
         NL = self.n_layers
+        def gate_logit(value):
+            probability = min(max(float(value), 1e-4), 1.0 - 1e-4)
+            return math.log(probability / (1.0 - probability))
         self.gdu_ab = nn.Parameter(torch.full(
-            (NL,), LOGIT_CLAMPED_1, device=device, dtype=dtype))
+            (NL,), gate_logit(gdu_alpha_init), device=device, dtype=dtype))
         self.gdu_bb = nn.Parameter(torch.full(
-            (NL,), LOGIT_CLAMPED_1, device=device, dtype=dtype))
+            (NL,), gate_logit(gdu_beta_init), device=device, dtype=dtype))
         self.device, self.dtype = device, dtype
 
         g = torch.Generator(device="cpu").manual_seed(seed)
@@ -314,9 +322,19 @@ class MetisMemory(nn.Module):
         self.gdu_bw = nn.Parameter(zeros(NL, self.d_model))
         self.mem_norm = nn.Parameter(torch.ones(NL, self.q_dim,
                                                 device=device, dtype=dtype))
+        if self.fusion_mode == "residual_gate":
+            self.fusion_gate_w = nn.Parameter(zeros(NL, self.d_model))
+            self.fusion_gate_b = nn.Parameter(torch.full(
+                (NL,), math.log(0.1 / 0.9),
+                device=device, dtype=dtype))
+        else:
+            self.fusion_gate_w = None
+            self.fusion_gate_b = None
         # Zero selects an independent full-rank query projection. Positive
-        # ranks use the legacy factorized query, optionally as a backbone
-        # residual.
+        # ranks use the factorized form.  ``backbone_delta`` remains only for
+        # loading historical experiments; accuracy-first training uses the
+        # reference independent query because it has one unambiguous input
+        # domain in both Python and C.
         if query_rank < 0 or query_rank > min(self.q_dim, self.d_model):
             raise ValueError(
                 f"query_rank {query_rank} outside [0, "
@@ -326,13 +344,14 @@ class MetisMemory(nn.Module):
             self.query_proj = nn.Parameter(
                 zeros(NL, self.q_dim, self.d_model))
             self.query_a = self.query_b = None
-            with torch.no_grad():
-                for layer in range(NL):
-                    query_init = torch.randn(
-                        self.q_dim, self.d_model, generator=g,
-                        dtype=torch.float32) / math.sqrt(self.d_model)
-                    self.query_proj[layer].copy_(query_init.to(
-                        device=device, dtype=dtype))
+            if query_mode == "independent":
+                with torch.no_grad():
+                    for layer in range(NL):
+                        query_init = torch.randn(
+                            self.q_dim, self.d_model, generator=g,
+                            dtype=torch.float32) / math.sqrt(self.d_model)
+                        self.query_proj[layer].copy_(query_init.to(
+                            device=device, dtype=dtype))
         else:
             self.query_proj = None
             self.query_a = nn.Parameter(
@@ -352,9 +371,6 @@ class MetisMemory(nn.Module):
         self.query_gate_min_rank = query_gate_min_rank
         if query_mode not in {"backbone_delta", "independent"}:
             raise ValueError(f"unsupported query mode {query_mode}")
-        if query_rank == 0 and query_mode != "independent":
-            raise ValueError(
-                "full-rank query requires query_mode='independent'")
         self.query_mode = query_mode
         self.denom_mode = denom_mode
         if state_mode not in {"delta", "slots"}:
@@ -422,6 +438,11 @@ class MetisMemory(nn.Module):
         self.evidence_supervision_tail = None
         self.evidence_supervision_range = None
         self.evidence_losses = []
+        self.collect_write_selection_loss = False
+        self.write_selection_losses = []
+        self.collect_fusion_gate_loss = False
+        self.fusion_gate_target = 0.0
+        self.fusion_gate_losses = []
         self.last_pointer_weights = None
         self.last_pointer_weights_by_layer = [None] * self.n_layers
         self.last_memory_fused_by_layer = [None] * self.n_layers
@@ -435,12 +456,31 @@ class MetisMemory(nn.Module):
     def init_from_backbone(self):
         """Initialize memory projections from the matching backbone.
 
-        Full-rank projections are exact copies. Factorized projections retain
-        the legacy truncated-SVD initialization for compressed experiments.
+        The accuracy-first learned query follows the reference implementation:
+        an independent query_proj(hidden_states), initialized from the
+        backbone q_proj weights.  It must not reuse the backbone's live
+        q_proj output because that output consumes input_layernorm(hidden),
+        while the learned memory query consumes the raw block input.
+
+        Full-rank K/V projections are exact copies. Factorized projections
+        retain the legacy truncated-SVD initialization for compressed
+        experiments.
         """
         with torch.no_grad():
             for s, blk in enumerate(self.layer_ids):
                 lw = self.backbone.layers[blk]
+                if self.query_mode == "independent":
+                    if self.q_rank == 0:
+                        self.query_proj[s].copy_(lw["q"].float())
+                    else:
+                        query_a, query_b = balanced_truncated_svd(
+                            lw["q"].float(), self.q_rank)
+                        self.query_a[s].copy_(query_a.to(
+                            device=self.query_a.device,
+                            dtype=self.query_a.dtype))
+                        self.query_b[s].copy_(query_b.to(
+                            device=self.query_b.device,
+                            dtype=self.query_b.dtype))
                 if self.kv_rank == 0:
                     self.wk[s].copy_(lw["k"].float())
                     self.wv[s].copy_(lw["v"].float())
@@ -536,6 +576,11 @@ class MetisMemory(nn.Module):
             raise ValueError(
                 f"checkpoint query mode {checkpoint_mode} != "
                 f"trainer query mode {self.query_mode}")
+        checkpoint_fusion = checkpoint.get("fusion_mode", "fixed")
+        if checkpoint_fusion != self.fusion_mode:
+            raise ValueError(
+                f"checkpoint fusion mode {checkpoint_fusion} != "
+                f"trainer fusion mode {self.fusion_mode}")
         checkpoint_tensors = dict(checkpoint["tensors"])
         if checkpoint["kv_rank"] > 0:
             checkpoint_tensors["wk"] = torch.matmul(
@@ -608,6 +653,11 @@ class MetisMemory(nn.Module):
         self.evidence_supervision_tail = None
         self.evidence_supervision_range = None
         self.evidence_losses = []
+        self.collect_write_selection_loss = False
+        self.write_selection_losses = []
+        self.collect_fusion_gate_loss = False
+        self.fusion_gate_target = 0.0
+        self.fusion_gate_losses = []
         self.last_pointer_weights = None
         self.last_pointer_weights_by_layer = [None] * self.n_layers
         self.last_memory_fused_by_layer = [None] * self.n_layers
@@ -670,6 +720,31 @@ class MetisMemory(nn.Module):
             return torch.zeros((), device=self.device)
         result = torch.stack(self.evidence_losses).mean()
         self.evidence_losses = []
+        return result
+
+    def begin_write_selection_supervision(self):
+        self.write_selection_losses = []
+        self.collect_write_selection_loss = True
+
+    def end_write_selection_supervision(self):
+        self.collect_write_selection_loss = False
+        if not self.write_selection_losses:
+            return torch.zeros((), device=self.device)
+        result = torch.stack(self.write_selection_losses).mean()
+        self.write_selection_losses = []
+        return result
+
+    def begin_fusion_gate_supervision(self, target):
+        self.fusion_gate_losses = []
+        self.fusion_gate_target = float(target)
+        self.collect_fusion_gate_loss = True
+
+    def end_fusion_gate_supervision(self):
+        self.collect_fusion_gate_loss = False
+        if not self.fusion_gate_losses:
+            return torch.zeros((), device=self.device)
+        result = torch.stack(self.fusion_gate_losses).mean()
+        self.fusion_gate_losses = []
         return result
 
     def slot_of(self, blk):
@@ -919,6 +994,9 @@ class MetisMemory(nn.Module):
         if self.q_rank == 0:
             q = F.linear(
                 h_raw.float(), self.query_proj[slot].float())
+            if self.query_mode == "backbone_delta":
+                q = q + F.linear(
+                    h_raw.to(base_q_w.dtype), base_q_w).float()
         else:
             query_hidden = F.linear(
                 h_raw.float(), self.query_b[slot].float())
@@ -989,6 +1067,21 @@ class MetisMemory(nn.Module):
         memn = metis_rms_norm(mem, self.mem_norm[slot], 1e-6)
         fused = F.linear(memn.to(o_w.dtype), o_w)            # [T, d]
         self.last_memory_fused_by_layer[slot] = fused
+        if self.fusion_mode == "residual_gate":
+            gate_logit = (
+                h_raw.float() @ self.fusion_gate_w[slot].float() +
+                self.fusion_gate_b[slot].float())
+            gate = torch.sigmoid(gate_logit)
+            if self.collect_fusion_gate_loss:
+                target = torch.full_like(
+                    gate_logit, self.fusion_gate_target)
+                self.fusion_gate_losses.append(
+                    F.binary_cross_entropy_with_logits(
+                        gate_logit, target))
+            return (
+                attn_branch.float() +
+                gate.unsqueeze(-1) * fused.float()
+            ).to(attn_branch.dtype)
         layer_gates = self.layer_gates(hard=True)
         gate = (
             torch.ones((), device=attn_branch.device)
@@ -1056,6 +1149,21 @@ class MetisMemory(nn.Module):
 
         a_pre = h @ self.gdu_aw[slot] + self.gdu_ab[slot]
         b_pre = h @ self.gdu_bw[slot] + self.gdu_bb[slot]
+        if (
+            self.collect_write_selection_loss
+            and self.pending_slot_labels is not None
+            and self.pending_slot_labels.numel() == L
+        ):
+            labels = self.pending_slot_labels
+            known = labels >= 0
+            if bool(known.any()):
+                targets = (labels[known] > 0).to(b_pre.dtype)
+                write_loss = F.binary_cross_entropy_with_logits(
+                    b_pre[known], targets)
+                if bool((labels > 0).any()) and bool((labels == 0).any()):
+                    write_loss = (
+                        write_loss + evidence_attention_loss(p, labels))
+                self.write_selection_losses.append(write_loss)
         beta_i = self.beta_scale * torch.sigmoid(b_pre)      # [L]
         alpha_scalar = ((torch.sigmoid(a_pre) * w_sel).sum()
                         / w_sel.sum().clamp_min(1e-6))
@@ -1139,6 +1247,29 @@ class MetisMemory(nn.Module):
             self.query_proj.data if self.q_rank == 0 else None)
         query_a = self.query_a.data if self.q_rank > 0 else None
         query_b = self.query_b.data if self.q_rank > 0 else None
+        query_add_backbone = self.query_mode == "backbone_delta"
+        if query_add_backbone and self.q_rank == 0:
+            # Deploy one unambiguous learned-query operator.  Python training
+            # defines the delta path as:
+            #   Q_mem(h_raw) = delta(h_raw) + Wq_backbone(h_raw)
+            # The C attention Q snapshot is Wq_backbone(RMSNorm(h_raw)), so
+            # serializing the delta flag would change the function at runtime.
+            # Fold Wq into the full-rank matrix and export the reference form
+            # query_proj(h_raw) instead.
+            backbone_query = torch.stack([
+                self.backbone.layers[layer]["q"].float()
+                for layer in self.layer_ids
+            ]).to(device=query_proj.device, dtype=query_proj.dtype)
+            query_proj = query_proj + backbone_query
+            query_add_backbone = False
+            print(json.dumps({
+                "phase": "memory_export",
+                "query_conversion": "backbone_delta_to_independent",
+            }, separators=(",", ":")), flush=True)
+        elif query_add_backbone:
+            raise ValueError(
+                "low-rank backbone-delta query cannot be exported exactly; "
+                "use --query-rank 0 or --query-mode independent")
         gates = self.query_gates()
         if gates is not None:
             gate_values = gates.detach()
@@ -1206,8 +1337,13 @@ class MetisMemory(nn.Module):
                       query_norm=selected(self.query_norm.data),
                       denom_mode=(2 if self.denom_mode == "abs_plus_one"
                                   else 1),
-                      query_add_backbone=(
-                          self.query_mode == "backbone_delta"),
+                      query_add_backbone=query_add_backbone,
+                      fusion_gate_w=(
+                          None if self.fusion_gate_w is None
+                          else selected(self.fusion_gate_w.data)),
+                      fusion_gate_b=(
+                          None if self.fusion_gate_b is None
+                          else selected(self.fusion_gate_b.data)),
                       backbone_sha256=self.backbone.model_sha256())
         print(f'{{"exported":"{path}"}}', flush=True)
 
@@ -1348,6 +1484,9 @@ class MemoryTrainer:
                                     args.layer_gate_threshold),
                                 layer_gate_min_layers=(
                                     args.layer_gate_min_layers),
+                                fusion_mode=args.fusion_mode,
+                                gdu_alpha_init=args.gdu_alpha_init,
+                                gdu_beta_init=args.gdu_beta_init,
                                 denom_mode=args.denom_mode,
                                 state_mode=args.state_mode,
                                 max_memory_slots=args.max_memory_slots,
@@ -1535,6 +1674,8 @@ class MemoryTrainer:
         self.schedule_rng = random.Random(args.seed + 0x5E1F)
         self.self_prefix_used = 0
         self.contrastive_pairs_used = 0
+        self.write_selection_loss_sum = 0.0
+        self.write_selection_loss_count = 0
         self.arch_cursor = 0
 
     def warmup_lr(self, step):
@@ -1672,6 +1813,7 @@ class MemoryTrainer:
         n_label = 0
         n_correct = 0
         sequence_exact = 0
+        sample_write_losses = []
         with ctx:
             for chunk_index, (
                 ids, is_q, target, text, tgt_ids
@@ -1704,10 +1846,22 @@ class MemoryTrainer:
                     else:
                         slot_labels = [-1] * len(ids)
                     mem.set_pending_slot_labels(slot_labels)
+                    supervise_write = (
+                        want_grads
+                        and self.args.write_selection_lambda > 0.0
+                        and mem.state_mode == "delta")
+                    if supervise_write:
+                        mem.begin_write_selection_supervision()
                     if truncated_prefix:
                         mem.commit_all()
                     else:
                         mem.commit_all_grad_enabled()
+                    if supervise_write:
+                        write_loss = mem.end_write_selection_supervision()
+                        sample_write_losses.append(write_loss)
+                    if mem.state_mode == "delta":
+                        mem.pending_slot_labels = None
+                        mem.pending_slot_label = -1
                     append_pointer_token_ids(mem, ids, bb.device)
                     continue
                 # query: FRESH context (memory is the only fact source).
@@ -1763,6 +1917,16 @@ class MemoryTrainer:
                 # score targets on the same fresh context with fusion active
                 full = ids + prefix
                 toks = torch.tensor(full, device=self.device)
+                supervise_fusion = (
+                    want_grads
+                    and query_memory_enabled
+                    and mem.fusion_mode == "residual_gate"
+                    and self.args.fusion_gate_lambda > 0.0)
+                if supervise_fusion:
+                    memory_relevant = (
+                        sample.get("metadata", {}).get("type") != "normal")
+                    mem.begin_fusion_gate_supervision(
+                        1.0 if memory_relevant else 0.0)
                 supervise_evidence = (
                     want_grads
                     and query_memory_enabled
@@ -1775,6 +1939,11 @@ class MemoryTrainer:
                         mem.begin_evidence_supervision(len(tgt_ids))
                 logits_all = bb(toks, memory_v6=mem, logits_all=True,
                                 fuse_start=0)
+                if supervise_fusion:
+                    fusion_loss = mem.end_fusion_gate_supervision()
+                    loss_sum = (
+                        loss_sum + self.args.fusion_gate_lambda *
+                        fusion_loss * len(tgt_ids))
                 if supervise_evidence:
                     evidence_loss = mem.end_evidence_supervision()
                     loss_sum = (
@@ -1855,6 +2024,13 @@ class MemoryTrainer:
                         mem.commit_all()
                     append_pointer_token_ids(
                         mem, complete_ids, bb.device)
+        if sample_write_losses and n_label > 0:
+            write_loss = torch.stack(sample_write_losses).mean()
+            self.write_selection_loss_sum += float(write_loss.detach())
+            self.write_selection_loss_count += 1
+            loss_sum = (
+                loss_sum +
+                self.args.write_selection_lambda * write_loss * n_label)
         return loss_sum, n_label, n_correct, sequence_exact
 
     def run_valid(self, n, tok_cache, query_memory_enabled=True):
@@ -1974,6 +2150,12 @@ def main():
         help="training device; auto prefers CUDA, then Apple MPS")
     ap.add_argument("--layers", default="all")
     ap.add_argument("--gamma", type=float, default=0.9)
+    ap.add_argument(
+        "--fusion-mode", choices=("fixed", "residual_gate"),
+        default="fixed",
+        help="fixed gamma blend or identity-preserving per-token residual gate")
+    ap.add_argument("--gdu-alpha-init", type=float, default=1.0)
+    ap.add_argument("--gdu-beta-init", type=float, default=1.0)
     ap.add_argument("--tau", type=float, default=1.0)
     ap.add_argument("--rho", type=float, default=0.9)
     ap.add_argument("--alpha-max-tokens", type=int, default=0)
@@ -1984,8 +2166,8 @@ def main():
     ap.add_argument(
         "--query-mode",
         choices=("independent", "backbone_delta"),
-        default="backbone_delta",
-        help="paper-aligned independent query or compatibility delta on Q")
+        default="independent",
+        help="paper-aligned independent query or legacy compatibility delta")
     ap.add_argument("--query-gate-lambda", type=float, default=1e-4,
                     help="NAS-NG sparsity weight; zero disables rank gates")
     ap.add_argument("--query-gate-temperature", type=float, default=1.0)
@@ -2060,6 +2242,12 @@ def main():
         "--evidence-lambda", type=float, default=0.0,
         help="weight for attention mass supervision on labelled evidence")
     ap.add_argument(
+        "--write-selection-lambda", type=float, default=0.0,
+        help="direct supervision for AlphaTopP importance and GDU write beta")
+    ap.add_argument(
+        "--fusion-gate-lambda", type=float, default=0.0,
+        help="direct memory-relevant versus normal-query fusion supervision")
+    ap.add_argument(
         "--evidence-label-mode",
         choices=("answer_span", "chunk"), default="answer_span",
         help="positive slot labels within annotated evidence chunks")
@@ -2097,13 +2285,19 @@ def main():
         ap.error("--contrastive-negatives must be positive")
     if args.evidence_lambda < 0.0:
         ap.error("--evidence-lambda must be non-negative")
+    if args.write_selection_lambda < 0.0:
+        ap.error("--write-selection-lambda must be non-negative")
+    if args.fusion_gate_lambda < 0.0:
+        ap.error("--fusion-gate-lambda must be non-negative")
+    if not 0.0 < args.gdu_alpha_init <= 1.0:
+        ap.error("--gdu-alpha-init must be in (0, 1]")
+    if not 0.0 < args.gdu_beta_init <= 1.0:
+        ap.error("--gdu-beta-init must be in (0, 1]")
     for task in TASK_WEIGHT_DEFAULTS:
         for suffix in ("start", "end"):
             if getattr(args, f"task{task}_weight_{suffix}") < 0.0:
                 ap.error(
                     f"--task{task}-weight-{suffix} must be non-negative")
-    if args.query_rank == 0 and args.query_mode != "independent":
-        ap.error("--query-rank 0 requires --query-mode independent")
     if args.query_rank == 0 and args.query_gate_lambda > 0.0:
         ap.error("--query-rank 0 requires --query-gate-lambda 0")
     if args.kv_rank == 0 and args.kv_gate_lambda > 0.0:
@@ -2157,6 +2351,8 @@ def main():
         total_loss, total_tok, n_ok = 0.0, 0, 0
         batch_task, batch_indices, task_weights = tr.next_training_batch(
             step, args.batch)
+        tr.write_selection_loss_sum = 0.0
+        tr.write_selection_loss_count = 0
         for s_idx in batch_indices:
             line = tr.train_strata[s_idx[0]][1][s_idx[1]]
             sample = json.loads(line)
@@ -2208,6 +2404,8 @@ def main():
               f'"task_weight":{task_weights[batch_task]:.6f},'
               f'"self_prefix_used":{tr.self_prefix_used},'
               f'"contrastive_pairs_used":{tr.contrastive_pairs_used},'
+              f'"write_selection_loss":'
+              f'{tr.write_selection_loss_sum / max(tr.write_selection_loss_count, 1):.6f},'
               f'"steps_per_hour":{sps:.0f}}}', flush=True)
 
         if (

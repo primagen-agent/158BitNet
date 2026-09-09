@@ -129,6 +129,31 @@ def main():
             **full_rank_tensors,
         )
         full_rank = load_bnmem_v1(full_rank_path)
+        gated_path = str(Path(temp_dir) / "gated-full-rank.bnmem")
+        fusion_gate_w = random(nl, d_model)
+        fusion_gate_b = random(nl)
+        save_bnmem_v3(
+            gated_path,
+            layer_ids=[1, 3],
+            d_model=d_model,
+            kv_dim=kv_dim,
+            q_dim=q_dim,
+            head_dim=head_dim,
+            gamma=0.9,
+            tau=1.0,
+            rho=0.9,
+            k_min=1,
+            alpha_max_tokens=16,
+            alpha_max_fraction=0.25,
+            beta_scale=0.9,
+            denom_mode=1,
+            query_add_backbone=True,
+            fusion_gate_w=fusion_gate_w,
+            fusion_gate_b=fusion_gate_b,
+            backbone_sha256=backbone_sha256,
+            **full_rank_tensors,
+        )
+        gated = load_bnmem_v1(gated_path)
         model_a = Path(temp_dir) / "model-a.gguf"
         model_b = Path(temp_dir) / "model-b.gguf"
         model_a.write_bytes(b"a")
@@ -162,6 +187,13 @@ def main():
     assert full_rank["query_add_backbone"] is False
     for name, expected in full_rank_tensors.items():
         torch.testing.assert_close(full_rank["tensors"][name], expected)
+    assert gated["query_rank"] == 0
+    assert gated["query_add_backbone"] is True
+    assert gated["fusion_mode"] == "residual_gate"
+    torch.testing.assert_close(
+        gated["tensors"]["fusion_gate_w"], fusion_gate_w)
+    torch.testing.assert_close(
+        gated["tensors"]["fusion_gate_b"], fusion_gate_b)
     print("python BNMEM1 roundtrip: PASS")
 
 

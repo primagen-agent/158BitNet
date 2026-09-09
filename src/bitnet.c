@@ -3463,9 +3463,22 @@ static int metis_apply_layer(bitnet_context_t *ctx, int slot,
 #endif
 #endif
     }
-    for (int o = 0; o < d; ++o)
-        attn_branch[o] = p->gamma * attn_branch[o] +
-                         (1.0f - p->gamma) * fused[o];
+    if (p->fusion_gate_w != NULL && p->fusion_gate_b != NULL) {
+        const float *gate_w =
+            p->fusion_gate_w + (size_t)slot * (size_t)d;
+        float gate_logit = p->fusion_gate_b[slot];
+        for (int i = 0; i < d; ++i)
+            gate_logit += gate_w[i] * ctx->metis_h_raw[i];
+        {
+            float gate = 1.0f / (1.0f + expf(-gate_logit));
+            for (int o = 0; o < d; ++o)
+                attn_branch[o] += gate * fused[o];
+        }
+    } else {
+        for (int o = 0; o < d; ++o)
+            attn_branch[o] = p->gamma * attn_branch[o] +
+                             (1.0f - p->gamma) * fused[o];
+    }
     return 0;
 }
 

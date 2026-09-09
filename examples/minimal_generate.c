@@ -117,7 +117,8 @@ static void print_memory_model_banner(const char *path) {
     if (ok) ok = (fread(magic, 1, sizeof magic, f) == (size_t)sizeof magic);
     if (ok) ok = read_le_u32(f, &version);
     if (ok) ok = (
-        (version >= 1u && version <= 4u) || version == 6u);
+        (version >= 1u && version <= 4u) ||
+        version == 6u || version == 7u);
     if (ok) ok = read_le_u32(f, &n_layers);
     const int slots = version >= 3u ? 32 : 4;
     for (int i = 0; i < kMaxLayers; ++i) {
@@ -127,7 +128,8 @@ static void print_memory_model_banner(const char *path) {
     if (f != NULL) fclose(f);
 
     fprintf(stderr, "[bitnet] memory model: %s%s layers=[", path,
-            version == 4u ? " v4" : (version == 6u ? " v6" : ""));
+            version == 4u ? " v4" :
+            (version == 6u ? " v6" : (version == 7u ? " v7" : "")));
     if (ok && n_layers >= 1u && n_layers <= (unsigned int)slots) {
         if (version >= 3u && n_layers > 6) {
             fprintf(stderr, "%u..%u x%u", ids[0], ids[n_layers - 1],

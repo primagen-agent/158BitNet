@@ -8,7 +8,8 @@ remember/update/forget + implicit structures), their commit protocol
 OUR C runtime (openai_server --memory-model), NOT their python stack.
 
 Usage: eval_reference_protocol.py <openai_server> <model.gguf> <mem.bnmem>
-       [--protocol explicit|implicit] [--n-per-op 30] [--port N]
+       [--protocol explicit|implicit] [--n-per-op 30]
+       [--persistence|--fresh-query] [--output results.json]
 """
 import json
 import random
@@ -110,8 +111,14 @@ def request_json(url, payload=None, timeout=600):
         data = json.dumps(payload).encode()
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=data, headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as error:
+        body = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(
+            f"HTTP {error.code} from {url}: {body}; "
+            f"payload={payload}") from error
 
 
 def response_text(resp):
@@ -121,11 +128,26 @@ def response_text(resp):
         return ""
 
 
-def start_server(srv, gguf, bnmem, port, state_dir=None):
-    cmd = [srv, gguf, "--memory-model", bnmem,
-           "--host", "127.0.0.1", "--port", str(port)]
+def start_server(
+    srv, gguf, bnmem, port, state_dir=None, controller=None,
+    addressed=False, pointer=None,
+):
+    cmd = [srv, gguf, "--host", "127.0.0.1", "--port", str(port)]
+    if bnmem != "-":
+        cmd += ["--memory-model", bnmem]
     if state_dir is not None:
         cmd += ["--memory-state-dir", state_dir]
+    if addressed:
+        if controller is None:
+            raise ValueError("--addressed requires --controller")
+        cmd += [
+            "--episodic-memory",
+            "--memory-controller", controller,
+            "--episodic-top-k", "3",
+            "--episodic-lexical-weight", "0.25",
+        ]
+        if pointer is not None:
+            cmd += ["--memory-pointer", pointer]
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
                             stderr=subprocess.DEVNULL)
     health = f"http://127.0.0.1:{port}/health"
@@ -147,6 +169,12 @@ def main():
     protocol = "explicit"
     n_per_op = 30
     persistence = False
+    fresh_query = False
+    output = None
+    controller = None
+    addressed = False
+    pointer = None
+    auto_action = False
     args = sys.argv[4:]
     i = 0
     while i < len(args):
@@ -156,39 +184,79 @@ def main():
             n_per_op = int(args[i + 1]); i += 2
         elif args[i] == "--persistence":
             persistence = True; i += 1
+        elif args[i] == "--fresh-query":
+            fresh_query = True; i += 1
+        elif args[i] == "--output":
+            output = args[i + 1]; i += 2
+        elif args[i] == "--controller":
+            controller = args[i + 1]; i += 2
+        elif args[i] == "--addressed":
+            addressed = True; i += 1
+        elif args[i] == "--pointer":
+            pointer = args[i + 1]; i += 2
+        elif args[i] == "--auto-action":
+            auto_action = True; i += 1
         else:
             i += 1
+    if persistence and fresh_query:
+        raise ValueError("--persistence and --fresh-query are mutually exclusive")
 
     port = find_port()
-    state_dir = tempfile.mkdtemp(prefix="bitnet-memory-state-") if persistence else None
-    proc = start_server(srv, gguf, bnmem, port, state_dir)
+    state_dir = (
+        tempfile.mkdtemp(prefix="bitnet-memory-state-")
+        if persistence or fresh_query else None)
+    proc = start_server(
+        srv, gguf, bnmem, port, state_dir, controller, addressed, pointer)
     base = f"http://127.0.0.1:{port}/v1/chat/completions"
     try:
         sessions = (gen_implicit_sessions(n_per_op) if protocol == "implicit"
                     else gen_sessions(n_per_op))
         ops = sorted({s["op"] for s in sessions})
         correct = {op: 0 for op in ops}
-        if persistence:
+        routed_actions = {}
+        if persistence or fresh_query:
             for si, s in enumerate(sessions):
                 sid = f"refeval-{si}"
+                routed_actions[sid] = []
                 for k, m in enumerate(("mem", "mem2", "mem3")):
                     if m not in s:
                         continue
-                    request_json(base, {
+                    action = None
+                    if addressed and not auto_action:
+                        if s["op"] == "remember":
+                            action = "store"
+                        elif s["op"] == "update":
+                            action = "store" if k == 0 else "update"
+                        elif s["op"] == "forget":
+                            if k > 1:
+                                continue
+                            action = "store" if k == 0 else "delete"
+                    payload = {
                         "session_id": sid, "reset_session": k == 0,
                         "max_tokens": 1,
                         "messages": [{"role": "user", "content": s[m]}],
+                    }
+                    if action is not None:
+                        payload["memory_action"] = action
+                    record_response = request_json(base, payload)
+                    routed_actions[sid].append({
+                        "message": s[m],
+                        "action": record_response.get("memory_action"),
                     })
                 request_json(f"http://127.0.0.1:{port}/v1/memory/export",
                              {"session_id": sid})
                 if (si + 1) % 10 == 0:
                     print(f"[export {si+1}/{len(sessions)}] ...", flush=True)
-            proc.terminate(); proc.wait()
-            proc = start_server(srv, gguf, bnmem, port, state_dir)
+            if persistence:
+                proc.terminate(); proc.wait()
+                proc = start_server(
+                    srv, gguf, bnmem, port, state_dir,
+                    controller, addressed, pointer)
+        rows = []
         for si, s in enumerate(sessions):
             sid = f"refeval-{si}"
             # their protocol: each mem message committed SOLO (fresh ctx)
-            if persistence:
+            if persistence or fresh_query:
                 request_json(f"http://127.0.0.1:{port}/v1/memory/import",
                              {"session_id": sid})
             else:
@@ -200,11 +268,24 @@ def main():
                         "max_tokens": 1,
                         "messages": [{"role": "user", "content": s[m]}],
                     })
+            retrieved_context = None
+            if addressed:
+                retrieved = request_json(
+                    f"http://127.0.0.1:{port}/v1/memory/search",
+                    {
+                        "session_id": sid,
+                        "query": s["query"],
+                        "top_k": 3,
+                    })
+                retrieved_context = retrieved.get("context", "")
             response = request_json(base, {
                 "session_id": sid, "max_tokens": 24,
+                **({"memory_action": "ignore"}
+                   if addressed and not auto_action else {}),
+                **({"memory_copy": True} if pointer else {}),
                 "messages": [{"role": "user", "content": s["query"]}],
             })
-            if persistence:
+            if persistence or fresh_query:
                 session = response.get("session", {})
                 cached = session.get("cached_tokens", 0)
                 reused = session.get("reused_tokens", 0)
@@ -218,9 +299,26 @@ def main():
             else:
                 ok = bool(UNK_PAT.search(ans))
             correct[s["op"]] += int(ok)
+            rows.append({
+                "index": si,
+                "op": s["op"],
+                "memory": [s[key] for key in ("mem", "mem2", "mem3")
+                           if key in s],
+                "query": s["query"],
+                "gold": s["gold"],
+                "prediction": ans,
+                "correct": bool(ok),
+                **({"retrieved_context": retrieved_context}
+                   if addressed else {}),
+                **({"routed_actions": routed_actions.get(sid, []),
+                    "query_action": response.get("memory_action")}
+                   if auto_action else {}),
+            })
             if (si + 1) % 10 == 0:
                 print(f"[{si+1}/{len(sessions)}] ...", flush=True)
-        mode = "restart persistence" if persistence else protocol
+        mode = (
+            "restart persistence" if persistence else
+            ("fresh-query import" if fresh_query else protocol))
         print(f"\n=== Memory accuracy ({mode}) — OUR model via OUR C runtime ===")
         tc = tn = 0
         for op in ops:
@@ -228,6 +326,10 @@ def main():
             print(f"{op:11s}: {correct[op]}/{n} = {correct[op]/n:.1%}")
             tc += correct[op]; tn += n
         print(f"{'TOTAL':11s}: {tc}/{tn} = {tc/tn:.1%}")
+        if output is not None:
+            with open(output, "w", encoding="utf-8") as handle:
+                json.dump(rows, handle, ensure_ascii=False, indent=2)
+            print(f"{'predictions':11s}: {output}")
     finally:
         if proc.poll() is None:
             proc.terminate()

@@ -72,6 +72,10 @@ typedef struct metis_params {
     float *wk_b;            /* [n_layers][kv_rank x d_model] */
     float *wv_a;            /* [n_layers][kv_dim x kv_rank] */
     float *wv_b;            /* [n_layers][kv_rank x d_model] */
+    /* BNMEM7 identity-preserving per-token fusion:
+     * attn' = attn + sigmoid(w.h_raw + b) * fused. */
+    float *fusion_gate_w;   /* [n_layers][d_model] */
+    float *fusion_gate_b;   /* [n_layers] */
     /* per-layer trainable tensors, layer-major concatenation:
      * wk/wv: [n_layers][kv_dim x d_model] row-major
      * w_agg/gdu_aw/gdu_bw: [n_layers][d_model]

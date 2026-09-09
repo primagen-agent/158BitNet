@@ -39,6 +39,7 @@ class TinyBackbone:
             "q": torch.randn(8, 8, generator=generator),
             "k": torch.randn(4, 8, generator=generator),
             "v": torch.randn(4, 8, generator=generator),
+            "o": torch.eye(8),
             "attn_norm": torch.ones(8),
         }]
 
@@ -172,13 +173,94 @@ def test_full_rank_projection_initialization_matches_reference():
         device="cpu",
     )
     memory.init_from_backbone()
-    assert not torch.equal(memory.query_proj[0], backbone.layers[0]["q"])
-    assert torch.isfinite(memory.query_proj[0]).all()
-    assert float(memory.query_proj[0].detach().std()) > 0.0
+    torch.testing.assert_close(
+        memory.query_proj[0], backbone.layers[0]["q"])
     torch.testing.assert_close(memory.wk[0], backbone.layers[0]["k"])
     torch.testing.assert_close(memory.wv[0], backbone.layers[0]["v"])
     assert memory.query_a is None
     assert memory.wk_a is None
+
+
+def test_full_rank_backbone_delta_starts_aligned_and_fusion_is_identity():
+    backbone = TinyBackbone()
+    memory = MetisMemory(
+        backbone,
+        [0],
+        query_rank=0,
+        query_mode="backbone_delta",
+        kv_rank=0,
+        query_gate_lambda=0.0,
+        kv_gate_lambda=0.0,
+        layer_gate_lambda=0.0,
+        fusion_mode="residual_gate",
+        device="cpu",
+    )
+    memory.init_from_backbone()
+    torch.testing.assert_close(
+        memory.query_proj, torch.zeros_like(memory.query_proj))
+    memory.reset_state()
+    attention = torch.randn(3, 8)
+    hidden = torch.randn(3, 8)
+    output = memory.fuse(0, attention, hidden)
+    torch.testing.assert_close(output, attention)
+
+
+def test_backbone_delta_export_folds_raw_query_operator(tmp_path):
+    backbone = TinyBackbone()
+    memory = MetisMemory(
+        backbone,
+        [0],
+        query_rank=0,
+        query_mode="backbone_delta",
+        kv_rank=0,
+        query_gate_lambda=0.0,
+        kv_gate_lambda=0.0,
+        layer_gate_lambda=0.0,
+        fusion_mode="residual_gate",
+        device="cpu",
+    )
+    memory.init_from_backbone()
+    with torch.no_grad():
+        memory.query_proj.copy_(
+            torch.arange(memory.query_proj.numel()).reshape_as(
+                memory.query_proj) / memory.query_proj.numel())
+    expected = memory.query_proj.detach() + backbone.layers[0]["q"]
+    output = tmp_path / "folded.bnmem"
+    memory.export(str(output))
+
+    from bnmem_export import load_bnmem_v1
+    checkpoint = load_bnmem_v1(str(output))
+    assert checkpoint["query_add_backbone"] is False
+    torch.testing.assert_close(
+        checkpoint["tensors"]["query_proj"], expected)
+
+
+def test_write_selection_supervision_reaches_selector_and_beta_gate():
+    backbone = TinyBackbone()
+    memory = MetisMemory(
+        backbone,
+        [0],
+        query_rank=0,
+        query_mode="backbone_delta",
+        kv_rank=0,
+        query_gate_lambda=0.0,
+        kv_gate_lambda=0.0,
+        layer_gate_lambda=0.0,
+        device="cpu",
+    )
+    memory.init_from_backbone()
+    memory.reset_state()
+    rows = torch.randn(3, 8, requires_grad=True)
+    memory.capture([rows])
+    memory.set_pending_slot_labels([1, 0, 0])
+    memory.begin_write_selection_supervision()
+    assert memory.commit_all_grad_enabled()
+    loss = memory.end_write_selection_supervision()
+    loss.backward()
+    assert memory.w_agg.grad is not None
+    assert torch.count_nonzero(memory.w_agg.grad).item() > 0
+    assert memory.gdu_bw.grad is not None
+    assert torch.count_nonzero(memory.gdu_bw.grad).item() > 0
 
 
 def test_memory_commit_preserves_source_activation_graph():
@@ -237,6 +319,8 @@ if __name__ == "__main__":
     test_evidence_attention_loss_rewards_positive_mass()
     test_answer_token_slot_labels_marks_longest_contiguous_match()
     test_full_rank_projection_initialization_matches_reference()
+    test_full_rank_backbone_delta_starts_aligned_and_fusion_is_identity()
+    test_write_selection_supervision_reaches_selector_and_beta_gate()
     test_memory_commit_preserves_source_activation_graph()
     test_official_five_task_mapping_and_schedule()
     print("metis training formula tests: PASS")

@@ -45,6 +45,7 @@
 #define METIS_FILE_VERSION 1u
 #define METIS_BOUND_FILE_VERSION 2u
 #define METIS_BOUNDED_FILE_VERSION 6u
+#define METIS_GATED_FILE_VERSION 7u
 #define METIS_MAX_LAYERS 32
 #define METIS_HDR_MAGIC_LEN 8u
 #define METIS_UNUSED_LAYER 0xFFFFFFFFu
@@ -63,6 +64,8 @@ static const uint8_t METIS_MAGIC_5[METIS_HDR_MAGIC_LEN] =
     { 'B', 'N', 'M', 'E', 'M', '5', 0, 0 };
 static const uint8_t METIS_MAGIC_6[METIS_HDR_MAGIC_LEN] =
     { 'B', 'N', 'M', 'E', 'M', '6', 0, 0 };
+static const uint8_t METIS_MAGIC_7[METIS_HDR_MAGIC_LEN] =
+    { 'B', 'N', 'M', 'E', 'M', '7', 0, 0 };
 
 /* ------------------------------------------------------------------ */
 /* little-endian primitives (shared shape with metis_model.c)          */
@@ -156,6 +159,8 @@ enum {
     T_WK_B,       /* low-rank K: f32[n_layers x (kv_rank*d_model)] */
     T_WV_A,       /* low-rank V: f32[n_layers x (kv_dim*kv_rank)] */
     T_WV_B,       /* low-rank V: f32[n_layers x (kv_rank*d_model)] */
+    T_FUSION_GATE_W, /* v7: f32[n_layers x d_model] */
+    T_FUSION_GATE_B, /* v7: f32[n_layers] */
     T_TENSOR_COUNT,
 };
 
@@ -203,6 +208,9 @@ static void metis_build_tinfo(const metis_params_t *p,
     metis_tinfo_fill(&ti[T_WV_B], "wv_b", NL,
                   (uint64_t)(p->kv_rank > 0 ? p->kv_rank : 1) *
                   p->d_model);
+    metis_tinfo_fill(
+        &ti[T_FUSION_GATE_W], "fusion_gate_w", NL, p->d_model);
+    metis_tinfo_fill(&ti[T_FUSION_GATE_B], "fusion_gate_b", NL, 1);
 }
 
 static const void *metis_tensor_ptr(const metis_params_t *p, int idx) {
@@ -221,6 +229,8 @@ static const void *metis_tensor_ptr(const metis_params_t *p, int idx) {
     case T_WK_B:       return p->wk_b;
     case T_WV_A:       return p->wv_a;
     case T_WV_B:       return p->wv_b;
+    case T_FUSION_GATE_W: return p->fusion_gate_w;
+    case T_FUSION_GATE_B: return p->fusion_gate_b;
     default:          return NULL;
     }
 }
@@ -241,6 +251,10 @@ static int metis_build_tmap(const metis_params_t *p,
     tmap[n++] = T_GDU_AW;
     tmap[n++] = T_GDU_BW;
     tmap[n++] = T_MEM_NORM;
+    if (p->fusion_gate_w != NULL && p->fusion_gate_b != NULL) {
+        tmap[n++] = T_FUSION_GATE_W;
+        tmap[n++] = T_FUSION_GATE_B;
+    }
     tmap[n++] = T_QUERY_NORM;
     if (p->query_rank > 0) {
         tmap[n++] = T_QUERY_A;
@@ -363,6 +377,8 @@ void metis_model_free_arrays(metis_file_model_t *m) {
     free(p->wk_b); p->wk_b = NULL;
     free(p->wv_a); p->wv_a = NULL;
     free(p->wv_b); p->wv_b = NULL;
+    free(p->fusion_gate_w); p->fusion_gate_w = NULL;
+    free(p->fusion_gate_b); p->fusion_gate_b = NULL;
     memset(m, 0, sizeof *m);
 }
 
@@ -403,16 +419,21 @@ int metis_model_save(const metis_file_model_t *m, const char *path) {
     metis_build_tinfo((metis_params_t *)p, ti);
 
     uint64_t off = 0;
+    int gated_fusion =
+        p->fusion_gate_w != NULL && p->fusion_gate_b != NULL;
     int bounded_selection =
         p->alpha_max_tokens > 0 || p->alpha_max_fraction > 0.0f;
-    if (bounded_selection && !p->has_backbone_sha256) goto io_fail;
+    if ((bounded_selection || gated_fusion) &&
+        !p->has_backbone_sha256) goto io_fail;
     const uint8_t *magic =
-        bounded_selection ? METIS_MAGIC_6 :
-        (p->has_backbone_sha256 ? METIS_BOUND_MAGIC : METIS_MAGIC);
+        gated_fusion ? METIS_MAGIC_7 :
+        (bounded_selection ? METIS_MAGIC_6 :
+         (p->has_backbone_sha256 ? METIS_BOUND_MAGIC : METIS_MAGIC));
     uint32_t version =
-        bounded_selection ? METIS_BOUNDED_FILE_VERSION :
+        gated_fusion ? METIS_GATED_FILE_VERSION :
+        (bounded_selection ? METIS_BOUNDED_FILE_VERSION :
         (p->has_backbone_sha256 ? METIS_BOUND_FILE_VERSION :
-                                  METIS_FILE_VERSION);
+                                  METIS_FILE_VERSION));
     if (metis_w_bytes(f, magic, METIS_HDR_MAGIC_LEN) != 0) goto io_fail;
     off += METIS_HDR_MAGIC_LEN;
     if (metis_w_u32(f, version) != 0) goto io_fail;   off += 4;
@@ -431,7 +452,7 @@ int metis_model_save(const metis_file_model_t *m, const char *path) {
     if (metis_w_f32(f, p->tau) != 0) goto io_fail;                  off += 4;
     if (metis_w_f32(f, p->rho) != 0) goto io_fail;                  off += 4;
     if (metis_w_u32(f, (uint32_t)p->k_min) != 0) goto io_fail;      off += 4;
-    if (bounded_selection) {
+    if (bounded_selection || gated_fusion) {
         if (metis_w_u32(
                 f, (uint32_t)p->alpha_max_tokens) != 0) goto io_fail;
         if (metis_w_f32(f, p->alpha_max_fraction) != 0) goto io_fail;
@@ -507,7 +528,8 @@ int metis_file_probe(const char *path) {
              (memcmp(magic, METIS_MAGIC, sizeof magic) == 0 ||
               memcmp(magic, METIS_BOUND_MAGIC, sizeof magic) == 0 ||
               memcmp(magic, METIS_MAGIC_5, sizeof magic) == 0 ||
-              memcmp(magic, METIS_MAGIC_6, sizeof magic) == 0);
+              memcmp(magic, METIS_MAGIC_6, sizeof magic) == 0 ||
+              memcmp(magic, METIS_MAGIC_7, sizeof magic) == 0);
     fclose(f);
     return ok ? 1 : 0;
 }
@@ -547,7 +569,8 @@ metis_file_model_t *metis_model_load(const char *path,
     if (memcmp(magic, METIS_MAGIC, sizeof magic) != 0 &&
     memcmp(magic, METIS_BOUND_MAGIC, sizeof magic) != 0 &&
     memcmp(magic, METIS_MAGIC_5, sizeof magic) != 0 &&
-    memcmp(magic, METIS_MAGIC_6, sizeof magic) != 0)
+    memcmp(magic, METIS_MAGIC_6, sizeof magic) != 0 &&
+    memcmp(magic, METIS_MAGIC_7, sizeof magic) != 0)
         METIS_FAIL("bad magic (not a metis bnmem file)");
 
     uint32_t version = 0, n_layers = 0;
@@ -561,7 +584,9 @@ metis_file_model_t *metis_model_load(const char *path,
           memcmp(magic, METIS_BOUND_MAGIC, sizeof magic) == 0) &&
         !(version == 5u && memcmp(magic, METIS_MAGIC_5, sizeof magic) == 0) &&
         !(version == METIS_BOUNDED_FILE_VERSION &&
-          memcmp(magic, METIS_MAGIC_6, sizeof magic) == 0))
+          memcmp(magic, METIS_MAGIC_6, sizeof magic) == 0) &&
+        !(version == METIS_GATED_FILE_VERSION &&
+          memcmp(magic, METIS_MAGIC_7, sizeof magic) == 0))
         METIS_FAIL("unsupported version %u", version);
     if (metis_r_u32(f, &n_layers) != 0) METIS_FAIL("truncated header");
     off += 4;
@@ -602,7 +627,8 @@ metis_file_model_t *metis_model_load(const char *path,
     off += 4;
     uint32_t alpha_max_tokens = 0;
     float alpha_max_fraction = 0.0f;
-    if (version == METIS_BOUNDED_FILE_VERSION) {
+    if (version == METIS_BOUNDED_FILE_VERSION ||
+        version == METIS_GATED_FILE_VERSION) {
         if (metis_r_u32(f, &alpha_max_tokens) != 0)
             METIS_FAIL("truncated selection cap");
         if (metis_r_f32(f, &alpha_max_fraction) != 0)
@@ -629,8 +655,6 @@ metis_file_model_t *metis_model_load(const char *path,
     uint32_t kv_rank =
         (encoded_query_rank & METIS_KV_RANK_MASK) >>
         METIS_KV_RANK_SHIFT;
-    if (query_add_backbone && query_rank == 0)
-        METIS_FAIL("full query cannot use backbone-delta mode");
     if (query_rank > q_dim || query_rank > d_model)
         METIS_FAIL("query_rank %u out of range", query_rank);
     if (kv_rank > kv_dim || kv_rank > d_model)
@@ -639,7 +663,8 @@ metis_file_model_t *metis_model_load(const char *path,
     uint8_t backbone_sha256[32];
     int has_backbone_sha256 =
         version == METIS_BOUND_FILE_VERSION ||
-        version == METIS_BOUNDED_FILE_VERSION;
+        version == METIS_BOUNDED_FILE_VERSION ||
+        version == METIS_GATED_FILE_VERSION;
     memset(backbone_sha256, 0, sizeof backbone_sha256);
     if (has_backbone_sha256) {
         if (metis_r_bytes(f, backbone_sha256, sizeof backbone_sha256) != 0)
@@ -700,6 +725,14 @@ metis_file_model_t *metis_model_load(const char *path,
         if (p->wk_a == NULL || p->wk_b == NULL ||
             p->wv_a == NULL || p->wv_b == NULL)
             METIS_FAIL("low-rank K/V allocation failed");
+    }
+    if (version == METIS_GATED_FILE_VERSION) {
+        m->params.fusion_gate_w = metis_xcalloc(
+            (uint64_t)n_layers * d_model);
+        m->params.fusion_gate_b = metis_xcalloc(n_layers);
+        if (m->params.fusion_gate_w == NULL ||
+            m->params.fusion_gate_b == NULL)
+            METIS_FAIL("fusion gate allocation failed");
     }
     for (int i = 0; i < (int)n_layers; ++i)
         if (metis_r_f32(f, &m->params.gdu_ab_v[i]) != 0)
@@ -1214,7 +1247,8 @@ void metis_read(const metis_params_t *p, int slot,
     } else {
         for (int o = 0; o < p->q_dim; ++o) {
             const float *row = qproj + (size_t)o * (size_t)d;
-            float acc = 0.0f;
+            float acc = p->query_add_backbone && q_backbone != NULL ?
+                        q_backbone[o] : 0.0f;
             for (int i = 0; i < d; ++i) acc += row[i] * h_raw[i];
             q[o] = acc;
         }

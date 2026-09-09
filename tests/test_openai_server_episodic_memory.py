@@ -139,6 +139,36 @@ def main() -> int:
             )
             if exact_record not in search.get("context", ""):
                 raise AssertionError(f"exact record not retrieved: {search}")
+            active_record = exact_record
+            if controller is not None:
+                active_record = "Arbitrary payload Ω-9924 belongs to Mira."
+                post(
+                    base,
+                    "/v1/chat/completions",
+                    {
+                        "model": "bitnet",
+                        "session_id": session_id,
+                        "memory_action": "update",
+                        "messages": [
+                            {"role": "user", "content": active_record},
+                        ],
+                        "max_tokens": 1,
+                        "temperature": 0,
+                    },
+                )
+                search = post(
+                    base,
+                    "/v1/memory/search",
+                    {
+                        "session_id": session_id,
+                        "query": "Mira payload",
+                        "top_k": 3,
+                    },
+                )
+                context = search.get("context", "")
+                if active_record not in context or exact_record in context:
+                    raise AssertionError(
+                        f"addressed update did not replace record: {search}")
             query = post(
                 base,
                 "/v1/chat/completions",
@@ -181,9 +211,32 @@ def main() -> int:
                 "/v1/memory/search",
                 {"session_id": session_id, "query": "Mira payload"},
             )
-            if exact_record not in search.get("context", ""):
+            if active_record not in search.get("context", ""):
                 raise AssertionError(
                     f"record changed after restart: {search}")
+            if controller is not None:
+                post(
+                    base,
+                    "/v1/chat/completions",
+                    {
+                        "model": "bitnet",
+                        "session_id": session_id,
+                        "memory_action": "delete",
+                        "messages": [
+                            {"role": "user", "content": active_record},
+                        ],
+                        "max_tokens": 1,
+                        "temperature": 0,
+                    },
+                )
+                deleted = post(
+                    base,
+                    "/v1/memory/search",
+                    {"session_id": session_id, "query": "Mira payload"},
+                )
+                if "DELETED MEMORY" not in deleted.get("context", ""):
+                    raise AssertionError(
+                        f"addressed delete did not create tombstone: {deleted}")
         finally:
             stop_server(process)
 

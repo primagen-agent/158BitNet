@@ -170,6 +170,29 @@ static void test_backbone_delta_query_read(void) {
     metis_model_free_arrays(&m);
 }
 
+static void test_full_backbone_delta_query_read(void) {
+    metis_file_model_t m;
+    const int ids[1] = {0};
+    const int D = 4, KV = 2, Q = 4, HD = 2;
+    float h[D], q_base[Q], M[KV * KV], S[KV], out[Q];
+    CHECK(metis_model_alloc(&m, 1, ids, D, KV, Q, HD, 0.9f, 1.0f,
+                            0.9f, 1, 0.9f, 1, 0) == 0,
+          "full backbone delta alloc");
+    m.params.query_add_backbone = 1;
+    memset(h, 0, sizeof h);
+    memset(m.params.query_proj, 0,
+           (size_t)Q * D * sizeof(float));
+    q_base[0] = 1.0f; q_base[1] = 0.0f;
+    q_base[2] = 0.0f; q_base[3] = 1.0f;
+    M[0] = 1.0f; M[1] = 0.0f;
+    M[2] = 0.0f; M[3] = 1.0f;
+    S[0] = 0.0f; S[1] = 0.0f;
+    metis_read(&m.params, 0, h, q_base, M, S, out);
+    CHECK(fabsf(out[0] - 1.0f) < 1e-5f, "full base q group 0");
+    CHECK(fabsf(out[3] - 1.0f) < 1e-5f, "full base q group 1");
+    metis_model_free_arrays(&m);
+}
+
 static void test_low_rank_kv_roundtrip(void) {
     metis_file_model_t m;
     const int ids[1] = {0};
@@ -304,6 +327,19 @@ static void test_full_query_roundtrip(void) {
     }
     for (size_t i = 0; i < (size_t)NL * Q * D; ++i)
         m.params.query_proj[i] = (float)i * 0.01f;
+    m.params.query_add_backbone = 1;
+    m.params.has_backbone_sha256 = 1;
+    for (int i = 0; i < 32; ++i)
+        m.params.backbone_sha256[i] = (uint8_t)i;
+    m.params.fusion_gate_w = (float *)calloc(
+        (size_t)NL * D, sizeof(float));
+    m.params.fusion_gate_b = (float *)calloc(
+        (size_t)NL, sizeof(float));
+    CHECK(m.params.fusion_gate_w != NULL &&
+          m.params.fusion_gate_b != NULL,
+          "fusion gate allocation");
+    for (int i = 0; i < NL; ++i)
+        m.params.fusion_gate_b[i] = -2.0f + (float)i;
     CHECK(metis_model_save(&m, "/tmp/test_full_query.bnmem") == 0,
           "full query save");
     metis_file_model_t *l = metis_model_load(
@@ -311,6 +347,14 @@ static void test_full_query_roundtrip(void) {
     CHECK(l != NULL, "full query load");
     if (l != NULL) {
         CHECK(l->params.query_rank == 0, "full query rank marker");
+        CHECK(l->params.query_add_backbone == 1,
+              "full query backbone delta marker");
+        CHECK(l->params.fusion_gate_w != NULL &&
+              l->params.fusion_gate_b != NULL,
+              "fusion gate payload present");
+        CHECK(memcmp(l->params.fusion_gate_b, m.params.fusion_gate_b,
+                     (size_t)NL * sizeof(float)) == 0,
+              "fusion gate bias payload");
         CHECK(memcmp(l->params.query_proj, m.params.query_proj,
                      (size_t)NL * Q * D * sizeof(float)) == 0,
               "full query payload");
@@ -400,6 +444,7 @@ int main(void) {
     test_v5_roundtrip();
     test_full_query_roundtrip();
     test_backbone_delta_query_read();
+    test_full_backbone_delta_query_read();
     test_low_rank_kv_roundtrip();
     test_commit_uses_standard_rmsnorm_order();
     test_state_roundtrip();

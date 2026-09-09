@@ -41,6 +41,7 @@ typedef struct server_config {
     const char *memory_controller_path;
     const char *memory_pointer_path;
     float episodic_lexical_weight;
+    float memory_address_threshold;
 } server_config_t;
 
 typedef struct cached_session {
@@ -319,13 +320,18 @@ static cached_session_t *find_session(server_state_t *state, const char *session
 }
 
 static void reset_session(cached_session_t *session) {
+    int episodic_key_dim;
     if (session == NULL) return;
+    episodic_key_dim = session->episodic.key_dim;
     bitnet_reset_context(session->ctx);
     bitnet_memory_reset(session->ctx);   /* no-op without metis attached */
     session->history_count = 0;
     session->transcript_len = 0;
     if (session->transcript != NULL) session->transcript[0] = '\0';
     metis_episodic_clear(&session->episodic);
+    if (episodic_key_dim > 0)
+        (void)metis_episodic_configure_keys(
+            &session->episodic, episodic_key_dim);
 }
 
 /* Clear transient conversation/KV state without touching attached memory.
@@ -1251,15 +1257,68 @@ static int should_store_episodic_record(const char *text) {
     return 0;
 }
 
-static int request_should_store_episodic(
-    cJSON *request, const char *text) {
+typedef enum memory_record_action {
+    MEMORY_ACTION_IGNORE = 0,
+    MEMORY_ACTION_STORE = 1,
+    MEMORY_ACTION_UPDATE = 2,
+    MEMORY_ACTION_DELETE = 3,
+} memory_record_action_t;
+
+static int controller_classify_action(
+    server_state_t *state, const char *text, float *confidence);
+
+static memory_record_action_t inferred_memory_action(const char *text) {
+    if (text == NULL || text[0] == '\0') return MEMORY_ACTION_IGNORE;
+    if (contains_ascii_ci(text, "forget") ||
+        contains_ascii_ci(text, "delete") ||
+        contains_ascii_ci(text, "remove from memory") ||
+        contains_ascii_ci(text, "unset"))
+        return MEMORY_ACTION_DELETE;
+    if (contains_ascii_ci(text, "update") ||
+        contains_ascii_ci(text, "replace the old") ||
+        contains_ascii_ci(text, "is now") ||
+        contains_ascii_ci(text, "changed"))
+        return MEMORY_ACTION_UPDATE;
+    return should_store_episodic_record(text) ?
+        MEMORY_ACTION_STORE : MEMORY_ACTION_IGNORE;
+}
+
+static memory_record_action_t request_memory_action(
+    server_state_t *state, cJSON *request, const char *text) {
     cJSON *action = cJSON_GetObjectItem(request, "memory_action");
     if (action != NULL && cJSON_IsString(action) &&
         action->valuestring != NULL) {
-        if (strcmp(action->valuestring, "store") == 0) return 1;
-        if (strcmp(action->valuestring, "ignore") == 0) return 0;
+        if (strcmp(action->valuestring, "store") == 0 ||
+            strcmp(action->valuestring, "write") == 0)
+            return MEMORY_ACTION_STORE;
+        if (strcmp(action->valuestring, "update") == 0)
+            return MEMORY_ACTION_UPDATE;
+        if (strcmp(action->valuestring, "delete") == 0 ||
+            strcmp(action->valuestring, "forget") == 0)
+            return MEMORY_ACTION_DELETE;
+        if (strcmp(action->valuestring, "ignore") == 0 ||
+            strcmp(action->valuestring, "read") == 0)
+            return MEMORY_ACTION_IGNORE;
     }
-    return should_store_episodic_record(text);
+    if (state != NULL && state->memory_controller != NULL &&
+        state->memory_controller->action_projection != NULL) {
+        int classified = controller_classify_action(
+            state, text, NULL);
+        if (classified >= MEMORY_ACTION_IGNORE &&
+            classified <= MEMORY_ACTION_DELETE)
+            return (memory_record_action_t)classified;
+    }
+    return inferred_memory_action(text);
+}
+
+static const char *memory_action_name(memory_record_action_t action) {
+    switch (action) {
+        case MEMORY_ACTION_STORE: return "write";
+        case MEMORY_ACTION_UPDATE: return "update";
+        case MEMORY_ACTION_DELETE: return "delete";
+        case MEMORY_ACTION_IGNORE:
+        default: return "ignore";
+    }
 }
 
 static char *prepend_episodic_context(
@@ -1326,12 +1385,51 @@ static int controller_encode_key(
     return 0;
 }
 
+static int controller_classify_action(
+    server_state_t *state, const char *text, float *confidence) {
+    int tokens[512];
+    int count;
+    int action;
+    bitnet_context_t *context;
+    const float *hidden;
+    if (state == NULL || state->memory_controller == NULL ||
+        state->memory_controller->action_projection == NULL ||
+        text == NULL || text[0] == '\0')
+        return -1;
+    count = bitnet_tokenize_ex(
+        state->model, text, tokens,
+        (int)(sizeof tokens / sizeof tokens[0]), 1);
+    if (count <= 0) return -1;
+    context = bitnet_create_context(
+        state->model, count < MIN_CONTEXT_TOKENS ?
+        MIN_CONTEXT_TOKENS : count + 1);
+    if (context == NULL) return -1;
+    if (bitnet_eval(context, tokens, count) != 0) {
+        bitnet_free_context(context);
+        return -1;
+    }
+    hidden = state->memory_controller->pooling == 2 ?
+        bitnet_get_last_pooled_hidden(context) :
+        bitnet_get_last_hidden(context);
+    action = metis_memory_controller_classify(
+        state->memory_controller, hidden, confidence);
+    bitnet_free_context(context);
+    return action;
+}
+
 static int store_episodic_record(
-    server_state_t *state, cached_session_t *session, const char *text) {
+    server_state_t *state, cached_session_t *session, const char *text,
+    memory_record_action_t action) {
     float *key = NULL;
     int result;
     if (state == NULL || session == NULL || text == NULL) return -1;
+    if (action == MEMORY_ACTION_IGNORE) return 0;
     if (state->memory_controller != NULL) {
+        if (session->episodic.key_dim == 0 &&
+            metis_episodic_configure_keys(
+                &session->episodic,
+                state->memory_controller->rank) != 0)
+            return -10;
         key = (float *)malloc(
             (size_t)state->memory_controller->rank * sizeof(float));
         if (key != NULL &&
@@ -1339,9 +1437,30 @@ static int store_episodic_record(
             free(key);
             key = NULL;
         }
+        if (key == NULL && action != MEMORY_ACTION_STORE) return -11;
     }
-    result = metis_episodic_add_with_key(
-        &session->episodic, text, key);
+    if (action == MEMORY_ACTION_STORE) {
+        result = metis_episodic_add_with_key(
+            &session->episodic, text, key);
+    } else if (key == NULL) {
+        result = -1;
+    } else if (action == MEMORY_ACTION_UPDATE) {
+        float threshold = (
+            state->memory_controller != NULL &&
+            state->memory_controller->action_projection != NULL) ?
+            state->memory_controller->address_threshold :
+            state->cfg.memory_address_threshold;
+        result = metis_episodic_upsert_with_key(
+            &session->episodic, text, key, threshold, NULL);
+    } else {
+        float threshold = (
+            state->memory_controller != NULL &&
+            state->memory_controller->action_projection != NULL) ?
+            state->memory_controller->address_threshold :
+            state->cfg.memory_address_threshold;
+        result = metis_episodic_tombstone_with_key(
+            &session->episodic, text, key, threshold, NULL);
+    }
     free(key);
     return result;
 }
@@ -1580,12 +1699,16 @@ static void handle_memory_state(struct mg_connection *c, server_state_t *state,
         has_imported_episodic = 1;
     }
     if (do_import) reset_session_context_only(session);
-    if ((do_import ? bitnet_memory_import(session->ctx, path) :
-                     bitnet_memory_export(session->ctx, path)) != 0) {
-        metis_episodic_free(&imported_episodic);
-        send_error(c, 500, "server_error", do_import ?
-                   "failed to import memory state" : "failed to export memory state");
-        return;
+    if (state->cfg.memory_model_path != NULL) {
+        if ((do_import ? bitnet_memory_import(session->ctx, path) :
+                         bitnet_memory_export(session->ctx, path)) != 0) {
+            metis_episodic_free(&imported_episodic);
+            send_error(
+                c, 500, "server_error", do_import ?
+                "failed to import memory state" :
+                "failed to export memory state");
+            return;
+        }
     }
     if (state->cfg.episodic_memory) {
         if (do_import) {
@@ -1613,6 +1736,9 @@ static void handle_memory_state(struct mg_connection *c, server_state_t *state,
     json_add_number(
         root, "episodic_records",
         (double)metis_episodic_count(&session->episodic));
+    json_add_number(
+        root, "matrix_memory",
+        state->cfg.memory_model_path != NULL ? 1.0 : 0.0);
     send_json(c, 200, root);
     cJSON_Delete(root);
 }
@@ -1722,6 +1848,7 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     float pointer_confidence = 0.0f;
     size_t pointer_record_index = 0;
     int pointer_used = 0;
+    memory_record_action_t memory_action = MEMORY_ACTION_IGNORE;
     int max_tokens = 0;
     int reset_existing_session = 0;
     int generation_reset = 0;
@@ -1738,6 +1865,7 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     max_tokens = json_get_int(request, "max_tokens", state->cfg.default_max_tokens,
                               1, state->cfg.max_request_tokens);
     user_content = last_user_content(request);
+    memory_action = request_memory_action(state, request, user_content);
     if (state->cfg.episodic_memory &&
         session_id != NULL && session_id[0] != '\0') {
         episodic_session = find_session(state, session_id);
@@ -1756,7 +1884,7 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
         return;
     }
     if (state->cfg.episodic_memory && episodic_session != NULL &&
-        !request_should_store_episodic(request, user_content)) {
+        memory_action == MEMORY_ACTION_IGNORE) {
         episodic_context = retrieve_episodic_context(
             state, episodic_session, user_content,
             state->cfg.episodic_top_k);
@@ -1772,8 +1900,24 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
             }
             free(prompt);
             prompt = augmented_prompt;
+            if (strstr(
+                    episodic_context,
+                    "[memory 1] DELETED MEMORY") != NULL) {
+                pointer_answer = dup_n(
+                    "No information available.",
+                    strlen("No information available."));
+                if (pointer_answer == NULL) {
+                    free(episodic_context);
+                    free(prompt);
+                    send_error(c, 500, "server_error",
+                               "failed to build tombstone answer");
+                    return;
+                }
+                pointer_used = 2;
+            }
         }
-        if (!json_get_bool(request, "stream", 0) &&
+        if (pointer_used == 0 &&
+            !json_get_bool(request, "stream", 0) &&
             json_get_bool(request, "memory_copy", 0) &&
             state->memory_pointer != NULL &&
             extract_episodic_answer(
@@ -1786,11 +1930,11 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
         handle_streaming_completion(c, state, prompt, max_tokens,
                                     session_id, generation_reset, 1);
         if (state->cfg.episodic_memory &&
-            request_should_store_episodic(request, user_content)) {
+            memory_action != MEMORY_ACTION_IGNORE) {
             cached_session_t *session = find_session(state, session_id);
             if (session != NULL)
                 (void)store_episodic_record(
-                    state, session, user_content);
+                    state, session, user_content, memory_action);
         }
         free(episodic_context);
         free(prompt);
@@ -1820,16 +1964,23 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
         }
     }
     if (state->cfg.episodic_memory &&
-        request_should_store_episodic(request, user_content)) {
+        memory_action != MEMORY_ACTION_IGNORE) {
         cached_session_t *session = find_session(state, session_id);
-        if (session == NULL ||
+        int store_status = session == NULL ? -12 :
             store_episodic_record(
-                state, session, user_content) != 0) {
+                state, session, user_content, memory_action);
+        if (store_status != 0) {
             generation_result_free(&result);
             free(episodic_context);
             free(prompt);
-            send_error(c, 500, "server_error",
-                       "failed to store episodic memory record");
+            snprintf(
+                error, sizeof(error),
+                "failed to store episodic memory record "
+                "(action=%s, status=%d, key_dim=%d, count=%zu)",
+                memory_action_name(memory_action), store_status,
+                session == NULL ? -1 : session->episodic.key_dim,
+                session == NULL ? 0 : session->episodic.count);
+            send_error(c, 500, "server_error", error);
             return;
         }
     }
@@ -1855,6 +2006,7 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     json_add_string(root, "object", "chat.completion");
     json_add_number(root, "created", (double)time(NULL));
     json_add_string(root, "model", state->cfg.model_id);
+    json_add_string(root, "memory_action", memory_action_name(memory_action));
     json_add_number(choice, "index", 0);
     json_add_string(message, "role", "assistant");
     {
@@ -1874,7 +2026,10 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     if (pointer_used) {
         cJSON *copy = cJSON_CreateObject();
         if (copy != NULL) {
-            json_add_string(copy, "mode", "extractive_pointer");
+            json_add_string(
+                copy, "mode",
+                pointer_used == 2 ? "deletion_tombstone" :
+                                    "extractive_pointer");
             json_add_number(copy, "confidence", pointer_confidence);
             json_add_number(
                 copy, "record_index", (double)pointer_record_index);
@@ -2038,7 +2193,8 @@ static void print_usage(const char *argv0) {
             "       [--episodic-memory] [--episodic-top-k N]\n"
             "       [--memory-controller PATH]"
             " [--memory-pointer PATH]"
-            " [--episodic-lexical-weight WEIGHT]\n",
+            " [--episodic-lexical-weight WEIGHT]"
+            " [--memory-address-threshold SCORE]\n",
             argv0);
 }
 
@@ -2060,6 +2216,7 @@ int main(int argc, char **argv) {
     state.cfg.lora_scale = 1.0f;
     state.cfg.episodic_top_k = 3;
     state.cfg.episodic_lexical_weight = 0.75f;
+    state.cfg.memory_address_threshold = 0.80f;
 
     if (argc < 2) {
         print_usage(argv[0]);
@@ -2112,6 +2269,10 @@ int main(int argc, char **argv) {
                    i + 1 < argc) {
             state.cfg.episodic_lexical_weight = parse_float_arg(
                 argv[++i], 0.75f, 0.0f, 1.0f);
+        } else if (strcmp(argv[i], "--memory-address-threshold") == 0 &&
+                   i + 1 < argc) {
+            state.cfg.memory_address_threshold = parse_float_arg(
+                argv[++i], 0.80f, -1.0f, 1.0f);
         } else {
             print_usage(argv[0]);
             return 1;
@@ -2124,11 +2285,17 @@ int main(int argc, char **argv) {
         state.cfg.max_context_tokens = state.cfg.max_request_tokens + MIN_CONTEXT_TOKENS;
     }
     if (state.cfg.episodic_memory &&
-        (state.cfg.memory_model_path == NULL ||
-         state.cfg.memory_state_dir == NULL)) {
+        state.cfg.memory_state_dir == NULL) {
         fprintf(stderr,
-                "--episodic-memory requires --memory-model and "
-                "--memory-state-dir\n");
+                "--episodic-memory requires --memory-state-dir\n");
+        return 1;
+    }
+    if (state.cfg.episodic_memory &&
+        state.cfg.memory_model_path == NULL &&
+        state.cfg.memory_controller_path == NULL) {
+        fprintf(stderr,
+                "--episodic-memory without --memory-model requires "
+                "--memory-controller\n");
         return 1;
     }
     if (state.cfg.memory_controller_path != NULL &&

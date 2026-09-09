@@ -69,6 +69,7 @@ def load_bnmem_v1(path: str) -> dict:
             or (magic == b"BNMEM2\x00\x00" and version == 2)
             or (magic == b"BNMEM5\x00\x00" and version == 5)
             or (magic == b"BNMEM6\x00\x00" and version == 6)
+            or (magic == b"BNMEM7\x00\x00" and version == 7)
         ):
             raise ValueError(
                 f"unsupported BNMEM magic/version {magic!r}/{version}")
@@ -83,8 +84,9 @@ def load_bnmem_v1(path: str) -> dict:
         tau = read_f32(handle)
         rho = read_f32(handle)
         k_min = read_u32(handle)
-        alpha_max_tokens = read_u32(handle) if version == 6 else 0
-        alpha_max_fraction = read_f32(handle) if version == 6 else 0.0
+        alpha_max_tokens = read_u32(handle) if version in (6, 7) else 0
+        alpha_max_fraction = (
+            read_f32(handle) if version in (6, 7) else 0.0)
         _mean_ab = read_f32(handle)
         _mean_bb = read_f32(handle)
         beta_scale = read_f32(handle)
@@ -94,7 +96,7 @@ def load_bnmem_v1(path: str) -> dict:
         query_rank = encoded_rank & QUERY_RANK_MASK
         kv_rank = (encoded_rank & KV_RANK_MASK) >> KV_RANK_SHIFT
         backbone_sha256 = (
-            read_exact(handle, 32) if version in (2, 6) else None)
+            read_exact(handle, 32) if version in (2, 6, 7) else None)
         tensors = {
             "gdu_ab": read_array(handle, (n_layers,)),
             "gdu_bb": read_array(handle, (n_layers,)),
@@ -121,6 +123,12 @@ def load_bnmem_v1(path: str) -> dict:
             "gdu_bw": read_array(handle, (n_layers, d_model)),
             "mem_norm": read_array(handle, (n_layers, q_dim)),
         })
+        if version == 7:
+            tensors.update({
+                "fusion_gate_w": read_array(
+                    handle, (n_layers, d_model)),
+                "fusion_gate_b": read_array(handle, (n_layers,)),
+            })
         if query_rank > 0:
             tensors.update({
                 "query_norm": read_array(handle, (n_layers, head_dim)),
@@ -154,6 +162,8 @@ def load_bnmem_v1(path: str) -> dict:
             expected_names = [
                 "wk", "wv", "w_agg", "gdu_aw", "gdu_bw", "mem_norm",
             ]
+        if version == 7:
+            expected_names.extend(["fusion_gate_w", "fusion_gate_b"])
         if query_rank > 0:
             expected_names.extend([
                 "query_norm", "query_a", "query_b",
@@ -181,6 +191,7 @@ def load_bnmem_v1(path: str) -> dict:
         "query_rank": query_rank,
         "kv_rank": kv_rank,
         "query_add_backbone": query_add_backbone,
+        "fusion_mode": "residual_gate" if version == 7 else "fixed",
         "backbone_sha256": backbone_sha256,
         "tensors": tensors,
     }
@@ -202,6 +213,7 @@ def save_bnmem_v3(path: str, *, layer_ids: list[int], d_model: int,
                   query_a=None, query_b=None, query_norm=None,
                   query_proj=None, denom_mode: int = 1,
                   query_add_backbone: bool = False,
+                  fusion_gate_w=None, fusion_gate_b=None,
                   backbone_sha256: bytes | str | None = None) -> None:
     """Torch tensors in the module's own layouts:
       wk/wv [NL, kv_dim, d_model], w_agg/gdu_aw/gdu_bw [NL, d_model],
@@ -231,20 +243,26 @@ def save_bnmem_v3(path: str, *, layer_ids: list[int], d_model: int,
         raise ValueError("alpha_max_tokens must be non-negative")
     if not 0.0 <= alpha_max_fraction <= 1.0:
         raise ValueError("alpha_max_fraction must be in [0, 1]")
+    gated_fusion = (
+        fusion_gate_w is not None and fusion_gate_b is not None)
+    if (fusion_gate_w is None) != (fusion_gate_b is None):
+        raise ValueError("provide both fusion gate tensors or neither")
     bounded_selection = (
         alpha_max_tokens > 0 or alpha_max_fraction > 0.0)
-    if bounded_selection and backbone_sha256 is None:
-        raise ValueError("BNMEM6 bounded selection requires backbone binding")
+    if (bounded_selection or gated_fusion) and backbone_sha256 is None:
+        raise ValueError("BNMEM6/7 requires backbone binding")
     hdr += (
-        b"BNMEM6\x00\x00" if bounded_selection
+        b"BNMEM7\x00\x00" if gated_fusion else
+        (b"BNMEM6\x00\x00" if bounded_selection
         else (
             b"BNMEM2\x00\x00"
             if backbone_sha256 is not None else b"BNMEM1\x00\x00"
-        )
+        ))
     )
     hdr += struct.pack(
-        "<I", 6 if bounded_selection
+        "<I", 7 if gated_fusion else (6 if bounded_selection
         else (2 if backbone_sha256 is not None else 1))
+        )
     hdr += struct.pack("<I", nl)
     ids = list(layer_ids) + [UNUSED_LAYER] * (METIS_V6_MAX_LAYERS - nl)
     for i in ids:
@@ -252,7 +270,7 @@ def save_bnmem_v3(path: str, *, layer_ids: list[int], d_model: int,
     hdr += struct.pack("<IIII", d_model, kv_dim, q_dim, head_dim)
     hdr += struct.pack("<fff", gamma, tau, rho)
     hdr += struct.pack("<I", k_min)
-    if bounded_selection:
+    if bounded_selection or gated_fusion:
         hdr += struct.pack("<If", alpha_max_tokens, alpha_max_fraction)
     # v8: per-layer trainable biases ([NL] tensors) — mean-fold into the
     # per-layer tensor payloads below; header keeps a representative
@@ -269,8 +287,6 @@ def save_bnmem_v3(path: str, *, layer_ids: list[int], d_model: int,
         raise ValueError(f"unsupported denominator mode {denom_mode}")
     hdr += struct.pack("<I", denom_mode)
     r = query_a.shape[-1] if is_v5 else 0
-    if query_add_backbone and not is_v5:
-        raise ValueError("backbone-delta mode requires low-rank factors")
     low_rank_kv = all(
         tensor is not None for tensor in (wk_a, wk_b, wv_a, wv_b))
     full_rank_kv = wk is not None and wv is not None
@@ -315,6 +331,11 @@ def save_bnmem_v3(path: str, *, layer_ids: list[int], d_model: int,
         ("gdu_bw", nl, d_model, f32(gdu_bw)),
         ("mem_norm", nl, q_dim, f32(mem_norm)),
     ])
+    if gated_fusion:
+        tensors.extend([
+            ("fusion_gate_w", nl, d_model, f32(fusion_gate_w)),
+            ("fusion_gate_b", nl, 1, f32(fusion_gate_b)),
+        ])
     if is_v5:
         tensors.append(("query_norm", nl, head_dim, f32(query_norm)))
         tensors.append(("query_a", nl, q_dim * query_a.shape[-1], f32(query_a)))
