@@ -188,7 +188,9 @@ class TorchBackbone(nn.Module):
     def forward(self, tokens: torch.Tensor, start_pos: int = 0,
                 memory=None, logits_all: bool = False,
                 fuse_start: int = 0, memory_v6=None,
-                return_hidden: bool = False):
+                return_hidden: bool = False,
+                return_hidden_layer: int | None = None,
+                return_hidden_layers: tuple[int, ...] | None = None):
         """Grad scope: ALL backbone weights are requires_grad=False, so
         autograd flows only through activations the memory module touches.
         Callers wrap in torch.no_grad() for pure eval; for training, the
@@ -211,6 +213,11 @@ class TorchBackbone(nn.Module):
         T = tokens.shape[0]
         device = self.device
         h = self.token_embd[tokens] * cfg.embedding_scale  # [T, D] bf16
+        if memory_v6 is not None:
+            token_rows = h if fuse_start == 0 else h[fuse_start:]
+            memory_v6.capture_token_identity(token_rows)
+            token_ids = tokens if fuse_start == 0 else tokens[fuse_start:]
+            memory_v6.capture_token_ids(token_ids)
         positions = torch.arange(start_pos, start_pos + T, device=device)
         cos, sin = rope_tables(cfg, positions, device, torch.bfloat16)
         cos = cos.to(self.dtype)
@@ -218,6 +225,40 @@ class TorchBackbone(nn.Module):
 
         v6 = memory_v6
         v6_caps = [] if v6 is not None else None
+        selected_hidden = None
+        selected_hiddens = {}
+        if (
+            return_hidden_layer is not None
+            and return_hidden_layers is not None
+        ):
+            raise ValueError(
+                "select either one hidden layer or multiple hidden layers")
+        requested_layers = (
+            tuple(return_hidden_layers)
+            if return_hidden_layers is not None else None)
+        if (
+            return_hidden_layer is not None
+            and not 0 <= return_hidden_layer < cfg.n_layers
+        ):
+            raise ValueError(
+                f"return_hidden_layer must be in [0, {cfg.n_layers})")
+        if requested_layers is not None and (
+            not requested_layers
+            or any(
+                layer < -1 or layer >= cfg.n_layers
+                for layer in requested_layers)
+        ):
+            raise ValueError(
+                "return_hidden_layers entries must be -1 or valid layers")
+        if (
+            return_hidden_layer is not None
+            or requested_layers is not None
+        ) and (
+                memory is not None or memory_v6 is not None):
+            raise ValueError(
+                "intermediate hidden extraction cannot run memory fusion")
+        if requested_layers is not None and -1 in requested_layers:
+            selected_hiddens[-1] = h
         for bi in range(cfg.n_layers):
             L = self.layers[bi]
             is_last = bi == cfg.n_layers - 1
@@ -291,6 +332,13 @@ class TorchBackbone(nn.Module):
             act = F.silu(g) * u
             dout = self.linear(act, L["down"], bi, 6)
             h = resid2 + dout * cfg.residual_scale
+            if return_hidden_layer == bi:
+                selected_hidden = h
+                break
+            if requested_layers is not None and bi in requested_layers:
+                selected_hiddens[bi] = h
+                if bi == max(requested_layers):
+                    break
 
         if v6 is not None and v6_caps:
             # deliver per-layer captures in LAYER order (slot index), with
@@ -304,6 +352,12 @@ class TorchBackbone(nn.Module):
                 per_layer[entry[0]] = entry[1]
             v6.capture(per_layer)
 
+        if return_hidden_layer is not None:
+            return selected_hidden
+        if requested_layers is not None:
+            return torch.cat(
+                [selected_hiddens[layer] for layer in requested_layers],
+                dim=-1)
         h = rms_norm(h, self.out_norm, cfg.rms_eps)
         if return_hidden:
             return h

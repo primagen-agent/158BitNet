@@ -93,6 +93,17 @@ int  bitnet_context_attach_memory(bitnet_context_t *ctx, const bitnet_model_t *m
 void bitnet_memory_reset(bitnet_context_t *ctx);
 int  bitnet_memory_commit(bitnet_context_t *ctx);
 int  bitnet_memory_active(const bitnet_context_t *ctx);
+/* Temporarily enable/disable native M/S reads without modifying the committed
+ * state. Intended for controlled activation ablations. */
+int  bitnet_memory_set_active(bitnet_context_t *ctx, int active);
+/* Monotonic per-context diagnostics for the native neural-memory read path.
+ * One activation is counted whenever a configured memory layer reads M/S and
+ * injects its result into the transformer attention branch. The L2 sum tracks
+ * the RMS magnitude of the injected memory contribution (not KV reuse and not
+ * episodic/RAG retrieval). Callers can snapshot before and after a request. */
+unsigned long long bitnet_memory_activation_count(
+    const bitnet_context_t *ctx);
+double bitnet_memory_activation_l2_sum(const bitnet_context_t *ctx);
 /* Export/import the committed M/S state for one attached context. Pending
  * capture rows are intentionally excluded. Import validates the snapshot
  * against the attached memory model and leaves the current state unchanged

@@ -271,6 +271,8 @@ struct bitnet_context {
     float *metis_lut;       /* scalar-tier LUT [lut_count] for o_proj */
     size_t metis_lut_count;
     int8_t *metis_qhidden;  /* i8 quantized mem vector [q_dim] for o_proj */
+    unsigned long long metis_activation_count;
+    double metis_activation_l2_sum;
 };
 
 #if defined(__ARM_NEON) && defined(__ARM_FEATURE_DOTPROD)
@@ -3407,7 +3409,8 @@ static int metis_apply_layer(bitnet_context_t *ctx, int slot,
     const int d = (int)ctx->model->embedding_length;
     const int q_dim = p->q_dim;
     const bitnet_tensor_cache_t *cache = &ctx->model->tensor_cache;
-    const bitnet_block_tensors_t *bt = &cache->blocks[block_idx];
+    const bitnet_block_tensors_t *bt BITNET_MAYBE_UNUSED =
+        &cache->blocks[block_idx];
     float *mem_out = ctx->metis_mem_out;   /* [q_dim] */
     float *fused = ctx->metis_fused;       /* [d_model] */
 
@@ -3463,21 +3466,35 @@ static int metis_apply_layer(bitnet_context_t *ctx, int slot,
 #endif
 #endif
     }
-    if (p->fusion_gate_w != NULL && p->fusion_gate_b != NULL) {
-        const float *gate_w =
-            p->fusion_gate_w + (size_t)slot * (size_t)d;
-        float gate_logit = p->fusion_gate_b[slot];
-        for (int i = 0; i < d; ++i)
-            gate_logit += gate_w[i] * ctx->metis_h_raw[i];
-        {
-            float gate = 1.0f / (1.0f + expf(-gate_logit));
+    {
+        float activation_scale = 0.0f;
+        double activation_sq = 0.0;
+        if (p->fusion_gate_w != NULL && p->fusion_gate_b != NULL) {
+            const float *gate_w =
+                p->fusion_gate_w + (size_t)slot * (size_t)d;
+            float gate_logit = p->fusion_gate_b[slot];
+            for (int i = 0; i < d; ++i)
+                gate_logit += gate_w[i] * ctx->metis_h_raw[i];
+            {
+                float gate = 1.0f / (1.0f + expf(-gate_logit));
+                activation_scale = gate;
+                for (int o = 0; o < d; ++o)
+                    attn_branch[o] += gate * fused[o];
+            }
+        } else {
+            activation_scale = 1.0f - p->gamma;
             for (int o = 0; o < d; ++o)
-                attn_branch[o] += gate * fused[o];
+                attn_branch[o] = p->gamma * attn_branch[o] +
+                                 activation_scale * fused[o];
         }
-    } else {
-        for (int o = 0; o < d; ++o)
-            attn_branch[o] = p->gamma * attn_branch[o] +
-                             (1.0f - p->gamma) * fused[o];
+        for (int o = 0; o < d; ++o) {
+            const double contribution =
+                (double)activation_scale * (double)fused[o];
+            activation_sq += contribution * contribution;
+        }
+        ctx->metis_activation_count++;
+        ctx->metis_activation_l2_sum +=
+            sqrt(activation_sq / (double)d);
     }
     return 0;
 }
@@ -4819,6 +4836,23 @@ void bitnet_memory_discard_captured(bitnet_context_t *ctx) {
 int bitnet_memory_active(const bitnet_context_t *ctx) {
     if (ctx == NULL || ctx->metis == NULL) return 0;
     return ctx->metis_active ? 1 : 0;
+}
+
+int bitnet_memory_set_active(bitnet_context_t *ctx, int active) {
+    if (ctx == NULL || ctx->metis == NULL) return -1;
+    ctx->metis_active = active ? 1 : 0;
+    return 0;
+}
+
+unsigned long long bitnet_memory_activation_count(
+        const bitnet_context_t *ctx) {
+    if (ctx == NULL || ctx->metis == NULL) return 0;
+    return ctx->metis_activation_count;
+}
+
+double bitnet_memory_activation_l2_sum(const bitnet_context_t *ctx) {
+    if (ctx == NULL || ctx->metis == NULL) return 0.0;
+    return ctx->metis_activation_l2_sum;
 }
 
 int bitnet_memory_export(const bitnet_context_t *ctx, const char *path) {

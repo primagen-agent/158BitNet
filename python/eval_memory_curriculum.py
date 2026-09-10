@@ -26,18 +26,29 @@ def resolve_device(requested: str) -> str:
     return "cpu"
 
 
-def load_samples(directory: str, limit: int) -> list[dict]:
+def load_samples(
+    directory: str,
+    limit: int,
+    sample_prefix: str | None = None,
+) -> list[dict]:
     rows = []
     paths = sorted(Path(directory).glob("*.jsonl"))
     per_file = (
         max(1, (limit + len(paths) - 1) // len(paths))
-        if limit and paths else 0)
+        if limit and paths and sample_prefix is None else 0)
     for path in paths:
         with path.open(encoding="utf-8") as handle:
             for index, line in enumerate(handle):
                 if per_file and index >= per_file:
                     break
-                rows.append(json.loads(line))
+                sample = json.loads(line)
+                if (
+                    sample_prefix
+                    and not str(sample.get("sample_id", "")).startswith(
+                        sample_prefix)
+                ):
+                    continue
+                rows.append(sample)
     return rows[:limit] if limit else rows
 
 
@@ -61,6 +72,9 @@ def main() -> None:
     parser.add_argument("--device", choices=("auto", "cuda", "mps", "cpu"),
                         default="auto")
     parser.add_argument("--samples", type=int, default=64)
+    parser.add_argument(
+        "--sample-prefix",
+        help="evaluate only sample_id values beginning with this prefix")
     parser.add_argument("--max-answer-tokens", type=int, default=16)
     parser.add_argument("--output")
     args = parser.parse_args()
@@ -86,7 +100,9 @@ def main() -> None:
         "memory_token_accuracy": 0.0,
         "no_memory_token_accuracy": 0.0,
     })
-    for index, sample in enumerate(load_samples(args.data, args.samples)):
+    for index, sample in enumerate(load_samples(
+        args.data, args.samples, args.sample_prefix
+    )):
         chunks = sample["messages"]
         query_value = sample.get("query_turn_id", len(chunks) - 1)
         query_indices = set(
@@ -148,14 +164,8 @@ def main() -> None:
                 **row,
             }, ensure_ascii=False, separators=(",", ":")), flush=True)
 
-            # Use the gold completed exchange as subsequent conversation
-            # history so each query measures memory rather than accumulated
-            # generation errors from earlier queries.
-            complete_text, _ = render_chunk(chunk, False)
-            complete_ids = tokenizer.encode(
-                complete_text, add_bos=True)
-            forward_chunk(backbone, memory, complete_ids)
-            memory.commit_all()
+            # Recall is read-only: do not write either the query or the gold
+            # answer into M/S before later queries in the same trajectory.
 
     summary = {}
     for kind, values in sorted(totals.items()):

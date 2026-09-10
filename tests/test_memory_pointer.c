@@ -29,6 +29,7 @@ int main(void) {
     const char *backbone = "test_memory_pointer.backbone";
     const char *model = "test_memory_pointer.bnptr";
     const char *model_v2 = "test_memory_pointer_v2.bnptr";
+    const char *model_v5 = "test_memory_pointer_v5.bnptr";
     const unsigned char magic[8] = {'B','N','P','T','R','1',0,0};
     const float start_w[2] = {1.0f, 0.0f};
     const float start_b = 0.0f;
@@ -141,8 +142,80 @@ int main(void) {
         }
         metis_memory_pointer_free(pointer);
     }
+    {
+        const unsigned char magic_v5[8] =
+            {'B','N','P','T','R','5',0,0};
+        float token_w[4] = {0};
+        float byte_w[257 * 2] = {0};
+        float previous_byte_w[257 * 2] = {0};
+        float next_byte_w[257 * 2] = {0};
+        float offset_w[4 * 2] = {0};
+        const float dense_w[2] = {1.0f, 0.0f};
+        const float dense_b = 0.0f;
+        const uint8_t bytes[3] = {'{', 'x', '}'};
+        const size_t byte_tokens[3] = {0, 1, 2};
+        const uint32_t byte_offsets[3] = {0, 0, 0};
+        const float byte_hidden[6] = {0};
+        const void *payloads[11];
+        const size_t payload_sizes[11] = {
+            sizeof token_w, sizeof byte_w,
+            sizeof previous_byte_w, sizeof next_byte_w,
+            sizeof offset_w, sizeof dense_w, sizeof dense_b,
+            sizeof dense_w, sizeof dense_b,
+            sizeof dense_w, sizeof dense_b,
+        };
+        byte_w['x' * 2] = 4.0f;
+        payloads[0] = token_w;
+        payloads[1] = byte_w;
+        payloads[2] = previous_byte_w;
+        payloads[3] = next_byte_w;
+        payloads[4] = offset_w;
+        payloads[5] = dense_w;
+        payloads[6] = &dense_b;
+        payloads[7] = dense_w;
+        payloads[8] = &dense_b;
+        payloads[9] = dense_w;
+        payloads[10] = &dense_b;
+        file = fopen(model_v5, "wb");
+        if (file == NULL) return 1;
+        fwrite(magic_v5, 1, sizeof magic_v5, file);
+        put_u32(file, 5);
+        put_u32(file, 2);
+        put_u32(file, 4);
+        {
+            float threshold = -1.0e9f;
+            fwrite(&threshold, sizeof threshold, 1, file);
+        }
+        put_u32(file, 2);
+        put_u32(file, 4);
+        fwrite(sha, 1, sizeof sha, file);
+        put_u32(file, 11);
+        for (int i = 0; i < 11; ++i) {
+            put_u32(file, (uint32_t)payload_sizes[i]);
+            put_u32(
+                file, crc32_bytes(payloads[i], payload_sizes[i]));
+        }
+        for (int i = 0; i < 11; ++i)
+            fwrite(payloads[i], 1, payload_sizes[i], file);
+        fclose(file);
+        pointer = metis_memory_pointer_load(
+            model_v5, backbone, 2, error, sizeof error);
+        if (pointer == NULL || !pointer->byte_mode ||
+            pointer->rank != 2 || pointer->max_token_bytes != 4 ||
+            metis_memory_pointer_select_bytes(
+                pointer, byte_hidden, 3, bytes,
+                byte_tokens, byte_offsets, 3,
+                &start, &end, &confidence) != 1 ||
+            start != 1 || end != 1 || confidence < 3.0f) {
+            fprintf(stderr, "v5 byte pointer failed: %s span=%zu..%zu "
+                    "margin=%g\n", error, start, end, confidence);
+            return 1;
+        }
+        metis_memory_pointer_free(pointer);
+    }
     remove(model);
     remove(model_v2);
+    remove(model_v5);
     remove(backbone);
     puts("test_memory_pointer: OK");
     return 0;

@@ -35,8 +35,9 @@ int main(void) {
     }
     metis_episodic_init(&loaded);
 
-    CHECK(metis_episodic_add(
-              &store, "Mira's locker code is amber-4172.") == 0,
+    CHECK(metis_episodic_add_with_priority(
+              &store, "Mira's locker code is amber-4172.",
+              NULL, 0.8f) == 0,
           "add first record");
     CHECK(metis_episodic_add(
               &store, "Jonah's travel date is Saturday morning.") == 0,
@@ -47,6 +48,14 @@ int main(void) {
     CHECK(metis_episodic_add(
               &store, "Mira's locker code is blue-9021 now.") == 0,
           "duplicate record accepted as no-op");
+    CHECK(metis_episodic_add_with_priority(
+              &store, "Mira's locker code is blue-9021 now.",
+              NULL, 0.9f) == 0 &&
+              store.priorities[2] == 0.9f,
+          "duplicate raises retained priority");
+    CHECK(metis_episodic_add_with_priority(
+              &store, "invalid", NULL, 1.1f) != 0,
+          "out-of-range priority rejected");
     CHECK(metis_episodic_count(&store) == 3, "duplicate not stored");
     CHECK(metis_episodic_configure_keys(&store, 2) == 0,
           "configure semantic key dimension");
@@ -126,6 +135,22 @@ int main(void) {
               &loaded, "/tmp/test_episodic.bnepisodic") == 0,
           "load episodic records");
     CHECK(metis_episodic_count(&loaded) == 2, "record count roundtrip");
+    CHECK(loaded.key_dim == 2, "semantic key dimension roundtrip");
+    CHECK(loaded.keys != NULL && loaded.keys[0] != NULL &&
+              loaded.keys[1] != NULL,
+          "semantic keys roundtrip");
+    CHECK(loaded.priorities != NULL &&
+              loaded.priorities[0] == 0.8f,
+          "priority roundtrip");
+    {
+        const float query_key[2] = {1.0f, 0.0f};
+        context = metis_episodic_build_hybrid_context(
+            &loaded, "no lexical overlap", query_key, 0.0f, 1);
+        CHECK(context != NULL &&
+                  strstr(context, "DELETED MEMORY") != NULL,
+              "loaded semantic-only retrieval");
+        free(context);
+    }
     context = metis_episodic_build_context(
         &loaded, "DELETED MEMORY", 1);
     CHECK(context != NULL && strstr(context, "DELETED MEMORY") != NULL,

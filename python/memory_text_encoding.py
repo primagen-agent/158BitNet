@@ -24,3 +24,12 @@ def query_text(question):
     return (
         "Find the stored conversation facts needed to answer this question: "
         + str(question))
+
+
+def action_text(request):
+    return (
+        "Classify the request as one memory operation: ignore, write, "
+        "update, or delete.\nRequest: "
+        + str(request)
+        + "\nMemory operation:"
+    )

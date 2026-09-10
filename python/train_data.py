@@ -118,12 +118,16 @@ class CTokenDecoder:
             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL)
 
-    def decode(self, token_ids) -> str:
+    def decode_bytes(self, token_ids) -> bytes:
         line = " ".join(str(int(token)) for token in token_ids) + "\n"
         self._proc.stdin.write(line.encode("ascii"))
         self._proc.stdin.flush()
-        raw = bytes.fromhex(self._proc.stdout.readline().decode().strip())
-        return raw.decode("utf-8", errors="replace")
+        return bytes.fromhex(
+            self._proc.stdout.readline().decode().strip())
+
+    def decode(self, token_ids) -> str:
+        return self.decode_bytes(token_ids).decode(
+            "utf-8", errors="replace")
 
 
 # ----------------------------------------------------------------------
@@ -344,6 +348,8 @@ class MetisMemoryTorch(nn.Module):
 
 WANTED_FILES = [
     "reconstruction.jsonl",
+    "operation.jsonl", "operation_distract.jsonl",
+    "multi_fact.jsonl", "memory_pollution.jsonl",
     "locomo_cat1.jsonl", "locomo_cat2.jsonl",
     "locomo_cat3.jsonl", "locomo_cat4.jsonl",
     "locomo_cat5.jsonl",
@@ -354,7 +360,8 @@ WANTED_FILES = [
     "reflect_explicit.jsonl", "reflect_distract.jsonl",
     "multi_entity.jsonl", "post_memory.jsonl",
     "task3_multi_entity.jsonl", "task4_normal.jsonl",
-    "long_memory.jsonl",
+    "long_memory.jsonl", "task3_single_natural.jsonl",
+    "task3_long_opaque.jsonl",
 ]
 
 

@@ -29,7 +29,7 @@ import torch.nn.functional as F
 
 from ggw import GGUFWeights
 from model_identity import sha256_file
-from memory_text_encoding import encode_text, query_text
+from memory_text_encoding import action_text, encode_text, query_text
 from torch_backbone import TorchBackbone
 from train_data import CTokenizer
 
@@ -50,6 +50,26 @@ ATTRS = [
      ["fishing", "painting", "birdwatching", "pottery", "cycling"]),
     ("favorite flower",
      ["peony", "jasmine", "sunflower", "orchid", "cornflower"]),
+    ("response language",
+     ["English", "Japanese", "Chinese", "Spanish", "German"]),
+    ("home city",
+     ["Kyoto", "Osaka", "Seattle", "Berlin", "Lisbon"]),
+    ("project codename",
+     ["amber-orchid", "cobalt-cedar", "silver-pine", "violet-river"]),
+    ("editor theme",
+     ["solarized dark", "monokai", "nord", "gruvbox"]),
+    ("default device",
+     ["work laptop", "tablet", "desktop", "phone"]),
+    ("meeting preference",
+     ["mornings", "afternoons", "video calls", "written updates"]),
+    ("favorite color",
+     ["blue", "green", "violet", "orange", "black"]),
+    ("timezone",
+     ["UTC", "Asia Tokyo", "Europe Berlin", "America New York"]),
+    ("dietary preference",
+     ["vegetarian", "vegan", "pescatarian", "no preference"]),
+    ("communication style",
+     ["concise", "detailed", "formal", "casual"]),
 ]
 
 WRITE_TEMPLATES = [
@@ -100,6 +120,77 @@ IMPLICIT_DELETE_TEMPLATES = [
     "I withdraw my earlier answer about my {attr}; erase it.",
     "That information about my {attr} is private, so discard it.",
 ]
+OOD_WRITE_TEMPLATES = [
+    "Record {name}'s {attr} as {value} for later.",
+    "The persistent {attr} for {name} is {value}.",
+]
+OOD_UPDATE_TEMPLATES = [
+    "Amend {name}'s persistent {attr} entry so it reads {value}.",
+    "For {name}, supersede {old} with {value} as the {attr}.",
+]
+OOD_DELETE_TEMPLATES = [
+    "Purge the persistent record of {name}'s {attr}.",
+    "Revoke the saved {attr} detail for {name}.",
+]
+OOD_QUERY_TEMPLATES = [
+    "Which {attr} is stored for {name}?",
+    "Return {name}'s remembered {attr}.",
+]
+OOD_IMPLICIT_WRITE_TEMPLATES = [
+    "The persistent setting I use for {attr} is {value}.",
+    "You can treat {value} as my established {attr}.",
+]
+OOD_IMPLICIT_UPDATE_TEMPLATES = [
+    "Amend the persistent {attr} entry so it reads {value}.",
+    "Going forward, remember {value} instead of {old} for {attr}.",
+]
+OOD_IMPLICIT_DELETE_TEMPLATES = [
+    "Purge the persistent record of my {attr}.",
+    "The saved {attr} detail must no longer be retained.",
+]
+OOD_SELF_QUERY_TEMPLATES = [
+    "What is my {attr}?",
+    "Return my remembered {attr}.",
+]
+TRAIN_SELF_QUERY_TEMPLATES = [
+    "What is my {attr}?",
+    "Do you remember my {attr}?",
+    "Tell me the stored value of my {attr}.",
+]
+
+_COMPOSED_IMPLICIT_WRITES = [
+    f"{prefix}{verb} {{value}} as my {{attr}}{ending}"
+    for prefix in (
+        "", "For future conversations, ", "As a lasting detail, ",
+        "For later reference, ",
+    )
+    for verb in ("use", "keep", "record", "remember", "treat")
+    for ending in (
+        ".", " going forward.", " as the persistent setting.",
+    )
+]
+_COMPOSED_IMPLICIT_UPDATES = [
+    (
+        f"{prefix}{verb} my {{attr}} to {{value}} "
+        f"{connector} {{old}}{ending}"
+    )
+    for prefix in ("", "Please ", "Going forward, ", "As a correction, ")
+    for verb in ("change", "update", "revise", "set")
+    for connector in ("instead of", "rather than", "and retire")
+    for ending in (".", " in memory.", " from now on.")
+]
+_COMPOSED_IMPLICIT_DELETES = [
+    f"{prefix}{verb} the saved detail about my {{attr}}{ending}"
+    for prefix in ("", "Please ", "For privacy, ")
+    for verb in ("remove", "erase", "discard", "forget")
+    for ending in (".", " from memory.", " permanently.")
+]
+TRAIN_IMPLICIT_WRITE_TEMPLATES = (
+    IMPLICIT_WRITE_TEMPLATES + _COMPOSED_IMPLICIT_WRITES)
+TRAIN_IMPLICIT_UPDATE_TEMPLATES = (
+    IMPLICIT_UPDATE_TEMPLATES + _COMPOSED_IMPLICIT_UPDATES)
+TRAIN_IMPLICIT_DELETE_TEMPLATES = (
+    IMPLICIT_DELETE_TEMPLATES + _COMPOSED_IMPLICIT_DELETES)
 
 
 @dataclass
@@ -124,6 +215,7 @@ class AddressExample:
 
 def make_examples(
     seed: int, count: int, offset: int = 0,
+    strict_ood: bool = False,
 ) -> list[AddressExample]:
     addresses = [
         (name, attr_id, attr, values)
@@ -143,13 +235,33 @@ def make_examples(
         fields = {
             "name": name, "attr": attr, "old": old, "value": value,
         }
+        write_templates = (
+            OOD_WRITE_TEMPLATES if strict_ood else WRITE_TEMPLATES)
+        update_templates = (
+            OOD_UPDATE_TEMPLATES if strict_ood else UPDATE_TEMPLATES)
+        delete_templates = (
+            OOD_DELETE_TEMPLATES if strict_ood else DELETE_TEMPLATES)
+        query_templates = (
+            OOD_QUERY_TEMPLATES if strict_ood else QUERY_TEMPLATES)
+        implicit_write_templates = (
+            OOD_IMPLICIT_WRITE_TEMPLATES
+            if strict_ood else TRAIN_IMPLICIT_WRITE_TEMPLATES)
+        implicit_update_templates = (
+            OOD_IMPLICIT_UPDATE_TEMPLATES
+            if strict_ood else TRAIN_IMPLICIT_UPDATE_TEMPLATES)
+        implicit_delete_templates = (
+            OOD_IMPLICIT_DELETE_TEMPLATES
+            if strict_ood else TRAIN_IMPLICIT_DELETE_TEMPLATES)
+        self_query_templates = (
+            OOD_SELF_QUERY_TEMPLATES
+            if strict_ood else TRAIN_SELF_QUERY_TEMPLATES)
         examples.append(AddressExample(
             address=offset + index,
             attr_id=attr_id,
-            write=rng.choice(WRITE_TEMPLATES).format(**fields),
-            update=rng.choice(UPDATE_TEMPLATES).format(**fields),
-            delete=rng.choice(DELETE_TEMPLATES).format(**fields),
-            query=rng.choice(QUERY_TEMPLATES).format(**fields),
+            write=rng.choice(write_templates).format(**fields),
+            update=rng.choice(update_templates).format(**fields),
+            delete=rng.choice(delete_templates).format(**fields),
+            query=rng.choice(query_templates).format(**fields),
             ignore=rng.choice(IGNORE_TEMPLATES).format(**fields),
             action_write=(
                 f"Please remember that my {attr} is {value}."),
@@ -159,22 +271,28 @@ def make_examples(
             action_unset=f"My {attr} is now unset.",
             action_query=f"What is my {attr}?",
             implicit_write=rng.choice(
-                IMPLICIT_WRITE_TEMPLATES).format(**fields),
+                implicit_write_templates).format(**fields),
             implicit_update=rng.choice(
-                IMPLICIT_UPDATE_TEMPLATES).format(**fields),
+                implicit_update_templates).format(**fields),
             implicit_delete=rng.choice(
-                IMPLICIT_DELETE_TEMPLATES).format(**fields),
-            self_query=f"What is my {attr}?",
+                implicit_delete_templates).format(**fields),
+            self_query=rng.choice(
+                self_query_templates).format(**fields),
         ))
     return examples
 
 
 class AddressedController(nn.Module):
-    def __init__(self, hidden: int, rank: int):
+    def __init__(self, hidden: int, rank: int, action_rank: int = 0):
         super().__init__()
         self.query = nn.Linear(hidden, rank, bias=False)
         self.entry = nn.Linear(hidden, rank, bias=False)
-        self.action = nn.Linear(hidden, 4)
+        self.action_rank = action_rank
+        self.action_hidden = (
+            nn.Linear(hidden, action_rank)
+            if action_rank > 0 else None)
+        self.action = nn.Linear(
+            action_rank if action_rank > 0 else hidden, 4)
         nn.init.orthogonal_(self.query.weight)
         nn.init.orthogonal_(self.entry.weight)
 
@@ -183,6 +301,11 @@ class AddressedController(nn.Module):
 
     def entry_keys(self, hidden):
         return F.normalize(self.entry(hidden), dim=-1)
+
+    def action_logits(self, hidden):
+        if self.action_hidden is not None:
+            hidden = F.silu(self.action_hidden(hidden))
+        return self.action(hidden)
 
 
 def encode_examples(
@@ -215,7 +338,41 @@ def encode_examples(
     return tensors
 
 
-def addressed_loss(model, tensors, indices, temperature, action_weight):
+def encode_action_dataset(
+    backbone, tokenizer, path, max_tokens: int, pooling: str,
+):
+    hidden = []
+    labels = []
+    for index, line in enumerate(Path(path).read_text().splitlines()):
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        label = int(row["label"])
+        if label < IGNORE or label > DELETE:
+            raise ValueError(f"invalid action label {label} in {path}")
+        hidden.append(encode_text(
+            backbone, tokenizer, action_text(row["text"]),
+            max_tokens, pooling))
+        labels.append(label)
+        if (index + 1) % 250 == 0:
+            print(json.dumps({
+                "phase": "encode_action",
+                "data": str(path),
+                "examples": index + 1,
+            }), flush=True)
+    if not hidden:
+        raise ValueError(f"empty action dataset: {path}")
+    return {
+        "hidden": torch.from_numpy(np.stack(hidden)),
+        "labels": torch.tensor(labels, dtype=torch.long),
+    }
+
+
+def addressed_loss(
+    model, tensors, indices, temperature, action_weight,
+    action_tensors=None, action_indices=None,
+    action_ignore_weight=1.0, action_update_weight=1.0,
+):
     write_h = tensors["write"][indices]
     update_h = tensors["update"][indices]
     delete_h = tensors["delete"][indices]
@@ -259,29 +416,41 @@ def addressed_loss(model, tensors, indices, temperature, action_weight):
         (1.0 - (implicit_write_k * implicit_delete_k).sum(-1)).mean()
     ) * 0.5
     invariance = (named_invariance + implicit_invariance) * 0.5
-    action_h = torch.cat((
-        ignore_h, query_h,
-        write_h, tensors["action_write"][indices],
-        update_h, tensors["action_update"][indices],
-        delete_h, tensors["action_delete"][indices],
-        tensors["action_unset"][indices],
-        tensors["action_query"][indices],
-        tensors["implicit_write"][indices],
-        tensors["implicit_update"][indices],
-        tensors["implicit_delete"][indices],
-    ), dim=0)
-    action_y = torch.cat([
-        torch.full((indices.numel(),), action, device=indices.device)
-        for action in (
-            IGNORE, IGNORE,
-            WRITE, WRITE,
-            UPDATE, UPDATE,
-            DELETE, DELETE, DELETE,
-            IGNORE,
-            WRITE, UPDATE, DELETE,
-        )
-    ])
-    action = F.cross_entropy(model.action(action_h), action_y)
+    if action_tensors is not None:
+        if action_indices is None:
+            raise ValueError("action indices are required")
+        action_h = action_tensors["hidden"][action_indices]
+        action_y = action_tensors["labels"][action_indices]
+    else:
+        action_h = torch.cat((
+            ignore_h, query_h,
+            write_h, tensors["action_write"][indices],
+            update_h, tensors["action_update"][indices],
+            delete_h, tensors["action_delete"][indices],
+            tensors["action_unset"][indices],
+            tensors["action_query"][indices],
+            tensors["implicit_write"][indices],
+            tensors["implicit_update"][indices],
+            tensors["implicit_delete"][indices],
+        ), dim=0)
+        action_y = torch.cat([
+            torch.full((indices.numel(),), action, device=indices.device)
+            for action in (
+                IGNORE, IGNORE,
+                WRITE, WRITE,
+                UPDATE, UPDATE,
+                DELETE, DELETE, DELETE,
+                IGNORE,
+                WRITE, UPDATE, DELETE,
+            )
+        ])
+    action_class_weights = torch.ones(
+        4, device=action_h.device, dtype=action_h.dtype)
+    action_class_weights[IGNORE] = action_ignore_weight
+    action_class_weights[UPDATE] = action_update_weight
+    action = F.cross_entropy(
+        model.action_logits(action_h), action_y,
+        weight=action_class_weights)
     return retrieval + invariance + action_weight * action, {
         "retrieval_loss": retrieval.detach(),
         "invariance_loss": invariance.detach(),
@@ -290,7 +459,7 @@ def addressed_loss(model, tensors, indices, temperature, action_weight):
 
 
 @torch.no_grad()
-def metrics(model, tensors):
+def metrics(model, tensors, action_tensors=None):
     write = model.entry_keys(tensors["write"])
     update = model.entry_keys(tensors["update"])
     delete = model.entry_keys(tensors["delete"])
@@ -308,27 +477,32 @@ def metrics(model, tensors):
     ])
     attr_targets = torch.searchsorted(unique_attrs, attr_ids)
     targets = torch.arange(write.shape[0], device=write.device)
-    action_h = torch.cat([
-        tensors["ignore"], tensors["query"],
-        tensors["write"], tensors["action_write"],
-        tensors["update"], tensors["action_update"],
-        tensors["delete"], tensors["action_delete"],
-        tensors["action_unset"],
-        tensors["action_query"],
-        tensors["implicit_write"], tensors["implicit_update"],
-        tensors["implicit_delete"],
-    ])
-    action_y = torch.cat([
-        torch.full((write.shape[0],), action, device=write.device)
-        for action in (
-            IGNORE, IGNORE,
-            WRITE, WRITE,
-            UPDATE, UPDATE,
-            DELETE, DELETE, DELETE,
-            IGNORE,
-            WRITE, UPDATE, DELETE,
-        )
-    ])
+    if action_tensors is not None:
+        action_h = action_tensors["hidden"]
+        action_y = action_tensors["labels"]
+    else:
+        action_h = torch.cat([
+            tensors["ignore"], tensors["query"],
+            tensors["write"], tensors["action_write"],
+            tensors["update"], tensors["action_update"],
+            tensors["delete"], tensors["action_delete"],
+            tensors["action_unset"],
+            tensors["action_query"],
+            tensors["implicit_write"], tensors["implicit_update"],
+            tensors["implicit_delete"],
+        ])
+        action_y = torch.cat([
+            torch.full((write.shape[0],), action, device=write.device)
+            for action in (
+                IGNORE, IGNORE,
+                WRITE, WRITE,
+                UPDATE, UPDATE,
+                DELETE, DELETE, DELETE,
+                IGNORE,
+                WRITE, UPDATE, DELETE,
+            )
+        ])
+    action_prediction = model.action_logits(action_h).argmax(-1)
     positives = torch.cat([
         (write * update).sum(-1), (write * delete).sum(-1)])
     negative = write @ write.T
@@ -337,7 +511,13 @@ def metrics(model, tensors):
     threshold, balanced = choose_threshold(positives, negatives)
     return {
         "action_accuracy": float(
-            (model.action(action_h).argmax(-1) == action_y).float().mean()),
+            (action_prediction == action_y).float().mean()),
+        **{
+            f"action_{name}_recall": float(
+                (action_prediction[action_y == action] == action)
+                .float().mean())
+            for action, name in enumerate(ACTION_NAMES)
+        },
         "query_top1": float(
             ((query @ write.T).argmax(-1) == targets).float().mean()),
         "update_top1": float(
@@ -374,24 +554,45 @@ def choose_threshold(positives, negatives):
     return best_threshold, best_accuracy
 
 
-def save_bnctrl3(
+def save_bnctrl(
     path, model, gguf, hidden, rank, temperature, pooling, threshold,
 ):
     pooling_id = {"last": 1, "mean_last": 2}[pooling]
-    payloads = [
+    shared_payloads = [
         model.query.weight.detach().float().cpu().contiguous().numpy()
         .astype("<f4", copy=False).tobytes(),
         model.entry.weight.detach().float().cpu().contiguous().numpy()
         .astype("<f4", copy=False).tobytes(),
-        model.action.weight.detach().float().cpu().contiguous().numpy()
-        .astype("<f4", copy=False).tobytes(),
-        model.action.bias.detach().float().cpu().contiguous().numpy()
-        .astype("<f4", copy=False).tobytes(),
     ]
-    header = bytearray(b"BNCTRL3\x00")
-    header += struct.pack(
-        "<IIIIff", 3, hidden, rank, pooling_id,
-        float(temperature), float(threshold))
+    if model.action_hidden is None:
+        version = 3
+        header = bytearray(b"BNCTRL3\x00")
+        header += struct.pack(
+            "<IIIIff", version, hidden, rank, pooling_id,
+            float(temperature), float(threshold))
+        action_payloads = [
+            model.action.weight.detach().float().cpu()
+            .contiguous().numpy().astype("<f4", copy=False).tobytes(),
+            model.action.bias.detach().float().cpu()
+            .contiguous().numpy().astype("<f4", copy=False).tobytes(),
+        ]
+    else:
+        version = 4
+        header = bytearray(b"BNCTRL4\x00")
+        header += struct.pack(
+            "<IIIIffI", version, hidden, rank, pooling_id,
+            float(temperature), float(threshold), model.action_rank)
+        action_payloads = [
+            model.action_hidden.weight.detach().float().cpu()
+            .contiguous().numpy().astype("<f4", copy=False).tobytes(),
+            model.action_hidden.bias.detach().float().cpu()
+            .contiguous().numpy().astype("<f4", copy=False).tobytes(),
+            model.action.weight.detach().float().cpu()
+            .contiguous().numpy().astype("<f4", copy=False).tobytes(),
+            model.action.bias.detach().float().cpu()
+            .contiguous().numpy().astype("<f4", copy=False).tobytes(),
+        ]
+    payloads = shared_payloads + action_payloads
     header += sha256_file(gguf)
     for payload in payloads:
         header += struct.pack("<I", zlib.crc32(payload) & 0xFFFFFFFF)
@@ -409,14 +610,23 @@ def main():
     parser.add_argument("--lib", required=True)
     parser.add_argument("--tok-probe", required=True)
     parser.add_argument("--cache")
+    parser.add_argument("--action-train")
+    parser.add_argument("--action-valid")
+    parser.add_argument("--action-cache")
     parser.add_argument("--train-examples", type=int, default=110)
     parser.add_argument("--valid-examples", type=int, default=28)
     parser.add_argument("--rank", type=int, default=128)
+    parser.add_argument("--action-rank", type=int, default=64)
     parser.add_argument("--steps", type=int, default=2000)
     parser.add_argument("--batch", type=int, default=64)
+    parser.add_argument("--action-batch", type=int, default=256)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--temperature", type=float, default=0.07)
     parser.add_argument("--action-weight", type=float, default=1.0)
+    parser.add_argument(
+        "--action-ignore-weight", type=float, default=1.0)
+    parser.add_argument(
+        "--action-update-weight", type=float, default=1.0)
     parser.add_argument("--max-tokens", type=int, default=96)
     parser.add_argument(
         "--pooling", choices=("last", "mean_last"), default="mean_last")
@@ -425,6 +635,16 @@ def main():
         default="auto")
     parser.add_argument("--seed", type=int, default=20260909)
     args = parser.parse_args()
+    if bool(args.action_train) != bool(args.action_valid):
+        parser.error("--action-train and --action-valid must be used together")
+    if (
+        args.steps < 1 or args.batch < 1 or args.action_batch < 1
+        or args.train_examples < 1 or args.valid_examples < 1
+        or args.action_ignore_weight <= 0.0
+        or args.action_update_weight <= 0.0
+        or args.action_rank < 0
+    ):
+        parser.error("steps, batches, and example counts must be positive")
 
     device = (
         "cuda" if args.device == "auto" and torch.cuda.is_available()
@@ -468,7 +688,7 @@ def main():
             backbone, tokenizer,
             make_examples(
                 args.seed, args.valid_examples,
-                offset=args.train_examples),
+                offset=args.train_examples, strict_ood=True),
             args.max_tokens, args.pooling)
         weights.close()
         del backbone
@@ -479,10 +699,51 @@ def main():
                 for split, values in (("train", train), ("valid", valid))
                 for kind, tensor in values.items()
             })
+    action_train = None
+    action_valid = None
+    if args.action_train:
+        action_cache = (
+            Path(args.action_cache) if args.action_cache else None)
+        if action_cache is not None and action_cache.exists():
+            archive = np.load(action_cache)
+            action_train = {
+                "hidden": torch.from_numpy(archive["train_hidden"]),
+                "labels": torch.from_numpy(archive["train_labels"]),
+            }
+            action_valid = {
+                "hidden": torch.from_numpy(archive["valid_hidden"]),
+                "labels": torch.from_numpy(archive["valid_labels"]),
+            }
+        else:
+            weights = GGUFWeights(args.gguf, args.lib)
+            backbone = TorchBackbone(
+                weights, device=device, dtype=torch.bfloat16)
+            tokenizer = CTokenizer(args.tok_probe, args.gguf)
+            action_train = encode_action_dataset(
+                backbone, tokenizer, args.action_train,
+                args.max_tokens, args.pooling)
+            action_valid = encode_action_dataset(
+                backbone, tokenizer, args.action_valid,
+                args.max_tokens, args.pooling)
+            weights.close()
+            del backbone
+            if action_cache is not None:
+                action_cache.parent.mkdir(parents=True, exist_ok=True)
+                np.savez_compressed(
+                    action_cache,
+                    train_hidden=action_train["hidden"].numpy(),
+                    train_labels=action_train["labels"].numpy(),
+                    valid_hidden=action_valid["hidden"].numpy(),
+                    valid_labels=action_valid["labels"].numpy(),
+                )
     hidden = train["write"].shape[1]
     train = move_tensors(train, device)
     valid = move_tensors(valid, device)
-    model = AddressedController(hidden, args.rank).to(device)
+    if action_train is not None:
+        action_train = move_tensors(action_train, device)
+        action_valid = move_tensors(action_valid, device)
+    model = AddressedController(
+        hidden, args.rank, args.action_rank).to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=args.lr, weight_decay=0.01)
     best_score = -1.0
@@ -491,14 +752,24 @@ def main():
         indices = torch.randperm(
             train["write"].shape[0], generator=rng
         )[:min(args.batch, train["write"].shape[0])].to(device)
+        action_indices = None
+        if action_train is not None:
+            action_indices = torch.randperm(
+                action_train["hidden"].shape[0], generator=rng
+            )[:min(
+                args.action_batch,
+                action_train["hidden"].shape[0])].to(device)
         optimizer.zero_grad(set_to_none=True)
         loss, parts = addressed_loss(
-            model, train, indices, args.temperature, args.action_weight)
+            model, train, indices, args.temperature, args.action_weight,
+            action_train, action_indices,
+            action_ignore_weight=args.action_ignore_weight,
+            action_update_weight=args.action_update_weight)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
         if (step + 1) % 50 == 0 or step == 0:
-            report = metrics(model, valid)
+            report = metrics(model, valid, action_valid)
             score = (
                 report["action_accuracy"] + report["query_top1"] +
                 report["update_top1"] + report["delete_top1"] +
@@ -517,16 +788,17 @@ def main():
                     for key, value in model.state_dict().items()}
     if best_state is not None:
         model.load_state_dict(best_state)
-    report = metrics(model, valid)
+    report = metrics(model, valid, action_valid)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    save_bnctrl3(
+    save_bnctrl(
         output, model, args.gguf, hidden, args.rank,
         args.temperature, args.pooling, report["address_threshold"])
     torch.save({
         "state_dict": model.state_dict(),
         "hidden": hidden,
         "rank": args.rank,
+        "action_rank": args.action_rank,
         "pooling": args.pooling,
         "temperature": args.temperature,
         "backbone_sha256": sha256_file(args.gguf).hex(),

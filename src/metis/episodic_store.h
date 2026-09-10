@@ -6,6 +6,7 @@
 typedef struct metis_episodic_store {
     char **records;
     float **keys;
+    float *priorities;
     size_t count;
     size_t capacity;
     int key_dim;
@@ -19,6 +20,13 @@ int metis_episodic_configure_keys(
     metis_episodic_store_t *store, int key_dim);
 int metis_episodic_add_with_key(
     metis_episodic_store_t *store, const char *text, const float *key);
+/* Priority is a bounded learned salience hint in [0, 1]. It affects ranking
+ * only; the exact source record remains present regardless of priority. */
+int metis_episodic_add_with_priority(
+    metis_episodic_store_t *store, const char *text, const float *key,
+    float priority);
+int metis_episodic_set_priority(
+    metis_episodic_store_t *store, size_t index, float priority);
 /* Addressed long-term-memory operations. Keys are expected to be L2
  * normalized. UPDATE replaces the closest active record when its cosine
  * similarity reaches min_similarity, otherwise it appends a new record.

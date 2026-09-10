@@ -13,8 +13,11 @@ typedef struct metis_memory_controller {
     uint8_t backbone_sha256[32];
     float *query_projection; /* [rank][hidden_dim] */
     float *entry_projection; /* [rank][hidden_dim] */
-    /* BNCTRL3 operation router: IGNORE, WRITE, UPDATE, DELETE. */
-    float *action_projection; /* [4][hidden_dim] */
+    /* BNCTRL3/4 operation router: IGNORE, WRITE, UPDATE, DELETE. */
+    int action_rank;
+    float *action_input_projection; /* BNCTRL4: [action_rank][hidden_dim] */
+    float *action_input_bias;       /* BNCTRL4: [action_rank] */
+    float *action_projection;       /* [4][action_rank] */
     float action_bias[4];
 } metis_memory_controller_t;
 

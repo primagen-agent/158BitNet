@@ -36,30 +36,56 @@ static int write_fixture(
     const char *path, const uint8_t sha[32], int version) {
     const unsigned char magic_v1[8] = {'B','N','C','T','R','L','1',0};
     const unsigned char magic_v3[8] = {'B','N','C','T','R','L','3',0};
+    const unsigned char magic_v4[8] = {'B','N','C','T','R','L','4',0};
     const float query[8] = {1,0,0,0, 0,1,0,0};
     const float entry[8] = {0.5f,0.5f,0,0, 0,0,1,0};
-    const float action[16] = {
+    const float action_v3[16] = {
         -1,0,0,0, 1,0,0,0, 0,1,0,0, 0,0,1,0};
+    const float action_input[8] = {
+        1,0,0,0, 0,1,0,0};
+    const float action_input_bias[2] = {0,0};
+    const float action_v4[8] = {
+        -1,0, 0,-1, 0,0, 1,1};
     const float action_bias[4] = {0,0,0,0};
+    const float *action = version == 4 ? action_v4 : action_v3;
+    const size_t action_size =
+        version == 4 ? sizeof action_v4 : sizeof action_v3;
+    const unsigned char *magic =
+        version == 4 ? magic_v4 :
+        (version == 3 ? magic_v3 : magic_v1);
     FILE *file = fopen(path, "wb");
     if (file == NULL) return -1;
     int failed =
-        fwrite(version == 3 ? magic_v3 : magic_v1, 1, 8, file) != 8 ||
+        fwrite(magic, 1, 8, file) != 8 ||
         write_u32(file, (uint32_t)version) || write_u32(file, 4) ||
         write_u32(file, 2) || write_u32(file, 2) ||
         write_f32(file, 0.07f) ||
-        (version == 3 && write_f32(file, 0.85f)) ||
+        (version >= 3 && write_f32(file, 0.85f)) ||
+        (version == 4 && write_u32(file, 2)) ||
         fwrite(sha, 1, 32, file) != 32 ||
         write_u32(file, crc32_bytes(query, sizeof query)) ||
         write_u32(file, crc32_bytes(entry, sizeof entry)) ||
-        (version == 3 &&
-         (write_u32(file, crc32_bytes(action, sizeof action)) ||
+        (version == 4 &&
+         (write_u32(
+              file, crc32_bytes(action_input, sizeof action_input)) ||
+          write_u32(
+              file, crc32_bytes(
+                  action_input_bias, sizeof action_input_bias)))) ||
+        (version >= 3 &&
+         (write_u32(file, crc32_bytes(action, action_size)) ||
           write_u32(file, crc32_bytes(
               action_bias, sizeof action_bias)))) ||
         fwrite(query, 1, sizeof query, file) != sizeof query ||
         fwrite(entry, 1, sizeof entry, file) != sizeof entry ||
-        (version == 3 &&
-         (fwrite(action, 1, sizeof action, file) != sizeof action ||
+        (version == 4 &&
+         (fwrite(
+              action_input, 1, sizeof action_input, file) !=
+              sizeof action_input ||
+          fwrite(
+              action_input_bias, 1, sizeof action_input_bias, file) !=
+              sizeof action_input_bias)) ||
+        (version >= 3 &&
+         (fwrite(action, 1, action_size, file) != action_size ||
           fwrite(action_bias, 1, sizeof action_bias, file) !=
               sizeof action_bias));
     if (fclose(file) != 0) failed = 1;
@@ -133,6 +159,9 @@ static int self_test(void) {
         verify(controller_path, backbone, 4, -1))
         return 1;
     if (write_fixture(controller_path, sha, 3) ||
+        verify(controller_path, backbone, 4, 3))
+        return 1;
+    if (write_fixture(controller_path, sha, 4) ||
         verify(controller_path, backbone, 4, 3))
         return 1;
 

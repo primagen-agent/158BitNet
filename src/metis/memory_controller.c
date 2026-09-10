@@ -11,6 +11,8 @@ static const unsigned char k_magic_v1[8] =
     {'B', 'N', 'C', 'T', 'R', 'L', '1', 0};
 static const unsigned char k_magic_v3[8] =
     {'B', 'N', 'C', 'T', 'R', 'L', '3', 0};
+static const unsigned char k_magic_v4[8] =
+    {'B', 'N', 'C', 'T', 'R', 'L', '4', 0};
 
 static int read_exact(FILE *file, void *output, size_t size) {
     return fread(output, 1, size, file) == size ? 0 : -1;
@@ -49,11 +51,14 @@ metis_memory_controller_t *metis_memory_controller_load(
     FILE *file = NULL;
     metis_memory_controller_t *controller = NULL;
     unsigned char magic[8];
-    uint32_t version, hidden, rank, pooling;
-    uint32_t query_crc, entry_crc, action_crc = 0, action_bias_crc = 0;
+    uint32_t version, hidden, rank, pooling, action_rank = 0;
+    uint32_t query_crc, entry_crc;
+    uint32_t action_input_crc = 0, action_input_bias_crc = 0;
+    uint32_t action_crc = 0, action_bias_crc = 0;
     uint8_t actual_sha256[32];
-    size_t count, bytes;
+    size_t count, bytes, action_input_bytes = 0, action_bytes = 0;
     int has_action = 0;
+    int has_action_mlp = 0;
 #define FAIL(...) do { \
     if (error != NULL && error_size > 0) \
         snprintf(error, error_size, __VA_ARGS__); \
@@ -66,10 +71,11 @@ metis_memory_controller_t *metis_memory_controller_load(
     if (file == NULL) FAIL("cannot open controller");
     if (read_exact(file, magic, sizeof magic) != 0 ||
         (memcmp(magic, k_magic_v1, sizeof magic) != 0 &&
-         memcmp(magic, k_magic_v3, sizeof magic) != 0))
+         memcmp(magic, k_magic_v3, sizeof magic) != 0 &&
+         memcmp(magic, k_magic_v4, sizeof magic) != 0))
         FAIL("bad controller magic");
     if (read_u32(file, &version) != 0 ||
-        (version != 1 && version != 3) ||
+        (version != 1 && version != 3 && version != 4) ||
         read_u32(file, &hidden) != 0 ||
         read_u32(file, &rank) != 0 ||
         read_u32(file, &pooling) != 0)
@@ -83,7 +89,8 @@ metis_memory_controller_t *metis_memory_controller_load(
     controller->hidden_dim = (int)hidden;
     controller->rank = (int)rank;
     controller->pooling = (int)pooling;
-    has_action = version == 3;
+    has_action = version >= 3;
+    has_action_mlp = version == 4;
     if (read_f32(file, &controller->temperature) != 0 ||
         !(controller->temperature > 0.0f))
         FAIL("bad controller temperature");
@@ -93,11 +100,20 @@ metis_memory_controller_t *metis_memory_controller_load(
          controller->address_threshold < -1.0f ||
          controller->address_threshold > 1.0f))
         FAIL("bad controller address threshold");
+    if (has_action_mlp &&
+        (read_u32(file, &action_rank) != 0 ||
+         action_rank < 1 || action_rank > 1024u))
+        FAIL("bad controller action rank");
+    controller->action_rank = has_action_mlp ?
+        (int)action_rank : (has_action ? (int)hidden : 0);
     if (read_exact(
             file, controller->backbone_sha256,
             sizeof controller->backbone_sha256) != 0 ||
         read_u32(file, &query_crc) != 0 ||
         read_u32(file, &entry_crc) != 0 ||
+        (has_action_mlp &&
+         (read_u32(file, &action_input_crc) != 0 ||
+          read_u32(file, &action_input_bias_crc) != 0)) ||
         (has_action &&
          (read_u32(file, &action_crc) != 0 ||
           read_u32(file, &action_bias_crc) != 0)))
@@ -111,19 +127,39 @@ metis_memory_controller_t *metis_memory_controller_load(
     bytes = count * sizeof(float);
     controller->query_projection = (float *)malloc(bytes);
     controller->entry_projection = (float *)malloc(bytes);
-    if (has_action)
-        controller->action_projection = (float *)malloc(
-            4u * (size_t)hidden * sizeof(float));
+    if (has_action_mlp) {
+        action_input_bytes =
+            (size_t)action_rank * (size_t)hidden * sizeof(float);
+        controller->action_input_projection =
+            (float *)malloc(action_input_bytes);
+        controller->action_input_bias = (float *)malloc(
+            (size_t)action_rank * sizeof(float));
+    }
+    if (has_action) {
+        action_bytes = 4u * (size_t)controller->action_rank *
+            sizeof(float);
+        controller->action_projection = (float *)malloc(action_bytes);
+    }
     if (controller->query_projection == NULL ||
         controller->entry_projection == NULL ||
+        (has_action_mlp &&
+         (controller->action_input_projection == NULL ||
+          controller->action_input_bias == NULL)) ||
         (has_action && controller->action_projection == NULL))
         FAIL("out of memory");
     if (read_exact(file, controller->query_projection, bytes) != 0 ||
         read_exact(file, controller->entry_projection, bytes) != 0 ||
+        (has_action_mlp &&
+         (read_exact(
+              file, controller->action_input_projection,
+              action_input_bytes) != 0 ||
+          read_exact(
+              file, controller->action_input_bias,
+              (size_t)action_rank * sizeof(float)) != 0)) ||
         (has_action &&
          (read_exact(
               file, controller->action_projection,
-              4u * (size_t)hidden * sizeof(float)) != 0 ||
+              action_bytes) != 0 ||
           read_exact(
               file, controller->action_bias,
               sizeof controller->action_bias) != 0)) ||
@@ -131,10 +167,18 @@ metis_memory_controller_t *metis_memory_controller_load(
         FAIL("truncated or trailing controller data");
     if (crc32_bytes(controller->query_projection, bytes) != query_crc ||
         crc32_bytes(controller->entry_projection, bytes) != entry_crc ||
+        (has_action_mlp &&
+         (crc32_bytes(
+              controller->action_input_projection,
+              action_input_bytes) != action_input_crc ||
+          crc32_bytes(
+              controller->action_input_bias,
+              (size_t)action_rank * sizeof(float)) !=
+              action_input_bias_crc)) ||
         (has_action &&
          (crc32_bytes(
               controller->action_projection,
-              4u * (size_t)hidden * sizeof(float)) != action_crc ||
+              action_bytes) != action_crc ||
           crc32_bytes(
               controller->action_bias,
               sizeof controller->action_bias) != action_bias_crc)))
@@ -153,6 +197,8 @@ void metis_memory_controller_free(
     if (controller == NULL) return;
     free(controller->query_projection);
     free(controller->entry_projection);
+    free(controller->action_input_projection);
+    free(controller->action_input_bias);
     free(controller->action_projection);
     free(controller);
 }
@@ -194,18 +240,51 @@ float metis_memory_controller_score(
 int metis_memory_controller_classify(
     const metis_memory_controller_t *controller, const float *hidden,
     float *confidence) {
+    float *normalized = NULL;
+    float *features = NULL;
+    const float *action_input = NULL;
     float best = -INFINITY, second = -INFINITY;
+    float norm = 0.0f;
     int best_action = -1;
     if (confidence != NULL) *confidence = 0.0f;
     if (controller == NULL || hidden == NULL ||
         controller->action_projection == NULL)
         return -1;
+    normalized = (float *)malloc(
+        (size_t)controller->hidden_dim * sizeof(float));
+    if (normalized == NULL) return -1;
+    for (int column = 0; column < controller->hidden_dim; ++column)
+        norm += hidden[column] * hidden[column];
+    norm = 1.0f / sqrtf(norm + 1e-12f);
+    for (int column = 0; column < controller->hidden_dim; ++column)
+        normalized[column] = hidden[column] * norm;
+    action_input = normalized;
+    if (controller->action_input_projection != NULL) {
+        features = (float *)malloc(
+            (size_t)controller->action_rank * sizeof(float));
+        if (features == NULL) {
+            free(normalized);
+            return -1;
+        }
+        for (int row = 0; row < controller->action_rank; ++row) {
+            const float *weight =
+                controller->action_input_projection +
+                (size_t)row * (size_t)controller->hidden_dim;
+            float value = controller->action_input_bias[row];
+            for (int column = 0;
+                 column < controller->hidden_dim; ++column)
+                value += weight[column] * normalized[column];
+            features[row] = value / (1.0f + expf(-value));
+        }
+        action_input = features;
+    }
     for (int action = 0; action < 4; ++action) {
         const float *weight = controller->action_projection +
-            (size_t)action * (size_t)controller->hidden_dim;
+            (size_t)action * (size_t)controller->action_rank;
         float score = controller->action_bias[action];
-        for (int column = 0; column < controller->hidden_dim; ++column)
-            score += weight[column] * hidden[column];
+        for (int column = 0;
+             column < controller->action_rank; ++column)
+            score += weight[column] * action_input[column];
         if (score > best) {
             second = best;
             best = score;
@@ -214,6 +293,8 @@ int metis_memory_controller_classify(
             second = score;
         }
     }
+    free(features);
+    free(normalized);
     if (confidence != NULL) *confidence = best - second;
     return best_action;
 }

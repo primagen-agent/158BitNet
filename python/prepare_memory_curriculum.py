@@ -161,6 +161,10 @@ def reconstruction_sample(
             chunk(query, value),
         ],
         "query_turn_id": 1,
+        "memory_targets_by_message": {
+            "0": [name, attribute, value],
+        },
+        "query_evidence_message_indices": {"1": 0},
         "evidence_message_indices": [0],
         "distractor_message_indices": [],
         "metadata": {
@@ -188,6 +192,10 @@ def remember_sample(index: int, split_salt: int, rng: random.Random) -> dict:
             chunk(query, value),
         ],
         "query_turn_id": 1,
+        "memory_targets_by_message": {
+            "0": [name, attribute, value],
+        },
+        "query_evidence_message_indices": {"1": 0},
         "evidence_message_indices": [0],
         "distractor_message_indices": [],
         "metadata": {
@@ -229,6 +237,13 @@ def multi_entity_sample(
             ),
         ],
         "query_turn_id": 2,
+        "memory_targets_by_message": {
+            "0": [first_name, attribute, first_value],
+            "1": [second_name, attribute, second_value],
+        },
+        "query_evidence_message_indices": {
+            "2": 0 if ask_first else 1,
+        },
         "evidence_message_indices": [0, 1],
         "distractor_message_indices": [],
         "metadata": {
@@ -267,6 +282,12 @@ def distract_sample(
         "sample_id": f"distract-{split_salt}-{index:06d}",
         "messages": messages,
         "query_turn_id": len(messages) - 1,
+        "memory_targets_by_message": {
+            "0": [name, attribute, value],
+        },
+        "query_evidence_message_indices": {
+            str(len(messages) - 1): 0,
+        },
         "evidence_message_indices": [0],
         "distractor_message_indices": list(
             range(1, len(messages) - 1)),
@@ -303,6 +324,14 @@ def update_sample(index: int, split_salt: int, rng: random.Random) -> dict:
             ),
         ],
         "query_turn_id": 2,
+        "memory_targets_by_message": {
+            "0": [name, attribute, old_value],
+            "1": [
+                "Update", name, attribute, new_value,
+                "Replace the old value",
+            ],
+        },
+        "query_evidence_message_indices": {"2": 1},
         "evidence_message_indices": [0, 1],
         "distractor_message_indices": [],
         "negative_answers": [old_value],
@@ -338,6 +367,14 @@ def forget_sample(index: int, split_salt: int, rng: random.Random) -> dict:
             ),
         ],
         "query_turn_id": 2,
+        "memory_targets_by_message": {
+            "0": [name, attribute, old_value],
+            "1": [
+                "Delete", name, attribute, "now unset",
+                "must not be recalled",
+            ],
+        },
+        "query_evidence_message_indices": {"2": 1},
         "evidence_message_indices": [0, 1],
         "distractor_message_indices": [],
         "negative_answers": [old_value],
@@ -373,6 +410,9 @@ def memory_irrelevant_sample(
             ),
         ],
         "query_turn_id": 1,
+        "memory_targets_by_message": {
+            "0": [name, attribute, value],
+        },
         "evidence_message_indices": [0],
         "distractor_message_indices": [],
         "metadata": {
@@ -413,7 +453,11 @@ def natural_value(index: int, turn: int, split_salt: int) -> str:
 
 
 def long_memory_sample(
-    index: int, split_salt: int, rng: random.Random
+    index: int, split_salt: int, rng: random.Random, *,
+    profile: tuple[int, int] | None = None,
+    value_kind: str = "natural",
+    sample_prefix: str = "long-memory",
+    style: str = "natural_long_context",
 ) -> dict:
     """Natural long-context sample with old/middle/recent recall targets.
 
@@ -421,12 +465,21 @@ def long_memory_sample(
     multiple query checkpoints while retaining the trainer's one-query-per-
     sample contract and keeping each backward graph independently bounded.
     """
-    commits, target_words = LONG_PROFILES[index % len(LONG_PROFILES)]
+    commits, target_words = (
+        profile
+        if profile is not None
+        else LONG_PROFILES[index % len(LONG_PROFILES)]
+    )
+    if value_kind not in ("natural", "opaque"):
+        raise ValueError("value_kind must be natural or opaque")
     facts = []
     messages = []
     fact_message_indices = []
     query_indices = []
     evidence_indices = []
+    memory_targets_by_message = {}
+    negative_answers_by_query = {}
+    query_evidence_message_indices = {}
     checkpoints = sorted({
         max(1, commits // 4),
         max(1, commits // 2),
@@ -435,13 +488,20 @@ def long_memory_sample(
     for turn in range(commits):
         name = f"Contact{split_salt:02d}{index:05d}_{turn:02d}"
         attribute = ATTRIBUTES[(index + turn * 3) % len(ATTRIBUTES)]
-        value = natural_value(index, turn, split_salt)
+        value = (
+            natural_value(index, turn, split_salt)
+            if value_kind == "natural"
+            else opaque_value(index * 64 + turn, split_salt)
+        )
         facts.append((name, attribute, value))
         statement = (
             f"While we are planning, please remember one specific detail: "
             f"{name}'s {attribute} is {value}."
         )
         fact_message_indices.append(len(messages))
+        memory_targets_by_message[str(len(messages))] = [
+            name, attribute, value,
+        ]
         messages.append(chunk(
             expand_to_words(statement, target_words, rng),
             rng.choice(ACK_TEMPLATES),
@@ -457,6 +517,18 @@ def long_memory_sample(
                 target_index = written // 2
             name_q, attribute_q, value_q = facts[target_index]
             query_indices.append(len(messages))
+            query_evidence_message_indices[
+                str(len(messages))
+            ] = fact_message_indices[target_index]
+            negative_answers_by_query[str(len(messages))] = [
+                remembered_value
+                for fact_index, (
+                    _remembered_name,
+                    _remembered_attribute,
+                    remembered_value,
+                ) in enumerate(facts)
+                if fact_index != target_index
+            ]
             evidence_indices.append(fact_message_indices[target_index])
             messages.append(chunk(
                 (
@@ -467,17 +539,20 @@ def long_memory_sample(
                 value_q,
             ))
     return {
-        "sample_id": f"long-memory-{split_salt}-{index:06d}",
+        "sample_id": f"{sample_prefix}-{split_salt}-{index:06d}",
         "messages": messages,
         "query_turn_id": query_indices,
+        "memory_targets_by_message": memory_targets_by_message,
+        "query_evidence_message_indices": (
+            query_evidence_message_indices),
+        "negative_answers_by_query": negative_answers_by_query,
         "evidence_message_indices": sorted(set(evidence_indices)),
-        "distractor_message_indices": [
-            message_index for message_index in fact_message_indices
-            if message_index not in evidence_indices
-        ],
+        # Every explicit "please remember" fact is a legitimate memory.
+        # Whether this trajectory later queries it must not affect writing.
+        "distractor_message_indices": [],
         "metadata": {
             "type": "remember",
-            "style": "natural_long_context",
+            "style": style,
             "v2_task": "task3_long_memory",
             "stage": 4,
             "commits": commits,
@@ -497,7 +572,8 @@ def write_jsonl(path: Path, samples: list[dict]) -> None:
 
 def build_split(
     output: Path, split: str, count: int, stage2_count: int,
-    stage3_count: int, long_count: int, seed: int, split_salt: int
+    stage3_count: int, long_count: int, factorial_count: int,
+    seed: int, split_salt: int
 ) -> None:
     rng = random.Random(seed + split_salt)
     if count:
@@ -546,6 +622,36 @@ def build_split(
             for i in range(long_count)
         ]
         write_jsonl(output / split / "long_memory.jsonl", long_memory)
+    if factorial_count:
+        # Keep answer length and memory age independently measurable.
+        # The old curriculum paired short answers with short trajectories
+        # and long answers with long trajectories, so a failed exact match
+        # could not identify whether retention or continuation was at fault.
+        single_natural = [
+            long_memory_sample(
+                i + 10_000_000, split_salt, rng,
+                profile=(1, 60),
+                value_kind="natural",
+                sample_prefix="factorial-single-natural",
+                style="single_natural_value",
+            )
+            for i in range(factorial_count)
+        ]
+        long_opaque = [
+            long_memory_sample(
+                i + 20_000_000, split_salt, rng,
+                value_kind="opaque",
+                sample_prefix="factorial-long-opaque",
+                style="long_context_opaque",
+            )
+            for i in range(factorial_count)
+        ]
+        write_jsonl(
+            output / split / "task3_single_natural.jsonl",
+            single_natural)
+        write_jsonl(
+            output / split / "task3_long_opaque.jsonl",
+            long_opaque)
 
 
 def main() -> None:
@@ -571,26 +677,35 @@ def main() -> None:
     parser.add_argument(
         "--long-valid", type=int, default=0,
         help="natural long-context validation samples")
+    parser.add_argument(
+        "--factorial-train", type=int, default=0,
+        help="samples per answer-length versus memory-age training stratum")
+    parser.add_argument(
+        "--factorial-valid", type=int, default=0,
+        help="samples per answer-length versus memory-age validation stratum")
     parser.add_argument("--seed", type=int, default=20260903)
     args = parser.parse_args()
     if min(args.train, args.valid, args.stage2_train, args.stage2_valid,
            args.stage3_train, args.stage3_valid,
-           args.long_train, args.long_valid) < 0:
+           args.long_train, args.long_valid,
+           args.factorial_train, args.factorial_valid) < 0:
         parser.error("sample counts must be non-negative")
     if (args.train + args.stage2_train + args.stage3_train
-            + args.long_train) < 1:
+            + args.long_train + args.factorial_train) < 1:
         parser.error("training sample counts must be positive")
     if (args.valid + args.stage2_valid + args.stage3_valid
-            + args.long_valid) < 1:
+            + args.long_valid + args.factorial_valid) < 1:
         parser.error("validation sample counts must be positive")
 
     output = Path(args.output)
     build_split(
         output, "train", args.train, args.stage2_train,
-        args.stage3_train, args.long_train, args.seed, split_salt=11)
+        args.stage3_train, args.long_train, args.factorial_train,
+        args.seed, split_salt=11)
     build_split(
         output, "valid", args.valid, args.stage2_valid,
-        args.stage3_valid, args.long_valid, args.seed, split_salt=29)
+        args.stage3_valid, args.long_valid, args.factorial_valid,
+        args.seed, split_salt=29)
     print(
         json.dumps(
             {
@@ -603,18 +718,25 @@ def main() -> None:
                 "stage3_valid": args.stage3_valid * 3,
                 "long_train": args.long_train,
                 "long_valid": args.long_valid,
+                "factorial_train": args.factorial_train * 2,
+                "factorial_valid": args.factorial_valid * 2,
                 "train_valid_entity_overlap": 0,
                 "stage": (
-                    "long_context_curriculum"
-                    if args.long_train or args.long_valid
+                    "factorial_memory_curriculum"
+                    if args.factorial_train or args.factorial_valid
                     else (
-                        "reconstruction_remember_multi_entity_distract_"
-                        "update_forget_contrastive"
-                        if args.stage3_train or args.stage3_valid
+                        "long_context_curriculum"
+                        if args.long_train or args.long_valid
                         else (
-                            "reconstruction_remember_multi_entity_distract"
-                            if args.stage2_train or args.stage2_valid
-                            else "reconstruction_and_explicit_remember"
+                            "reconstruction_remember_multi_entity_distract_"
+                            "update_forget_contrastive"
+                            if args.stage3_train or args.stage3_valid
+                            else (
+                                "reconstruction_remember_multi_entity_"
+                                "distract"
+                                if args.stage2_train or args.stage2_valid
+                                else "reconstruction_and_explicit_remember"
+                            )
                         )
                     )
                 ),

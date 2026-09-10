@@ -22,7 +22,7 @@
 
 int main(int argc, char **argv) {
     if (argc < 3) {
-        fprintf(stderr, "usage: %s <model.gguf> --encode|--eos|--serve-decode|--meta|--logits ids...\n",
+        fprintf(stderr, "usage: %s <model.gguf> --encode|--eos|--serve-decode|--dump-vocab|--dump-roundtrip-vocab|--meta|--logits ids...\n",
                 argv[0]);
         return 2;
     }
@@ -119,6 +119,37 @@ int main(int argc, char **argv) {
             }
             printf("\n");
             fflush(stdout);
+        }
+    } else if (strcmp(argv[2], "--dump-vocab") == 0) {
+        int vocab = bitnet_vocab_size(model);
+        for (int token = 0; token < vocab; ++token) {
+            char decoded[512];
+            int n = bitnet_decode_token(
+                model, token, decoded, (int)sizeof decoded);
+            printf("%d ", token);
+            for (int i = 0; i < n; ++i)
+                printf("%02x", (unsigned char)decoded[i]);
+            printf("\n");
+        }
+    } else if (strcmp(argv[2], "--dump-roundtrip-vocab") == 0) {
+        int vocab = bitnet_vocab_size(model);
+        for (int token = 0; token < vocab; ++token) {
+            char decoded[512];
+            int encoded[8];
+            int n = bitnet_decode_token(
+                model, token, decoded, (int)sizeof decoded - 1);
+            if (n <= 0 || n >= (int)sizeof decoded ||
+                memchr(decoded, '\0', (size_t)n) != NULL)
+                continue;
+            decoded[n] = '\0';
+            if (bitnet_tokenize_ex(
+                    model, decoded, encoded,
+                    (int)(sizeof encoded / sizeof encoded[0]), 0) != 1)
+                continue;
+            printf("%d ", token);
+            for (int i = 0; i < n; ++i)
+                printf("%02x", (unsigned char)decoded[i]);
+            printf("\n");
         }
     } else if (strcmp(argv[2], "--meta") == 0) {
         printf("eos %d\n", bitnet_eos_token(model));
