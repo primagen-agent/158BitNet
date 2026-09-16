@@ -9,8 +9,6 @@ Math contract (src/bitnet.c bitnet_eval):
   the row deinterleave), scores * 1/sqrt(head_dim), causal.
 - FFN: SiLU(gate)*up then down; residual scale 1.0 (llama arch).
 - output: output_norm RMSNorm then separate Q6_K output projection (not tied).
-- Metis hook at the LAST block: fusion replaces attn-branch BEFORE the
-  residual add (matches metis_apply_layer being applied to `down`).
 
 RoPE theta (bitnet.c): theta_j = 1/ base^(2j/head_dim), divided by
 rope_factors[j] when present and > 0 (longrope; the runtime picks the LONG
@@ -161,21 +159,12 @@ class TorchBackbone(nn.Module):
                 "token_embd.weight", (gw.vocab, gw.hidden))
         out = torch.from_numpy(output_array.copy())
         self.out_proj = out.to(device=device, dtype=dtype)
-        self.backbone_lora = None
-        self.output_lora = None
-        self.answer_decoder = None
 
     def model_sha256(self) -> bytes:
         return sha256_file(self.gguf_path)
 
-    def linear(self, hidden, weight, block_index, layer_id):
-        output = F.linear(hidden, weight)
-        if self.backbone_lora is not None:
-            delta = self.backbone_lora.delta(
-                block_index, layer_id, hidden)
-            if delta is not None:
-                output = output + delta.to(output.dtype)
-        return output
+    def linear(self, hidden, weight):
+        return F.linear(hidden, weight)
 
     def _norm(self, gw, i, kind):
         arr = gw.get_f32(f"blk.{i}.{kind}.weight", (gw.hidden,))
@@ -186,26 +175,12 @@ class TorchBackbone(nn.Module):
         return torch.from_numpy(arr.copy()).to(device=self.device, dtype=torch.float32)
 
     def forward(self, tokens: torch.Tensor, start_pos: int = 0,
-                memory=None, logits_all: bool = False,
-                fuse_start: int = 0, memory_v6=None,
+                logits_all: bool = False,
                 return_hidden: bool = False,
                 return_hidden_layer: int | None = None,
                 return_hidden_layers: tuple[int, ...] | None = None):
-        """Grad scope: ALL backbone weights are requires_grad=False, so
-        autograd flows only through activations the memory module touches.
-        Callers wrap in torch.no_grad() for pure eval; for training, the
-        fusion (memory.fuse on the last block's attn branch) builds a graph
-        into the memory params and the loss backprop reaches them through
-        the last block's FFN + output projection (which are differentiable
-        ops on the fused activations even with frozen weights).
-        tokens: [T] int64 on device. start_pos: absolute position of
-        tokens[0] (KV cache is rebuilt each call -- trainer evals whole
-        sequences). memory: optional MetisMemoryTorch (v2 single-layer).
-        memory_v6: optional MetisV6Torch — fuses at EVERY memory layer with
-        pre-RoPE q reads + per-layer capture. fuse_start: fusion AND capture
-        apply only to tokens with index >= fuse_start (full-prefix replay:
-        earlier tokens must behave as they did when first processed, with
-        memory inactive).
+        """Run the frozen backbone without KV reuse.
+
         Returns normalized hidden states [T, hidden] when
         return_hidden=True; otherwise logits [T, vocab] if logits_all else
         [vocab]."""
@@ -213,18 +188,11 @@ class TorchBackbone(nn.Module):
         T = tokens.shape[0]
         device = self.device
         h = self.token_embd[tokens] * cfg.embedding_scale  # [T, D] bf16
-        if memory_v6 is not None:
-            token_rows = h if fuse_start == 0 else h[fuse_start:]
-            memory_v6.capture_token_identity(token_rows)
-            token_ids = tokens if fuse_start == 0 else tokens[fuse_start:]
-            memory_v6.capture_token_ids(token_ids)
         positions = torch.arange(start_pos, start_pos + T, device=device)
         cos, sin = rope_tables(cfg, positions, device, torch.bfloat16)
         cos = cos.to(self.dtype)
         sin = sin.to(self.dtype)
 
-        v6 = memory_v6
-        v6_caps = [] if v6 is not None else None
         selected_hidden = None
         selected_hiddens = {}
         if (
@@ -250,28 +218,19 @@ class TorchBackbone(nn.Module):
         ):
             raise ValueError(
                 "return_hidden_layers entries must be -1 or valid layers")
-        if (
-            return_hidden_layer is not None
-            or requested_layers is not None
-        ) and (
-                memory is not None or memory_v6 is not None):
-            raise ValueError(
-                "intermediate hidden extraction cannot run memory fusion")
         if requested_layers is not None and -1 in requested_layers:
             selected_hiddens[-1] = h
         for bi in range(cfg.n_layers):
             L = self.layers[bi]
-            is_last = bi == cfg.n_layers - 1
             resid = h
             hn = rms_norm(h, L["attn_norm"], cfg.rms_eps)  # bf16
 
-            q = self.linear(hn, L["q"], bi, 0).view(
+            q = self.linear(hn, L["q"]).view(
                 T, cfg.n_heads, cfg.head_dim).transpose(0, 1)
-            k = self.linear(hn, L["k"], bi, 1).view(
+            k = self.linear(hn, L["k"]).view(
                 T, cfg.n_kv_heads, cfg.head_dim).transpose(0, 1)
-            v = self.linear(hn, L["v"], bi, 2).view(
+            v = self.linear(hn, L["v"]).view(
                 T, cfg.n_kv_heads, cfg.head_dim).transpose(0, 1)
-            q_pre = q                                        # pre-RoPE [H, T, hd]
 
             q = apply_rope_hf(q, cos, sin)
             k = apply_rope_hf(k, cos, sin)
@@ -285,52 +244,18 @@ class TorchBackbone(nn.Module):
                 q, kx, vx, is_causal=True if start_pos == 0 else None,
                 scale=1.0 / math.sqrt(cfg.head_dim))
             if start_pos != 0:
-                # cross-chunk attention: [H, Tq, Tpast+Tk] -- caller passes
-                # whole sequences in Phase A so this branch is unused.
                 raise NotImplementedError("start_pos != 0 requires KV cache")
             attn = att.transpose(0, 1).reshape(T, cfg.q_dim)  # [T, q_dim]
-            down = self.linear(attn, L["o"], bi, 3)          # [T, D] bf16
-
-            if is_last and memory is not None:
-                # capture attn-normed rows for the commit (C runtime captures
-                # `hidden` == hn after the pointer swap); only the current
-                # chunk's rows (index >= fuse_start) are captured/fused
-                if fuse_start > 0:
-                    hn_cur = hn[fuse_start:]
-                else:
-                    hn_cur = hn
-                memory.capture(hn_cur)
-                if memory.active:
-                    if fuse_start > 0:
-                        down_fused = memory.fuse(down[fuse_start:], hn_cur)
-                        down = torch.cat([down[:fuse_start], down_fused],
-                                         dim=0)
-                    else:
-                        down = memory.fuse(down, hn)
-
-            if v6 is not None:
-                slot = v6.slot_of(bi)
-                if slot is not None:
-                    # v4 read input: the layer's INPUT residual (raw, not
-                    # normed) — the reference query_proj's input domain.
-                    h_raw_cur = resid if fuse_start == 0 else resid[fuse_start:]
-                    v6_caps.append((slot, h_raw_cur))
-                    if v6.active:
-                        if fuse_start > 0:
-                            down_fused = v6.fuse(slot, down[fuse_start:], h_raw_cur)
-                            down = torch.cat([down[:fuse_start], down_fused],
-                                             dim=0)
-                        else:
-                            down = v6.fuse(slot, down, h_raw_cur)
+            down = self.linear(attn, L["o"])                 # [T, D] bf16
 
             h = resid + down * cfg.residual_scale
 
             resid2 = h
             hn2 = rms_norm(h, L["ffn_norm"], cfg.rms_eps)
-            g = self.linear(hn2, L["gate"], bi, 4)
-            u = self.linear(hn2, L["up"], bi, 5)
+            g = self.linear(hn2, L["gate"])
+            u = self.linear(hn2, L["up"])
             act = F.silu(g) * u
-            dout = self.linear(act, L["down"], bi, 6)
+            dout = self.linear(act, L["down"])
             h = resid2 + dout * cfg.residual_scale
             if return_hidden_layer == bi:
                 selected_hidden = h
@@ -339,18 +264,6 @@ class TorchBackbone(nn.Module):
                 selected_hiddens[bi] = h
                 if bi == max(requested_layers):
                     break
-
-        if v6 is not None and v6_caps:
-            # deliver per-layer captures in LAYER order (slot index), with
-            # slots that saw no fusion this call contributing nothing
-            per_layer = [None] * v6.n_layers
-            for entry in v6_caps:
-                # The hyper-memory applies the layer input norm itself.
-                # Capturing the already-normalized rows here would apply
-                # input_layernorm twice and diverge from the deployment
-                # runtime as well as the paper's PreNorm(H) definition.
-                per_layer[entry[0]] = entry[1]
-            v6.capture(per_layer)
 
         if return_hidden_layer is not None:
             return selected_hidden
@@ -361,21 +274,7 @@ class TorchBackbone(nn.Module):
         h = rms_norm(h, self.out_norm, cfg.rms_eps)
         if return_hidden:
             return h
-        if self.answer_decoder is not None:
-            memory_summary = (
-                (
-                    v6.answer_memory_layers()
-                    if self.answer_decoder.structured_memory
-                    else v6.answer_memory_summary()
-                )
-                if (
-                    v6 is not None
-                    and self.answer_decoder.memory_aware
-                ) else None)
-            h = self.answer_decoder(h, memory_summary)
         logits = F.linear(h, self.out_proj)
-        if self.output_lora is not None:
-            logits = logits + self.output_lora(h)
         if cfg.logit_scale != 0.0:
             logits = logits / cfg.logit_scale
         return logits if logits_all else logits[-1]

@@ -2,9 +2,10 @@
 #include "metis/episodic_store.h"
 #include "metis/event_store.h"
 #include "metis/memory_controller.h"
-#include "metis/memory_pointer.h"
-#include "metis/memory_retriever.h"
-#include "metis/retrieval_index.h"
+#include "metis/typed_link_model.h"
+#include "metis/typed_pair_encoder.h"
+#include "metis/typed_query_activator.h"
+#include "metis/typed_writer_model.h"
 
 #include "third_party/cJSON/cJSON.h"
 #include "third_party/mongoose/mongoose.h"
@@ -39,17 +40,13 @@ typedef struct server_config {
     float repeat_penalty;
     const char *lora_path;
     float lora_scale;
-    const char *memory_model_path;
     const char *memory_state_dir;
     int episodic_memory;
-    int episodic_context_injection;
-    int episodic_top_k;
     const char *memory_controller_path;
-    const char *memory_pointer_path;
-    const char *memory_retriever_path;
-    float episodic_lexical_weight;
-    float episodic_priority_weight;
-    float memory_address_threshold;
+    const char *typed_pair_path;
+    const char *typed_link_path;
+    const char *typed_query_path;
+    const char *typed_writer_path;
 } server_config_t;
 
 typedef struct cached_session {
@@ -63,7 +60,6 @@ typedef struct cached_session {
     size_t transcript_cap;
     metis_episodic_store_t episodic;
     metis_event_store_t events;
-    metis_retrieval_index_t retrieval_index;
     time_t last_used;
     struct cached_session *next;
 } cached_session_t;
@@ -73,8 +69,10 @@ typedef struct server_state {
     server_config_t cfg;
     cached_session_t *sessions;
     metis_memory_controller_t *memory_controller;
-    metis_memory_pointer_t *memory_pointer;
-    metis_memory_retriever_t *memory_retriever;
+    metis_typed_pair_encoder_t *typed_pair;
+    metis_typed_link_model_t *typed_link;
+    metis_typed_query_activator_t *typed_query;
+    metis_typed_writer_model_t *typed_writer;
 } server_state_t;
 
 typedef struct generation_result {
@@ -85,8 +83,6 @@ typedef struct generation_result {
     int cached_tokens;
     int reused_tokens;
     int context_tokens;
-    unsigned long long memory_activation_reads;
-    double memory_activation_l2;
     int finish_reason_length;
     double prefill_sec;
     double decode_sec;
@@ -109,11 +105,6 @@ typedef struct generation_state {
     int reused_tokens;
     int max_tokens;
     int emitted;
-    int commit_memory;
-    int memory_activation_changed;
-    int memory_activation_before;
-    unsigned long long memory_activation_count_start;
-    double memory_activation_l2_start;
     int finish_reason_length;
     char utf8_pending[4];
     int utf8_pending_len;
@@ -351,25 +342,13 @@ static cached_session_t *find_session(server_state_t *state, const char *session
 }
 
 static void reset_session(cached_session_t *session) {
-    int episodic_key_dim;
-    int retrieval_rank;
     if (session == NULL) return;
-    episodic_key_dim = session->episodic.key_dim;
-    retrieval_rank = session->retrieval_index.rank;
     bitnet_reset_context(session->ctx);
-    bitnet_memory_reset(session->ctx);   /* no-op without metis attached */
     session->history_count = 0;
     session->transcript_len = 0;
     if (session->transcript != NULL) session->transcript[0] = '\0';
     metis_episodic_clear(&session->episodic);
     metis_event_store_clear(&session->events);
-    metis_retrieval_index_clear(&session->retrieval_index);
-    if (episodic_key_dim > 0)
-        (void)metis_episodic_configure_keys(
-            &session->episodic, episodic_key_dim);
-    if (retrieval_rank > 0)
-        (void)metis_retrieval_index_configure(
-            &session->retrieval_index, retrieval_rank);
 }
 
 /* Clear transient conversation/KV state without touching attached memory.
@@ -377,7 +356,6 @@ static void reset_session(cached_session_t *session) {
 static void reset_session_context_only(cached_session_t *session) {
     if (session == NULL) return;
     bitnet_reset_context(session->ctx);
-    bitnet_memory_discard_captured(session->ctx);
     session->history_count = 0;
     session->transcript_len = 0;
     if (session->transcript != NULL) session->transcript[0] = '\0';
@@ -393,32 +371,12 @@ static cached_session_t *create_session(server_state_t *state, const char *sessi
     session->id = dup_n(session_id, strlen(session_id));
     metis_episodic_init(&session->episodic);
     metis_event_store_init(&session->events);
-    metis_retrieval_index_init(&session->retrieval_index);
-    if (state->memory_controller != NULL &&
-        metis_episodic_configure_keys(
-            &session->episodic,
-            state->memory_controller->rank) != 0) {
-        free(session->id);
-        free(session);
-        return NULL;
-    }
-    if (state->memory_retriever != NULL &&
-        metis_retrieval_index_configure(
-            &session->retrieval_index,
-            state->memory_retriever->rank) != 0) {
-        metis_episodic_free(&session->episodic);
-        metis_event_store_clear(&session->events);
-        free(session->id);
-        free(session);
-        return NULL;
-    }
     session->capacity = state->cfg.max_context_tokens;
     session->ctx = bitnet_create_context(state->model, session->capacity);
     session->history_tokens = (int *)calloc((size_t)session->capacity, sizeof(*session->history_tokens));
     if (session->id == NULL || session->ctx == NULL || session->history_tokens == NULL) {
         free(session->history_tokens);
         bitnet_free_context(session->ctx);
-        metis_retrieval_index_clear(&session->retrieval_index);
         metis_episodic_free(&session->episodic);
         metis_event_store_clear(&session->events);
         free(session->id);
@@ -428,25 +386,6 @@ static cached_session_t *create_session(server_state_t *state, const char *sessi
     session->last_used = time(NULL);
     session->next = state->sessions;
     state->sessions = session;
-
-    /* Memory model (if one was loaded in main): bind it to this session's
-     * context. bitnet_model_t is opaque here; cfg.memory_model_path != NULL
-     * implies the model carries a loaded memory model because main exits on
-     * load failure. bitnet_context_attach_memory needs the same model the
-     * context was created from (checked there). */
-    if (state->cfg.memory_model_path != NULL) {
-        if (bitnet_context_attach_memory(session->ctx, state->model) != 0) {
-            state->sessions = session->next;
-            free(session->history_tokens);
-            bitnet_free_context(session->ctx);
-            metis_retrieval_index_clear(&session->retrieval_index);
-            metis_episodic_free(&session->episodic);
-            metis_event_store_clear(&session->events);
-            free(session->id);
-            free(session);
-            return NULL;
-        }
-    }
     return session;
 }
 
@@ -459,7 +398,6 @@ static void free_sessions(server_state_t *state) {
         free(session->transcript);
         metis_episodic_free(&session->episodic);
         metis_event_store_clear(&session->events);
-        metis_retrieval_index_clear(&session->retrieval_index);
         free(session->id);
         free(session);
         session = next;
@@ -570,15 +508,6 @@ static char *build_chat_prompt(server_state_t *state, cJSON *root, int enable_th
     if (state != NULL && bitnet_chat_template_kind(state->model) == 1) {
         return build_chat_prompt_bitnet_b158(root);
     }
-    /* Memory-model sessions use the reference Metis protocol rendering:
-     * plain assistant header, NO injected think block. Probe2 evidence:
-     * the trained memory models collapse (<answer>/<think> fragments)
-     * when a think block precedes the answer; without it recall works.
-     * Ignore enable_thinking in this mode — the memory training
-     * distribution defines the template. */
-    if (state != NULL && state->cfg.memory_model_path != NULL) {
-        return build_chat_prompt_chatml(root, 0);
-    }
     return build_chat_prompt_chatml(root, !enable_thinking);
 }
 
@@ -642,10 +571,6 @@ static void generation_result_free(generation_result_t *result) {
 
 static void generation_state_free(generation_state_t *gen) {
     if (gen == NULL) return;
-    if (gen->memory_activation_changed && gen->ctx != NULL) {
-        (void)bitnet_memory_set_active(
-            gen->ctx, gen->memory_activation_before);
-    }
     if (gen->owns_context) {
         free(gen->history_tokens);
         bitnet_free_context(gen->ctx);
@@ -663,8 +588,6 @@ static int prepare_generation(server_state_t *state,
                               int max_tokens,
                               const char *session_id,
                               int reset_existing_session,
-                              int commit_memory,
-                              int memory_activation,
                               generation_state_t *gen,
                               char *error,
                               size_t error_size) {
@@ -685,7 +608,6 @@ static int prepare_generation(server_state_t *state,
         return -1;
     }
     memset(gen, 0, sizeof(*gen));
-    gen->commit_memory = commit_memory;
     if (max_tokens <= 0) max_tokens = state->cfg.default_max_tokens;
     if (max_tokens > state->cfg.max_request_tokens) max_tokens = state->cfg.max_request_tokens;
 
@@ -791,28 +713,6 @@ static int prepare_generation(server_state_t *state,
         return -1;
     }
 
-    if (memory_activation >= 0 &&
-        state->cfg.memory_model_path != NULL) {
-        gen->memory_activation_before =
-            bitnet_memory_active(gen->ctx);
-        if (gen->memory_activation_before != memory_activation) {
-            if (bitnet_memory_set_active(
-                    gen->ctx, memory_activation) != 0) {
-                snprintf(
-                    error, error_size,
-                    "failed to override native memory activation");
-                free(prompt_tokens);
-                generation_state_free(gen);
-                return -1;
-            }
-            gen->memory_activation_changed = 1;
-        }
-    }
-    gen->memory_activation_count_start =
-        bitnet_memory_activation_count(gen->ctx);
-    gen->memory_activation_l2_start =
-        bitnet_memory_activation_l2_sum(gen->ctx);
-
     if (n_prompt_tokens > 0) {
         const int *eval_tokens = prompt_tokens + prompt_offset;
         prefill_start = monotonic_seconds();
@@ -823,12 +723,6 @@ static int prepare_generation(server_state_t *state,
             return -1;
         }
         prefill_end = monotonic_seconds();
-        /* v9b protocol (best measured, 52% on v9): the exchange is
-         * committed AFTER generation (user prefill + assistant ack rows
-         * accumulate and commit in finish_generation / the streaming
-         * tail) — matching the reference TRAINER, which commits each
-         * full chunk incl. acks. Nothing to do here; decode rows
-         * accumulate. bitnet_memory_commit is a no-op without memory. */
         memcpy(gen->history_tokens + gen->history_count, eval_tokens,
                (size_t)n_prompt_tokens * sizeof(*gen->history_tokens));
         gen->history_count += n_prompt_tokens;
@@ -954,19 +848,6 @@ static int finish_generation(generation_state_t *gen,
             return -1;
         }
     }
-    /* Commit before transferring result ownership so a failure can be
-     * reported cleanly. Reset the memory state because a failed multi-layer
-     * commit may already have updated an earlier layer. */
-    if (gen->session != NULL && !gen->commit_memory) {
-        bitnet_memory_discard_captured(gen->ctx);
-    } else if (
-        gen->session != NULL && bitnet_memory_active(gen->ctx) &&
-            gen->emitted > 0 && bitnet_memory_commit(gen->ctx) != 0
-    ) {
-        bitnet_memory_reset(gen->ctx);
-        snprintf(error, error_size, "failed to commit memory model states");
-        return -1;
-    }
     result->text = gen->text;
     gen->text = NULL;
     result->session_id = gen->session_id == NULL ? NULL :
@@ -976,18 +857,6 @@ static int finish_generation(generation_state_t *gen,
     result->cached_tokens = gen->cached_tokens;
     result->reused_tokens = gen->reused_tokens;
     result->context_tokens = gen->history_count;
-    {
-        const unsigned long long activation_count =
-            bitnet_memory_activation_count(gen->ctx);
-        const double activation_l2 =
-            bitnet_memory_activation_l2_sum(gen->ctx);
-        result->memory_activation_reads =
-            activation_count >= gen->memory_activation_count_start ?
-            activation_count - gen->memory_activation_count_start : 0;
-        result->memory_activation_l2 =
-            activation_l2 >= gen->memory_activation_l2_start ?
-            activation_l2 - gen->memory_activation_l2_start : 0.0;
-    }
     result->finish_reason_length = gen->finish_reason_length;
     result->prefill_sec = gen->prefill_sec;
     result->decode_sec = gen->decode_sec;
@@ -1000,8 +869,6 @@ static int generate_text(server_state_t *state,
                          int max_tokens,
                          const char *session_id,
                          int reset_existing_session,
-                         int commit_memory,
-                         int memory_activation,
                          generation_result_t *result,
                          char *error,
                          size_t error_size) {
@@ -1011,7 +878,7 @@ static int generate_text(server_state_t *state,
 
     if (prepare_generation(
             state, prompt, max_tokens, session_id,
-            reset_existing_session, commit_memory, memory_activation,
+            reset_existing_session,
             &gen, error, error_size) != 0) {
         return -1;
     }
@@ -1128,12 +995,6 @@ static cJSON *build_session_json(const generation_result_t *result) {
     json_add_number(session, "cached_tokens", result->cached_tokens);
     json_add_number(session, "reused_tokens", result->reused_tokens);
     json_add_number(session, "context_tokens", result->context_tokens);
-    json_add_number(
-        session, "memory_activation_reads",
-        (double)result->memory_activation_reads);
-    json_add_number(
-        session, "memory_activation_l2",
-        result->memory_activation_l2);
     return session;
 }
 
@@ -1200,8 +1061,6 @@ static void handle_streaming_completion(struct mg_connection *c,
                                         int max_tokens,
                                         const char *session_id,
                                         int reset_existing_session,
-                                        int commit_memory,
-                                        int memory_activation,
                                         int is_chat) {
     char error[256];
     char id[64];
@@ -1214,7 +1073,7 @@ static void handle_streaming_completion(struct mg_connection *c,
              is_chat ? "chatcmpl" : "cmpl", (long long)time(NULL));
     if (prepare_generation(
             state, prompt, max_tokens, session_id,
-            reset_existing_session, commit_memory, memory_activation,
+            reset_existing_session,
             &gen, error, sizeof(error)) != 0) {
         send_error(c, 500, "server_error", error);
         return;
@@ -1250,24 +1109,6 @@ static void handle_streaming_completion(struct mg_connection *c,
                 cJSON_Delete(chunk);
             }
         }
-    }
-    if (!failed && gen.session != NULL && !gen.commit_memory) {
-        bitnet_memory_discard_captured(gen.ctx);
-    } else if (
-        !failed && gen.session != NULL &&
-        bitnet_memory_active(gen.ctx) &&
-            gen.emitted > 0 && bitnet_memory_commit(gen.ctx) != 0
-    ) {
-        cJSON *error_chunk = cJSON_CreateObject();
-        bitnet_memory_reset(gen.ctx);
-        if (error_chunk != NULL) {
-            json_add_string(
-                error_chunk, "error",
-                "failed to commit memory model states");
-            send_sse_json(c, error_chunk);
-            cJSON_Delete(error_chunk);
-        }
-        failed = 1;
     }
     if (!failed) {
         const char *finish_reason = gen.finish_reason_length ? "length" : "stop";
@@ -1305,8 +1146,9 @@ static void handle_models(struct mg_connection *c, server_state_t *state) {
     cJSON_Delete(root);
 }
 
-static int memory_state_path(const server_state_t *state, const char *sid,
-                             char *out, size_t out_size) {
+static int memory_session_base_path(
+    const server_state_t *state, const char *sid,
+    char *out, size_t out_size) {
     size_t n;
     if (state == NULL || state->cfg.memory_state_dir == NULL || sid == NULL)
         return -1;
@@ -1316,18 +1158,15 @@ static int memory_state_path(const server_state_t *state, const char *sid,
         unsigned char ch = (unsigned char)sid[i];
         if (!(isalnum(ch) || ch == '-' || ch == '_')) return -1;
     }
-    return snprintf(out, out_size, "%s/%s.bnstate",
+    return snprintf(out, out_size, "%s/%s",
                     state->cfg.memory_state_dir, sid) < (int)out_size ? 0 : -1;
 }
 
 static int episodic_state_path(const server_state_t *state, const char *sid,
                                char *out, size_t out_size) {
     char base[1024];
-    size_t length;
-    if (memory_state_path(state, sid, base, sizeof base) != 0) return -1;
-    length = strlen(base);
-    if (length < strlen(".bnstate")) return -1;
-    base[length - strlen(".bnstate")] = '\0';
+    if (memory_session_base_path(
+            state, sid, base, sizeof base) != 0) return -1;
     return snprintf(out, out_size, "%s.bnepisodic", base) < (int)out_size
         ? 0 : -1;
 }
@@ -1335,11 +1174,8 @@ static int episodic_state_path(const server_state_t *state, const char *sid,
 static int event_state_path(const server_state_t *state, const char *sid,
                             char *out, size_t out_size) {
     char base[1024];
-    size_t length;
-    if (memory_state_path(state, sid, base, sizeof base) != 0) return -1;
-    length = strlen(base);
-    if (length < strlen(".bnstate")) return -1;
-    base[length - strlen(".bnstate")] = '\0';
+    if (memory_session_base_path(
+            state, sid, base, sizeof base) != 0) return -1;
     return snprintf(out, out_size, "%s.bnevent", base) < (int)out_size
         ? 0 : -1;
 }
@@ -1419,6 +1255,85 @@ static memory_record_action_t inferred_memory_action(const char *text) {
         MEMORY_ACTION_STORE : MEMORY_ACTION_IGNORE;
 }
 
+static int starts_with_ascii_ci(
+    const char *text, const char *prefix) {
+    if (text == NULL || prefix == NULL) return 0;
+    while (*text != '\0' &&
+           isspace((unsigned char)*text))
+        ++text;
+    while (*prefix != '\0') {
+        if (*text == '\0' ||
+            tolower((unsigned char)*text) !=
+            tolower((unsigned char)*prefix))
+            return 0;
+        ++text;
+        ++prefix;
+    }
+    return *text == '\0' ||
+           isspace((unsigned char)*text) ||
+           ispunct((unsigned char)*text);
+}
+
+static int typed_auto_input_is_query(const char *text) {
+    static const char *prefixes[] = {
+        "what", "who", "when", "where", "why", "how",
+        "which", "is", "are", "was", "were", "do", "does",
+        "did", "can", "could", "would", "should", "will",
+        "tell me", "give me", "show me", "explain",
+        "summarize", "write", "generate", "translate",
+        "help", "please",
+    };
+    const char *end;
+    if (text == NULL) return 1;
+    end = text + strlen(text);
+    while (end > text &&
+           isspace((unsigned char)end[-1]))
+        --end;
+    if (end == text || end[-1] == '?') return 1;
+    for (size_t index = 0;
+         index < sizeof prefixes / sizeof prefixes[0]; ++index)
+        if (starts_with_ascii_ci(text, prefixes[index]))
+            return 1;
+    return 0;
+}
+
+static memory_record_action_t typed_auto_fallback_action(
+    const char *text) {
+    static const char *fact_cues[] = {
+        " is ", " are ", " was ", " has ", " have ",
+        " uses ", " prefers ", " likes ", " lives ",
+        " works ", " selected ", " chose ", " says ",
+        " said ", " appears as ", " represented by ",
+        " currently ", " record ", " retain ",
+    };
+    if (typed_auto_input_is_query(text))
+        return MEMORY_ACTION_IGNORE;
+    if (contains_ascii_ci(text, "forget") ||
+        contains_ascii_ci(text, "delete") ||
+        contains_ascii_ci(text, "remove from memory") ||
+        contains_ascii_ci(text, "purge"))
+        return MEMORY_ACTION_DELETE;
+    if (contains_ascii_ci(text, " is now ") ||
+        contains_ascii_ci(text, " changed ") ||
+        contains_ascii_ci(text, " update ") ||
+        contains_ascii_ci(text, " replace ") ||
+        contains_ascii_ci(text, " moved on from ") ||
+        contains_ascii_ci(text, " no longer ") ||
+        contains_ascii_ci(text, " supersed"))
+        return MEMORY_ACTION_UPDATE;
+    for (size_t index = 0;
+         index < sizeof fact_cues / sizeof fact_cues[0]; ++index)
+        if (contains_ascii_ci(text, fact_cues[index]))
+            return MEMORY_ACTION_STORE;
+    return MEMORY_ACTION_IGNORE;
+}
+
+static int request_has_memory_action(cJSON *request) {
+    cJSON *action = cJSON_GetObjectItem(request, "memory_action");
+    return action != NULL && cJSON_IsString(action) &&
+           action->valuestring != NULL;
+}
+
 static memory_record_action_t request_memory_action(
     server_state_t *state, cJSON *request, const char *text) {
     cJSON *action = cJSON_GetObjectItem(request, "memory_action");
@@ -1455,70 +1370,6 @@ static const char *memory_action_name(memory_record_action_t action) {
         case MEMORY_ACTION_IGNORE:
         default: return "ignore";
     }
-}
-
-static char *prepend_episodic_context(
-    const char *prompt, const char *records) {
-    static const char prefix[] =
-        "<|im_start|>system\n"
-        "The following are exact long-term memory records. Prefer newer "
-        "records when values conflict. A delete or forget record invalidates "
-        "the matching older value. Answer from these records exactly.\n";
-    static const char suffix[] = "<|im_end|>\n";
-    size_t size;
-    char *result;
-    if (prompt == NULL || records == NULL) return NULL;
-    size = strlen(prefix) + strlen(records) + strlen(suffix) +
-           strlen(prompt) + 1;
-    result = (char *)malloc(size);
-    if (result == NULL) return NULL;
-    snprintf(result, size, "%s%s%s%s", prefix, records, suffix, prompt);
-    return result;
-}
-
-static int controller_encode_key(
-    server_state_t *state, const char *text, int is_query, float *output) {
-    static const char query_prefix[] =
-        "Find the stored conversation facts needed to answer this question: ";
-    char *encoded_text = NULL;
-    const char *input = text;
-    int tokens[512];
-    int count;
-    bitnet_context_t *context;
-    const float *hidden;
-    if (state == NULL || state->memory_controller == NULL ||
-        text == NULL || output == NULL) return -1;
-    if (is_query) {
-        size_t size = strlen(query_prefix) + strlen(text) + 1;
-        encoded_text = (char *)malloc(size);
-        if (encoded_text == NULL) return -1;
-        snprintf(encoded_text, size, "%s%s", query_prefix, text);
-        input = encoded_text;
-    }
-    count = bitnet_tokenize_ex(
-        state->model, input, tokens,
-        (int)(sizeof tokens / sizeof tokens[0]), 1);
-    free(encoded_text);
-    if (count <= 0) return -1;
-    context = bitnet_create_context(
-        state->model, count < MIN_CONTEXT_TOKENS ?
-        MIN_CONTEXT_TOKENS : count + 1);
-    if (context == NULL) return -1;
-    if (bitnet_eval(context, tokens, count) != 0) {
-        bitnet_free_context(context);
-        return -1;
-    }
-    hidden = state->memory_controller->pooling == 2 ?
-        bitnet_get_last_pooled_hidden(context) :
-        bitnet_get_last_hidden(context);
-    if (hidden == NULL ||
-        metis_memory_controller_project(
-            state->memory_controller, hidden, is_query, output) != 0) {
-        bitnet_free_context(context);
-        return -1;
-    }
-    bitnet_free_context(context);
-    return 0;
 }
 
 static int controller_classify_action(
@@ -1570,601 +1421,160 @@ static int controller_classify_action(
     return action;
 }
 
-static int pointer_extract_write_record(
-    server_state_t *state, const char *record,
-    char **answer, float *confidence);
+static int select_typed_active_event(
+    server_state_t *state, cached_session_t *session,
+    const char *current_text,
+    const metis_event_record_t **selected_event,
+    float *selected_score, float *exists_score,
+    size_t *candidate_count, int query_mode);
 
-static int retriever_encode_text(
-    server_state_t *state, const char *text, int is_query,
-    float **global_key, float **token_keys, size_t *token_count) {
-    static const char query_prefix[] = "Evidence query: ";
-    static const char entry_prefix[] = "Structured memory evidence: ";
-    const char *prefix = is_query ? query_prefix : entry_prefix;
-    char *input = NULL;
-    int tokens[128];
+typedef struct typed_text_encoding {
+    float *hidden;
+    float *identity;
+    int *tokens;
+    size_t token_count;
+} typed_text_encoding_t;
+
+static void typed_text_encoding_clear(
+    typed_text_encoding_t *encoding) {
+    if (encoding == NULL) return;
+    free(encoding->hidden);
+    free(encoding->identity);
+    free(encoding->tokens);
+    memset(encoding, 0, sizeof *encoding);
+}
+
+static int encode_typed_pair_text(
+    server_state_t *state, const char *text,
+    typed_text_encoding_t *output) {
+    int tokens[256];
+    int band_start[256], band_end[256];
     int count;
+    int capacity;
+    int hidden_dim;
+    int bands;
+    size_t hidden_count;
     bitnet_context_t *context = NULL;
     const float *hidden;
-    float *global = NULL, *projected = NULL;
-    size_t input_size;
-    if (global_key != NULL) *global_key = NULL;
-    if (token_keys != NULL) *token_keys = NULL;
-    if (token_count != NULL) *token_count = 0;
-    if (state == NULL || state->memory_retriever == NULL ||
-        text == NULL || global_key == NULL ||
-        token_keys == NULL || token_count == NULL)
+    if (output != NULL) memset(output, 0, sizeof *output);
+    if (state == NULL || state->model == NULL ||
+        state->typed_pair == NULL || text == NULL ||
+        text[0] == '\0' || output == NULL)
         return -1;
-    input_size = strlen(prefix) + strlen(text) + 1;
-    input = (char *)malloc(input_size);
-    if (input == NULL) return -1;
-    snprintf(input, input_size, "%s%s", prefix, text);
+    hidden_dim = state->typed_pair->hidden_dim;
+    bands = state->typed_pair->band_count;
+    if (bands <= 0 ||
+        bands > (int)(sizeof band_start / sizeof band_start[0]))
+        return -1;
+    for (int band = 0; band < bands; ++band) {
+        band_start[band] =
+            (int)state->typed_pair->band_start[band];
+        band_end[band] =
+            (int)state->typed_pair->band_end[band];
+    }
     count = bitnet_tokenize_ex(
-        state->model, input, tokens,
+        state->model, text, tokens,
         (int)(sizeof tokens / sizeof tokens[0]), 1);
-    free(input);
     if (count <= 0) return -1;
-    context = bitnet_create_context(
-        state->model, count < MIN_CONTEXT_TOKENS ?
-        MIN_CONTEXT_TOKENS : count + 1);
+    capacity = count < MIN_CONTEXT_TOKENS ?
+        MIN_CONTEXT_TOKENS : count;
+    context = bitnet_create_context(state->model, capacity);
     if (context == NULL ||
-        bitnet_eval(context, tokens, count) != 0)
+        bitnet_context_configure_layer_bands(
+            context, band_start, band_end, bands) != 0 ||
+        bitnet_eval_hidden(context, tokens, count) != 0)
         goto fail;
-    hidden = bitnet_get_last_eval_hidden(context);
+    hidden = bitnet_get_last_eval_layer_bands(context);
     if (hidden == NULL ||
-        bitnet_last_eval_hidden_count(context) != count)
+        bitnet_last_eval_layer_band_token_count(context) != count ||
+        bitnet_layer_band_count(context) != bands)
         goto fail;
-    global = (float *)malloc(
-        (size_t)state->memory_retriever->rank * sizeof(float));
-    projected = (float *)malloc(
-        (size_t)count *
-        (size_t)state->memory_retriever->rank * sizeof(float));
-    if (global == NULL || projected == NULL ||
-        metis_memory_retriever_encode(
-            state->memory_retriever, hidden, (size_t)count,
-            is_query, global, projected) != 0)
+    if ((size_t)count > SIZE_MAX / (size_t)bands ||
+        (size_t)count * (size_t)bands >
+            SIZE_MAX / (size_t)hidden_dim)
         goto fail;
+    hidden_count = (size_t)count *
+                   (size_t)bands * (size_t)hidden_dim;
+    output->hidden = (float *)malloc(
+        hidden_count * sizeof(float));
+    output->identity = (float *)malloc(
+        (size_t)count * (size_t)hidden_dim * sizeof(float));
+    output->tokens = (int *)malloc(
+        (size_t)count * sizeof(int));
+    if (output->hidden == NULL || output->identity == NULL ||
+        output->tokens == NULL)
+        goto fail;
+    memcpy(output->hidden, hidden,
+           hidden_count * sizeof(float));
+    if (bitnet_token_embedding_lookup(
+            state->model, tokens, count, output->identity,
+            (size_t)count * (size_t)hidden_dim) != 0)
+        goto fail;
+    memcpy(
+        output->tokens, tokens,
+        (size_t)count * sizeof(int));
+    output->token_count = (size_t)count;
     bitnet_free_context(context);
-    *global_key = global;
-    *token_keys = projected;
-    *token_count = (size_t)count;
     return 0;
 fail:
     bitnet_free_context(context);
-    free(global);
-    free(projected);
+    typed_text_encoding_clear(output);
     return -1;
 }
 
-static int index_episodic_record(
+static int extract_typed_value_answer(
     server_state_t *state, cached_session_t *session,
-    size_t record_index) {
-    float *global = NULL, *tokens = NULL;
-    size_t token_count = 0;
-    int result;
+    const char *query, char **answer,
+    float *activation_score, float *exists_score,
+    float *span_score, size_t *record_index) {
+    const metis_event_record_t *event = NULL;
+    const char *source;
+    size_t length;
+    size_t candidate_count = 0;
+    int selected;
     if (state == NULL || session == NULL ||
-        state->memory_retriever == NULL ||
-        record_index >= session->episodic.count)
+        state->typed_pair == NULL || state->typed_link == NULL ||
+        query == NULL || answer == NULL ||
+        activation_score == NULL || exists_score == NULL ||
+        span_score == NULL || record_index == NULL)
         return -1;
-    if (retriever_encode_text(
-            state, session->episodic.records[record_index], 0,
-            &global, &tokens, &token_count) != 0)
+    *answer = NULL;
+    selected = select_typed_active_event(
+        state, session, query, &event,
+        activation_score, exists_score, &candidate_count, 1);
+    if (selected <= 0) return selected;
+    if (event == NULL ||
+        event->raw_record_index >=
+            session->episodic.count)
         return -1;
-    result = metis_retrieval_index_set(
-        &session->retrieval_index, record_index,
-        global, tokens, token_count);
-    free(global);
-    free(tokens);
-    return result;
-}
-
-static void rebuild_retrieval_index(
-    server_state_t *state, cached_session_t *session) {
-    if (state == NULL || session == NULL ||
-        state->memory_retriever == NULL) return;
-    metis_retrieval_index_clear(&session->retrieval_index);
-    if (metis_retrieval_index_configure(
-            &session->retrieval_index,
-            state->memory_retriever->rank) != 0)
-        return;
-    for (size_t index = 0;
-         index < session->episodic.count; ++index) {
-        if (index_episodic_record(state, session, index) != 0) {
-            metis_retrieval_index_clear(
-                &session->retrieval_index);
-            (void)metis_retrieval_index_configure(
-                &session->retrieval_index,
-                state->memory_retriever->rank);
-            return;
-        }
-    }
+    source = session->episodic.records[event->raw_record_index];
+    length = strlen(source);
+    if (event->value_start >= event->value_end ||
+        event->value_end > length ||
+        strlen(event->value) !=
+            event->value_end - event->value_start ||
+        memcmp(
+            source + event->value_start, event->value,
+            event->value_end - event->value_start) != 0)
+        return -1;
+    *answer = dup_n(
+        source + event->value_start,
+        event->value_end - event->value_start);
+    if (*answer == NULL) return -1;
+    *span_score = 1.0f;
+    *record_index = event->raw_record_index;
+    return 1;
 }
 
 static int store_episodic_record(
     server_state_t *state, cached_session_t *session, const char *text,
     memory_record_action_t action, float priority) {
-    float *key = NULL;
-    char *extracted = NULL;
-    const char *stored_text = text;
-    int result;
-    size_t changed = SIZE_MAX;
-    size_t indexed = SIZE_MAX;
-    size_t count_before;
-    if (state == NULL || session == NULL || text == NULL) return -1;
-    if (action == MEMORY_ACTION_IGNORE) return 0;
-    count_before = session->episodic.count;
-    if ((action == MEMORY_ACTION_STORE ||
-         action == MEMORY_ACTION_UPDATE) &&
-        state->memory_pointer != NULL &&
-        state->memory_pointer->byte_mode) {
-        result = pointer_extract_write_record(
-            state, text, &extracted, &(float){0.0f});
-        if (result < 0) return -12;
-        if (result > 0) stored_text = extracted;
-    }
-    if (state->memory_controller != NULL) {
-        if (session->episodic.key_dim == 0 &&
-            metis_episodic_configure_keys(
-                &session->episodic,
-                state->memory_controller->rank) != 0) {
-            free(extracted);
-            return -10;
-        }
-        key = (float *)malloc(
-            (size_t)state->memory_controller->rank * sizeof(float));
-        if (key != NULL &&
-            controller_encode_key(state, text, 0, key) != 0) {
-            free(key);
-            key = NULL;
-        }
-        if (key == NULL && action != MEMORY_ACTION_STORE) {
-            free(extracted);
-            return -11;
-        }
-    }
-    if (action == MEMORY_ACTION_STORE) {
-        result = metis_episodic_add_with_priority(
-            &session->episodic, stored_text, key, priority);
-    } else if (key == NULL) {
-        result = -1;
-    } else if (action == MEMORY_ACTION_UPDATE) {
-        float threshold = (
-            state->memory_controller != NULL &&
-            state->memory_controller->action_projection != NULL) ?
-            state->memory_controller->address_threshold :
-            state->cfg.memory_address_threshold;
-        result = metis_episodic_upsert_with_key(
-            &session->episodic, stored_text, key, threshold, &changed);
-    } else {
-        float threshold = (
-            state->memory_controller != NULL &&
-            state->memory_controller->action_projection != NULL) ?
-            state->memory_controller->address_threshold :
-            state->cfg.memory_address_threshold;
-        result = metis_episodic_tombstone_with_key(
-            &session->episodic, text, key, threshold, &changed);
-    }
-    if (result == 0) {
-        if (changed != SIZE_MAX)
-            (void)metis_episodic_set_priority(
-                &session->episodic, changed, priority);
-        else if (session->episodic.count > count_before)
-            (void)metis_episodic_set_priority(
-                &session->episodic,
-                session->episodic.count - 1, priority);
-    }
-    if (result == 0 && state->memory_retriever != NULL) {
-        if (changed != SIZE_MAX) {
-            indexed = changed;
-        } else {
-            const char *wanted = (
-                action == MEMORY_ACTION_DELETE ? text : stored_text);
-            for (size_t index = session->episodic.count;
-                 index > 0; --index) {
-                if (strstr(
-                        session->episodic.records[index - 1],
-                        wanted) != NULL) {
-                    indexed = index - 1;
-                    break;
-                }
-            }
-            if (indexed == SIZE_MAX && session->episodic.count > 0)
-                indexed = session->episodic.count - 1;
-        }
-        if (indexed == SIZE_MAX ||
-            index_episodic_record(state, session, indexed) != 0)
-            rebuild_retrieval_index(state, session);
-    }
-    free(key);
-    free(extracted);
-    return result;
-}
-
-static int rank_episodic_records(
-    server_state_t *state, cached_session_t *session, const char *query,
-    size_t *indices, int max_results);
-
-static char *build_ranked_context(
-    const metis_episodic_store_t *store,
-    const size_t *indices, int count) {
-    size_t bytes = 1, offset = 0;
-    char *context;
-    if (store == NULL || indices == NULL || count <= 0) return NULL;
-    for (int i = 0; i < count; ++i)
-        bytes += strlen(store->records[indices[i]]) + 32;
-    context = (char *)malloc(bytes);
-    if (context == NULL) return NULL;
-    for (int i = 0; i < count; ++i) {
-        int written = snprintf(
-            context + offset, bytes - offset,
-            "[memory %d] %s\n", i + 1,
-            store->records[indices[i]]);
-        if (written < 0 || (size_t)written >= bytes - offset) {
-            free(context);
-            return NULL;
-        }
-        offset += (size_t)written;
-    }
-    return context;
-}
-
-static char *retrieve_episodic_context(
-    server_state_t *state, cached_session_t *session,
-    const char *query, int top_k) {
-    float *query_key = NULL;
-    char *context;
-    if (state == NULL || session == NULL || query == NULL) return NULL;
-    if (state->memory_retriever != NULL &&
-        metis_retrieval_index_complete(
-            &session->retrieval_index,
-            session->episodic.count)) {
-        size_t *indices = (size_t *)malloc(
-            (size_t)top_k * sizeof *indices);
-        int count;
-        if (indices == NULL) return NULL;
-        count = rank_episodic_records(
-            state, session, query, indices, top_k);
-        context = build_ranked_context(
-            &session->episodic, indices, count);
-        free(indices);
-        if (context != NULL) return context;
-    }
-    if (state->memory_controller != NULL) {
-        query_key = (float *)malloc(
-            (size_t)state->memory_controller->rank * sizeof(float));
-        if (query_key != NULL &&
-            controller_encode_key(state, query, 1, query_key) == 0) {
-            context = metis_episodic_build_hybrid_context(
-                &session->episodic, query, query_key,
-                state->cfg.episodic_lexical_weight, top_k);
-            free(query_key);
-            return context;
-        }
-        free(query_key);
-    }
-    return metis_episodic_build_context(
-        &session->episodic, query, top_k);
-}
-
-static int rank_episodic_records(
-    server_state_t *state, cached_session_t *session, const char *query,
-    size_t *indices, int max_results) {
-    float *query_key = NULL;
-    int result;
-    if (state == NULL || session == NULL || query == NULL ||
-        indices == NULL || max_results <= 0)
+    if (state == NULL || session == NULL || text == NULL)
         return -1;
-    if (state->memory_retriever != NULL &&
-        metis_retrieval_index_complete(
-            &session->retrieval_index,
-            session->episodic.count)) {
-        float *global = NULL, *tokens = NULL;
-        size_t token_count = 0;
-        if (retriever_encode_text(
-                state, query, 1,
-                &global, &tokens, &token_count) == 0) {
-            result = metis_retrieval_index_rank(
-                &session->retrieval_index,
-                state->memory_retriever,
-                (const char *const *)session->episodic.records,
-                session->episodic.priorities,
-                session->episodic.count, query,
-                state->cfg.episodic_priority_weight,
-                global, tokens, token_count,
-                indices, max_results);
-            free(global);
-            free(tokens);
-            if (result >= 0) return result;
-        } else {
-            free(global);
-            free(tokens);
-        }
-    }
-    if (state->memory_controller != NULL) {
-        query_key = (float *)malloc(
-            (size_t)state->memory_controller->rank * sizeof(float));
-        if (query_key == NULL) return -1;
-        if (controller_encode_key(state, query, 1, query_key) != 0) {
-            free(query_key);
-            return -1;
-        }
-    }
-    result = metis_episodic_rank_hybrid(
-        &session->episodic, query, query_key,
-        state->cfg.episodic_lexical_weight, indices, max_results);
-    free(query_key);
-    return result;
-}
-
-static int pointer_extract_record(
-    server_state_t *state, const char *question, const char *record,
-    char **answer, float *confidence) {
-    static const char question_label[] = "Question: ";
-    static const char record_label[] = "\nMemory record:\n";
-    int prefix_tokens[320], record_tokens[192], tokens[512];
-    char *prefix = NULL;
-    size_t prefix_size, answer_len = 0, answer_cap = 0;
-    int prefix_count, record_count, total_count;
-    bitnet_context_t *context = NULL;
-    const float *hidden;
-    size_t start, end;
-    int selected;
-    if (state == NULL || state->memory_pointer == NULL ||
-        question == NULL || record == NULL || answer == NULL ||
-        confidence == NULL)
+    if (!state->cfg.episodic_memory || action != MEMORY_ACTION_STORE)
         return -1;
-    *answer = NULL;
-    if (state->memory_pointer->byte_mode) {
-        *answer = dup_n(record, strlen(record));
-        *confidence = 0.0f;
-        return *answer == NULL ? -1 : 1;
-    }
-    prefix_size = strlen(question_label) + strlen(question) +
-                  strlen(record_label) + 1;
-    prefix = (char *)malloc(prefix_size);
-    if (prefix == NULL) return -1;
-    snprintf(prefix, prefix_size, "%s%s%s",
-             question_label, question, record_label);
-    prefix_count = bitnet_tokenize_ex(
-        state->model, prefix, prefix_tokens,
-        (int)(sizeof prefix_tokens / sizeof prefix_tokens[0]), 1);
-    free(prefix);
-    record_count = bitnet_tokenize_ex(
-        state->model, record, record_tokens,
-        (int)(sizeof record_tokens / sizeof record_tokens[0]), 0);
-    if (prefix_count <= 0 || record_count <= 0 ||
-        prefix_count + record_count > (int)(sizeof tokens / sizeof tokens[0]))
-        return -1;
-    memcpy(tokens, prefix_tokens, (size_t)prefix_count * sizeof(int));
-    memcpy(tokens + prefix_count, record_tokens,
-           (size_t)record_count * sizeof(int));
-    total_count = prefix_count + record_count;
-    context = bitnet_create_context(
-        state->model, total_count < MIN_CONTEXT_TOKENS ?
-        MIN_CONTEXT_TOKENS : total_count + 1);
-    if (context == NULL ||
-        bitnet_eval(context, tokens, total_count) != 0) {
-        bitnet_free_context(context);
-        return -1;
-    }
-    hidden = bitnet_get_last_eval_hidden(context);
-    if (hidden == NULL ||
-        bitnet_last_eval_hidden_count(context) != total_count) {
-        bitnet_free_context(context);
-        return -1;
-    }
-    selected = metis_memory_pointer_select(
-        state->memory_pointer,
-        hidden + (size_t)prefix_count *
-            (size_t)state->memory_pointer->hidden_dim,
-        (size_t)record_count, &start, &end, confidence);
-    bitnet_free_context(context);
-    if (selected <= 0) return selected;
-    for (size_t index = start; index <= end; ++index) {
-        char piece[256];
-        int length = bitnet_decode_token(
-            state->model, record_tokens[index], piece, sizeof piece);
-        if (length < 0 ||
-            append_bytes(
-                answer, &answer_len, &answer_cap,
-                piece, (size_t)length) != 0) {
-            free(*answer);
-            *answer = NULL;
-            return -1;
-        }
-    }
-    if (*answer == NULL) return 0;
-    {
-        char *begin = *answer;
-        char *finish = begin + strlen(begin);
-        while (*begin != '\0' && isspace((unsigned char)*begin)) ++begin;
-        while (finish > begin &&
-               isspace((unsigned char)finish[-1])) --finish;
-        if (begin != *answer)
-            memmove(*answer, begin, (size_t)(finish - begin));
-        (*answer)[finish - begin] = '\0';
-        if ((*answer)[0] == '\0') {
-            free(*answer);
-            *answer = NULL;
-            return 0;
-        }
-    }
-    return 1;
-}
-
-static int pointer_extract_write_record(
-    server_state_t *state, const char *record,
-    char **answer, float *confidence) {
-    static const char prefix[] =
-        "Extract the exact byte sequence that this request asks "
-        "the memory system to preserve.\nMemory request:\n";
-    int prefix_tokens[192], record_tokens[512], tokens[704];
-    int prefix_count, record_count, total_count;
-    bitnet_context_t *context = NULL;
-    const float *hidden;
-    uint8_t *bytes = NULL;
-    size_t *byte_tokens = NULL;
-    uint32_t *byte_offsets = NULL;
-    size_t byte_count = 0, byte_capacity = 0;
-    char *piece = NULL;
-    size_t start, end;
-    int selected = -1;
-    if (state == NULL || state->memory_pointer == NULL ||
-        !state->memory_pointer->byte_mode || record == NULL ||
-        answer == NULL || confidence == NULL)
-        return -1;
-    *answer = NULL;
-    prefix_count = bitnet_tokenize_ex(
-        state->model, prefix, prefix_tokens,
-        (int)(sizeof prefix_tokens / sizeof prefix_tokens[0]), 1);
-    record_count = bitnet_tokenize_ex(
-        state->model, record, record_tokens,
-        (int)(sizeof record_tokens / sizeof record_tokens[0]), 0);
-    if (prefix_count <= 0 || record_count <= 0 ||
-        prefix_count + record_count >
-            (int)(sizeof tokens / sizeof tokens[0]))
-        goto done;
-    memcpy(tokens, prefix_tokens, (size_t)prefix_count * sizeof(int));
-    memcpy(tokens + prefix_count, record_tokens,
-           (size_t)record_count * sizeof(int));
-    total_count = prefix_count + record_count;
-    context = bitnet_create_context(
-        state->model, total_count < MIN_CONTEXT_TOKENS ?
-        MIN_CONTEXT_TOKENS : total_count + 1);
-    if (context == NULL ||
-        bitnet_eval(context, tokens, total_count) != 0)
-        goto done;
-    hidden = bitnet_get_last_eval_hidden(context);
-    if (hidden == NULL ||
-        bitnet_last_eval_hidden_count(context) != total_count)
-        goto done;
-    piece = (char *)malloc(
-        (size_t)state->memory_pointer->max_token_bytes + 1u);
-    if (piece == NULL) goto done;
-    for (int token = 0; token < record_count; ++token) {
-        int length = bitnet_decode_token(
-            state->model, record_tokens[token], piece,
-            state->memory_pointer->max_token_bytes + 1);
-        size_t required;
-        if (length < 0 ||
-            length > state->memory_pointer->max_token_bytes)
-            goto done;
-        required = byte_count + (size_t)length;
-        if (required > byte_capacity) {
-            size_t capacity = byte_capacity == 0 ? 256u : byte_capacity;
-            uint8_t *grown_bytes;
-            size_t *grown_tokens;
-            uint32_t *grown_offsets;
-            while (capacity < required) capacity *= 2u;
-            grown_bytes = (uint8_t *)realloc(bytes, capacity);
-            if (grown_bytes == NULL) goto done;
-            bytes = grown_bytes;
-            grown_tokens = (size_t *)realloc(
-                byte_tokens, capacity * sizeof *byte_tokens);
-            if (grown_tokens == NULL) goto done;
-            byte_tokens = grown_tokens;
-            grown_offsets = (uint32_t *)realloc(
-                byte_offsets, capacity * sizeof *byte_offsets);
-            if (grown_offsets == NULL) goto done;
-            byte_offsets = grown_offsets;
-            byte_capacity = capacity;
-        }
-        for (int offset = 0; offset < length; ++offset) {
-            bytes[byte_count] = (uint8_t)(unsigned char)piece[offset];
-            byte_tokens[byte_count] = (size_t)token;
-            byte_offsets[byte_count] = (uint32_t)offset;
-            ++byte_count;
-        }
-    }
-    selected = metis_memory_pointer_select_bytes(
-        state->memory_pointer,
-        hidden + (size_t)prefix_count *
-            (size_t)state->memory_pointer->hidden_dim,
-        (size_t)record_count, bytes, byte_tokens, byte_offsets,
-        byte_count, &start, &end, confidence);
-    if (selected > 0) {
-        size_t length = end - start + 1u;
-        if (memchr(bytes + start, '\0', length) != NULL) {
-            selected = -1;
-            goto done;
-        }
-        *answer = dup_n((const char *)bytes + start, length);
-        if (*answer == NULL) selected = -1;
-    }
-done:
-    bitnet_free_context(context);
-    free(bytes);
-    free(byte_tokens);
-    free(byte_offsets);
-    free(piece);
-    return selected;
-}
-
-static int extract_episodic_answer(
-    server_state_t *state, cached_session_t *session, const char *query,
-    char **answer, float *confidence, size_t *record_index) {
-    size_t indices[3];
-    char *best_answer = NULL;
-    float best_confidence = -1.0f;
-    int count;
-    if (answer == NULL || confidence == NULL || record_index == NULL)
-        return -1;
-    *answer = NULL;
-    count = rank_episodic_records(
-        state, session, query, indices,
-        (int)(sizeof indices / sizeof indices[0]));
-    if (count <= 0) return count;
-    for (int i = 0; i < count; ++i) {
-        char *candidate = NULL;
-        float candidate_confidence = 0.0f;
-        int result = pointer_extract_record(
-            state, query, session->episodic.records[indices[i]],
-            &candidate, &candidate_confidence);
-        if (result > 0 && candidate_confidence > best_confidence) {
-            free(best_answer);
-            best_answer = candidate;
-            best_confidence = candidate_confidence;
-            *record_index = indices[i];
-        } else {
-            free(candidate);
-        }
-    }
-    if (best_answer == NULL) return 0;
-    *answer = best_answer;
-    *confidence = best_confidence;
-    return 1;
-}
-
-static void rebuild_episodic_keys(
-    server_state_t *state, cached_session_t *session) {
-    int complete = 1;
-    if (state == NULL || session == NULL ||
-        state->memory_controller == NULL) return;
-    if (session->episodic.key_dim ==
-        state->memory_controller->rank) {
-        for (size_t index = 0;
-             index < session->episodic.count; ++index) {
-            if (session->episodic.keys == NULL ||
-                session->episodic.keys[index] == NULL) {
-                complete = 0;
-                break;
-            }
-        }
-        if (complete) return;
-    }
-    if (metis_episodic_configure_keys(
-            &session->episodic,
-            state->memory_controller->rank) != 0) return;
-    for (size_t index = 0; index < session->episodic.count; ++index) {
-        float *key = (float *)malloc(
-            (size_t)state->memory_controller->rank * sizeof(float));
-        if (key == NULL) return;
-        if (controller_encode_key(
-                state, session->episodic.records[index], 0, key) == 0)
-            (void)metis_episodic_add_with_key(
-                &session->episodic,
-                session->episodic.records[index], key);
-        free(key);
-    }
+    return metis_episodic_add_with_priority(
+        &session->episodic, text, NULL, priority);
 }
 
 static int event_spans_are_unknown(
@@ -2187,139 +1597,86 @@ static int event_spans_fit_source(
            event->value_end <= length;
 }
 
-static void handle_memory_state(struct mg_connection *c, server_state_t *state,
-                                cJSON *request, int do_import) {
+static void handle_memory_state(
+    struct mg_connection *c, server_state_t *state,
+    cJSON *request, int do_import) {
     const char *sid = json_get_string(request, "session_id", NULL);
     cached_session_t *session;
-    char path[1024];
     char episodic_path[1024];
     char event_path[1024];
     metis_episodic_store_t imported_episodic;
     metis_event_store_t imported_events;
-    int has_imported_episodic = 0;
-    int has_imported_events = 0;
     cJSON *root;
+
     metis_episodic_init(&imported_episodic);
     metis_event_store_init(&imported_events);
-    if (state->cfg.memory_state_dir == NULL) {
-        send_error(c, 403, "memory_state_disabled", "memory state directory is not configured");
+    if (!state->cfg.episodic_memory ||
+        state->cfg.memory_state_dir == NULL) {
+        send_error(c, 403, "memory_state_disabled",
+                   "typed memory state is not configured");
         return;
     }
-    if (memory_state_path(state, sid, path, sizeof path) != 0) {
-        send_error(c, 400, "invalid_request_error", "invalid session_id");
+    if (episodic_state_path(
+            state, sid, episodic_path, sizeof episodic_path) != 0 ||
+        event_state_path(
+            state, sid, event_path, sizeof event_path) != 0) {
+        send_error(c, 400, "invalid_request_error",
+                   "invalid session_id");
         return;
     }
     session = find_session(state, sid);
-    if (do_import && session == NULL) session = create_session(state, sid);
+    if (do_import && session == NULL)
+        session = create_session(state, sid);
     if (session == NULL) {
         send_error(c, 404, "not_found_error", "session not found");
         return;
     }
-    if (state->cfg.episodic_memory &&
-        episodic_state_path(
-            state, sid, episodic_path, sizeof episodic_path) != 0) {
-        send_error(c, 500, "server_error",
-                   "failed to resolve episodic memory path");
-        return;
-    }
-    if (state->cfg.episodic_memory &&
-        event_state_path(
-            state, sid, event_path, sizeof event_path) != 0) {
-        send_error(c, 500, "server_error",
-                   "failed to resolve event memory path");
-        return;
-    }
-    if (state->cfg.episodic_memory && do_import) {
+    if (do_import) {
         if (metis_episodic_load(
-                &imported_episodic, episodic_path) != 0) {
+                &imported_episodic, episodic_path) != 0 ||
+            metis_event_store_load(
+                &imported_events, event_path) != 0) {
+            metis_episodic_free(&imported_episodic);
+            metis_event_store_clear(&imported_events);
             send_error(c, 500, "server_error",
-                       "failed to import episodic memory records");
+                       "failed to import typed memory state");
             return;
         }
-        has_imported_episodic = 1;
-        {
-            FILE *probe;
-            errno = 0;
-            probe = fopen(event_path, "rb");
-            if (probe != NULL) {
-                fclose(probe);
-                if (metis_event_store_load(
-                        &imported_events, event_path) != 0) {
-                    metis_episodic_free(&imported_episodic);
-                    send_error(c, 500, "server_error",
-                               "failed to import typed memory events");
-                    return;
-                }
-                for (size_t index = 0;
-                     index < imported_events.count; ++index) {
-                    const metis_event_record_t *event =
-                        &imported_events.events[index];
-                    if (event->raw_record_index >=
-                            imported_episodic.count ||
-                        !event_spans_fit_source(
-                            event,
-                            imported_episodic.records[
-                                event->raw_record_index])) {
-                        metis_event_store_clear(&imported_events);
-                        metis_episodic_free(&imported_episodic);
-                        send_error(
-                            c, 500, "server_error",
-                            "typed event has invalid source evidence");
-                        return;
-                    }
-                }
-                has_imported_events = 1;
-            } else if (errno != ENOENT) {
+        for (size_t index = 0;
+             index < imported_events.count; ++index) {
+            const metis_event_record_t *event =
+                &imported_events.events[index];
+            if (event->raw_record_index >= imported_episodic.count ||
+                !event_spans_fit_source(
+                    event,
+                    imported_episodic.records[
+                        event->raw_record_index])) {
                 metis_episodic_free(&imported_episodic);
+                metis_event_store_clear(&imported_events);
                 send_error(c, 500, "server_error",
-                           "failed to open typed memory events");
+                           "typed event has invalid source evidence");
                 return;
             }
         }
+        reset_session_context_only(session);
+        metis_episodic_clear(&session->episodic);
+        metis_event_store_clear(&session->events);
+        session->episodic = imported_episodic;
+        session->events = imported_events;
+        metis_episodic_init(&imported_episodic);
+        metis_event_store_init(&imported_events);
+    } else if (metis_episodic_save(
+                   &session->episodic, episodic_path) != 0 ||
+               metis_event_store_save(
+                   &session->events, event_path) != 0) {
+        send_error(c, 500, "server_error",
+                   "failed to export typed memory state");
+        return;
     }
-    if (do_import) reset_session_context_only(session);
-    if (state->cfg.memory_model_path != NULL) {
-        if ((do_import ? bitnet_memory_import(session->ctx, path) :
-                         bitnet_memory_export(session->ctx, path)) != 0) {
-            metis_episodic_free(&imported_episodic);
-            metis_event_store_clear(&imported_events);
-            send_error(
-                c, 500, "server_error", do_import ?
-                "failed to import memory state" :
-                "failed to export memory state");
-            return;
-        }
-    }
-    if (state->cfg.episodic_memory) {
-        if (do_import) {
-            metis_episodic_clear(&session->episodic);
-            session->episodic = imported_episodic;
-            metis_episodic_init(&imported_episodic);
-            has_imported_episodic = 0;
-            rebuild_episodic_keys(state, session);
-            rebuild_retrieval_index(state, session);
-            metis_event_store_clear(&session->events);
-            if (has_imported_events) {
-                session->events = imported_events;
-                metis_event_store_init(&imported_events);
-                has_imported_events = 0;
-            }
-        } else if (metis_episodic_save(
-                       &session->episodic, episodic_path) != 0 ||
-                   metis_event_store_save(
-                       &session->events, event_path) != 0) {
-            send_error(c, 500, "server_error",
-                       "failed to export episodic memory records");
-            return;
-        }
-    }
-    if (has_imported_episodic)
-        metis_episodic_free(&imported_episodic);
-    if (has_imported_events)
-        metis_event_store_clear(&imported_events);
     root = cJSON_CreateObject();
     if (root == NULL) {
-        send_error(c, 500, "server_error", "failed to build response");
+        send_error(c, 500, "server_error",
+                   "failed to build response");
         return;
     }
     json_add_string(root, "status", "ok");
@@ -2327,56 +1684,10 @@ static void handle_memory_state(struct mg_connection *c, server_state_t *state,
     json_add_number(
         root, "episodic_records",
         (double)metis_episodic_count(&session->episodic));
-    json_add_number(root, "typed_events",
-                    (double)session->events.count);
     json_add_number(
-        root, "matrix_memory",
-        state->cfg.memory_model_path != NULL ? 1.0 : 0.0);
+        root, "typed_events", (double)session->events.count);
     send_json(c, 200, root);
     cJSON_Delete(root);
-}
-
-static void handle_memory_search(
-    struct mg_connection *c, server_state_t *state, cJSON *request) {
-    const char *sid = json_get_string(request, "session_id", NULL);
-    const char *query = json_get_string(request, "query", NULL);
-    int top_k = json_get_int(
-        request, "top_k", state->cfg.episodic_top_k, 1, 32);
-    cached_session_t *session;
-    char *context;
-    cJSON *root;
-    if (!state->cfg.episodic_memory) {
-        send_error(c, 403, "episodic_memory_disabled",
-                   "episodic memory is not enabled");
-        return;
-    }
-    if (sid == NULL || query == NULL || query[0] == '\0') {
-        send_error(c, 400, "invalid_request_error",
-                   "session_id and query are required");
-        return;
-    }
-    session = find_session(state, sid);
-    if (session == NULL) {
-        send_error(c, 404, "not_found_error", "session not found");
-        return;
-    }
-    context = retrieve_episodic_context(
-        state, session, query, top_k);
-    root = cJSON_CreateObject();
-    if (root == NULL) {
-        free(context);
-        send_error(c, 500, "server_error", "failed to build response");
-        return;
-    }
-    json_add_string(root, "status", "ok");
-    json_add_string(root, "session_id", sid);
-    json_add_number(
-        root, "episodic_records",
-        (double)metis_episodic_count(&session->episodic));
-    json_add_string(root, "context", context == NULL ? "" : context);
-    send_json(c, 200, root);
-    cJSON_Delete(root);
-    free(context);
 }
 
 static int parse_event_operation(const char *name,
@@ -2534,6 +1845,497 @@ static int resolve_event_evidence(
                event->value_start, event->value_end) ? 0 : -1;
 }
 
+static int typed_word_byte(unsigned char value) {
+    return isalnum(value) || value == '_' ||
+           value == '-' || value == '\'' || value >= 0x80u;
+}
+
+static int decode_typed_source(
+    server_state_t *state, const typed_text_encoding_t *encoding,
+    const char *source, char **decoded_output,
+    size_t **offsets_output, size_t *source_offset_output) {
+    char *decoded = NULL;
+    size_t decoded_length = 0, decoded_capacity = 0;
+    size_t *offsets = NULL;
+    char *source_match;
+    if (state == NULL || encoding == NULL ||
+        encoding->tokens == NULL || source == NULL ||
+        decoded_output == NULL || offsets_output == NULL ||
+        source_offset_output == NULL)
+        return -1;
+    offsets = (size_t *)malloc(
+        (encoding->token_count + 1u) * sizeof(size_t));
+    if (offsets == NULL) return -1;
+    offsets[0] = 0;
+    for (size_t token = 0;
+         token < encoding->token_count; ++token) {
+        char piece[256];
+        int length = bitnet_decode_token(
+            state->model, encoding->tokens[token],
+            piece, sizeof piece);
+        if (length < 0 ||
+            append_bytes(
+                &decoded, &decoded_length, &decoded_capacity,
+                piece, (size_t)length) != 0) {
+            free(decoded);
+            free(offsets);
+            return -1;
+        }
+        offsets[token + 1u] = decoded_length;
+    }
+    if (decoded == NULL) {
+        free(offsets);
+        return -1;
+    }
+    source_match = strstr(decoded, source);
+    if (source_match == NULL ||
+        strlen(source_match) != strlen(source)) {
+        free(decoded);
+        free(offsets);
+        return -1;
+    }
+    *source_offset_output = (size_t)(source_match - decoded);
+    *decoded_output = decoded;
+    *offsets_output = offsets;
+    return 0;
+}
+
+static int typed_token_span_to_source(
+    const char *decoded, const size_t *offsets,
+    size_t token_count, size_t source_offset,
+    const char *source, size_t token_start, size_t token_end,
+    int expand_entity, size_t *start_output, size_t *end_output) {
+    size_t start, end, source_length;
+    if (decoded == NULL || offsets == NULL || source == NULL ||
+        start_output == NULL || end_output == NULL ||
+        token_start > token_end || token_end >= token_count)
+        return -1;
+    start = offsets[token_start];
+    end = offsets[token_end + 1u];
+    while (start < end &&
+           isspace((unsigned char)decoded[start]))
+        ++start;
+    while (end > start &&
+           isspace((unsigned char)decoded[end - 1u]))
+        --end;
+    if (expand_entity) {
+        while (start < end &&
+               !typed_word_byte((unsigned char)decoded[start]))
+            ++start;
+        while (start > source_offset &&
+               typed_word_byte((unsigned char)decoded[start - 1u]))
+            --start;
+        while (typed_word_byte((unsigned char)decoded[end]))
+            ++end;
+        if (end >= start + 2u &&
+            decoded[end - 2u] == '\'' &&
+            decoded[end - 1u] == 's')
+            end -= 2u;
+        else if (end >= start + 4u &&
+                 memcmp(decoded + end - 4u, "\xE2\x80\x99s", 4) == 0)
+            end -= 4u;
+    }
+    source_length = strlen(source);
+    if (start < source_offset || end <= start ||
+        end - source_offset > source_length)
+        return -1;
+    *start_output = start - source_offset;
+    *end_output = end - source_offset;
+    return 0;
+}
+
+static char *duplicate_source_span(
+    const char *source, size_t start, size_t end) {
+    char *value;
+    if (source == NULL || end <= start || end > strlen(source))
+        return NULL;
+    value = (char *)malloc(end - start + 1u);
+    if (value == NULL) return NULL;
+    memcpy(value, source + start, end - start);
+    value[end - start] = '\0';
+    return value;
+}
+
+static char *normalize_predicate_span(
+    const char *source, size_t start, size_t end) {
+    char *value;
+    size_t written = 0;
+    int separator = 0;
+    if (source == NULL || end <= start || end > strlen(source))
+        return NULL;
+    value = (char *)malloc(end - start + 1u);
+    if (value == NULL) return NULL;
+    for (size_t index = start; index < end; ++index) {
+        unsigned char byte = (unsigned char)source[index];
+        if (isalnum(byte)) {
+            if (separator && written > 0)
+                value[written++] = '_';
+            value[written++] = (char)tolower(byte);
+            separator = 0;
+        } else if (written > 0) {
+            separator = 1;
+        }
+    }
+    value[written] = '\0';
+    if (written == 0 ||
+        value[0] < 'a' || value[0] > 'z') {
+        free(value);
+        return NULL;
+    }
+    return value;
+}
+
+static int source_span_is_iso_date(
+    const char *source, size_t start, size_t end) {
+    if (source == NULL || end - start != 10u ||
+        end > strlen(source))
+        return 0;
+    for (size_t index = 0; index < 10u; ++index) {
+        unsigned char byte = (unsigned char)source[start + index];
+        if (index == 4u || index == 7u) {
+            if (byte != '-') return 0;
+        } else if (!isdigit(byte)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static void expand_leading_value_article(
+    const char *source, size_t *start) {
+    size_t word_end, word_start, length;
+    if (source == NULL || start == NULL || *start == 0)
+        return;
+    word_end = *start;
+    while (word_end > 0 &&
+           isspace((unsigned char)source[word_end - 1u]))
+        --word_end;
+    if (word_end == *start || word_end == 0)
+        return;
+    word_start = word_end;
+    while (word_start > 0 &&
+           isalpha((unsigned char)source[word_start - 1u]))
+        --word_start;
+    length = word_end - word_start;
+    if ((length == 1u &&
+         tolower((unsigned char)source[word_start]) == 'a') ||
+        (length == 2u &&
+         tolower((unsigned char)source[word_start]) == 'a' &&
+         tolower((unsigned char)source[word_start + 1u]) == 'n') ||
+        (length == 3u &&
+         tolower((unsigned char)source[word_start]) == 't' &&
+         tolower((unsigned char)source[word_start + 1u]) == 'h' &&
+         tolower((unsigned char)source[word_start + 2u]) == 'e'))
+        *start = word_start;
+}
+
+static void add_event_json(
+    cJSON *root, const metis_event_record_t *event);
+
+static int select_typed_active_event(
+    server_state_t *state, cached_session_t *session,
+    const char *current_text,
+    const metis_event_record_t **selected_event,
+    float *selected_score, float *exists_score,
+    size_t *candidate_count, int query_mode);
+
+typedef struct autonomous_memory_result {
+    typed_text_encoding_t encoding;
+    metis_typed_writer_result_t prediction;
+    float target_score;
+    float exists_score;
+    size_t candidate_count;
+    size_t event_index;
+    int target_status;
+} autonomous_memory_result_t;
+
+static int remember_autonomous_event(
+    server_state_t *state, cached_session_t *session,
+    const char *text, float priority, cJSON *request,
+    memory_record_action_t operation_hint,
+    autonomous_memory_result_t *result,
+    char *error, size_t error_size) {
+    metis_event_record_t event;
+    char *decoded = NULL, *entity = NULL;
+    char *predicate = NULL, *value = NULL, *valid_time = NULL;
+    size_t *offsets = NULL;
+    size_t source_offset = 0;
+    size_t field_start[METIS_TYPED_WRITER_FIELD_COUNT];
+    size_t field_end[METIS_TYPED_WRITER_FIELD_COUNT];
+    char event_id[96], episode_id[96], source_id[96];
+    const char *requested;
+    int time_known = 1;
+    int status = -1;
+    memset(&event, 0, sizeof event);
+    if (result != NULL) memset(result, 0, sizeof *result);
+    if (error != NULL && error_size > 0) error[0] = '\0';
+#define AUTO_FAIL(code, ...) do { \
+    status = (code); \
+    if (error != NULL && error_size > 0) \
+        snprintf(error, error_size, __VA_ARGS__); \
+    goto cleanup; \
+} while (0)
+    if (state == NULL || session == NULL ||
+        text == NULL || text[0] == '\0' ||
+        result == NULL || state->typed_writer == NULL)
+        AUTO_FAIL(-1, "invalid autonomous writer arguments");
+    if (
+        encode_typed_pair_text(
+            state, text, &result->encoding) != 0 ||
+        metis_typed_writer_predict(
+            state->typed_writer,
+            result->encoding.hidden, result->encoding.identity,
+            result->encoding.token_count,
+            &result->prediction) != 0 ||
+        decode_typed_source(
+            state, &result->encoding, text, &decoded,
+            &offsets, &source_offset) != 0)
+        AUTO_FAIL(
+            -1, "autonomous typed writer inference failed");
+    if (operation_hint == MEMORY_ACTION_STORE)
+        result->prediction.operation = 0;
+    else if (operation_hint == MEMORY_ACTION_UPDATE)
+        result->prediction.operation = 1;
+    for (int field = 0;
+         field < METIS_TYPED_WRITER_FIELD_COUNT; ++field) {
+        int span_status = typed_token_span_to_source(
+                decoded, offsets, result->encoding.token_count,
+                source_offset, text,
+                result->prediction.span_start[field],
+                result->prediction.span_end[field],
+                field == METIS_TYPED_WRITER_ENTITY,
+                &field_start[field], &field_end[field]);
+        if (field == METIS_TYPED_WRITER_TIME &&
+            (span_status != 0 ||
+             !source_span_is_iso_date(
+                 text, field_start[field], field_end[field]))) {
+            time_known = 0;
+            field_start[field] = 0;
+            field_end[field] = 0;
+            continue;
+        }
+        if (span_status != 0)
+            AUTO_FAIL(
+                -3,
+                "autonomous writer produced an invalid field %d source span",
+                field);
+    }
+    entity = duplicate_source_span(
+        text, field_start[METIS_TYPED_WRITER_ENTITY],
+        field_end[METIS_TYPED_WRITER_ENTITY]);
+    predicate = normalize_predicate_span(
+        text, field_start[METIS_TYPED_WRITER_PREDICATE],
+        field_end[METIS_TYPED_WRITER_PREDICATE]);
+    expand_leading_value_article(
+        text, &field_start[METIS_TYPED_WRITER_VALUE]);
+    value = duplicate_source_span(
+        text, field_start[METIS_TYPED_WRITER_VALUE],
+        field_end[METIS_TYPED_WRITER_VALUE]);
+    valid_time = time_known ?
+        duplicate_source_span(
+            text, field_start[METIS_TYPED_WRITER_TIME],
+            field_end[METIS_TYPED_WRITER_TIME]) :
+        (char *)calloc(1, 1);
+    if (entity == NULL || predicate == NULL ||
+        value == NULL || valid_time == NULL)
+        AUTO_FAIL(
+            -1, "failed to compile autonomous writer spans");
+    requested = request == NULL ? NULL :
+        json_get_string(request, "event_id", NULL);
+    if (requested == NULL || requested[0] == '\0') {
+        snprintf(
+            event_id, sizeof event_id,
+            "auto-event-%zu", session->events.count);
+        requested = event_id;
+    }
+    event.event_id = (char *)requested;
+    requested = request == NULL ? NULL :
+        json_get_string(request, "episode_id", NULL);
+    if (requested == NULL || requested[0] == '\0') {
+        snprintf(
+            episode_id, sizeof episode_id,
+            "auto-episode-%zu", session->episodic.count);
+        requested = episode_id;
+    }
+    event.episode_id = (char *)requested;
+    requested = request == NULL ? NULL :
+        json_get_string(request, "source_id", NULL);
+    if (requested == NULL || requested[0] == '\0') {
+        snprintf(
+            source_id, sizeof source_id,
+            "auto-source-%zu", session->episodic.count);
+        requested = source_id;
+    }
+    event.source_id = (char *)requested;
+    event.entity = entity;
+    event.predicate = predicate;
+    event.value = value;
+    event.valid_time = valid_time;
+    event.target_event_id = "";
+    event.operation = result->prediction.operation == 0 ?
+        METIS_EVENT_ASSERT : METIS_EVENT_SUPERSEDE;
+    event.memory_kind = METIS_MEMORY_PROPERTY;
+    event.polarity = METIS_EVENT_POSITIVE;
+    event.modality = METIS_EVENT_ACTUAL;
+    event.active = 1;
+    event.subject_start =
+        field_start[METIS_TYPED_WRITER_ENTITY];
+    event.subject_end =
+        field_end[METIS_TYPED_WRITER_ENTITY];
+    event.value_start =
+        field_start[METIS_TYPED_WRITER_VALUE];
+    event.value_end =
+        field_end[METIS_TYPED_WRITER_VALUE];
+    if (event.operation == METIS_EVENT_SUPERSEDE) {
+        const metis_event_record_t *selected_event = NULL;
+        result->target_status = select_typed_active_event(
+            state, session, text, &selected_event,
+            &result->target_score, &result->exists_score,
+            &result->candidate_count, 0);
+        if (result->target_status < 0)
+            AUTO_FAIL(
+                -1, "neural predecessor selection failed");
+        if (result->target_status == 0)
+            AUTO_FAIL(
+                -2,
+                "autonomous update rejected all active candidates");
+        event.target_event_id = selected_event->event_id;
+        event.entity = selected_event->entity;
+        event.predicate = selected_event->predicate;
+    }
+    if (store_episodic_record(
+            state, session, text,
+            MEMORY_ACTION_STORE, priority) != 0)
+        AUTO_FAIL(
+            -1, "failed to store autonomous memory record");
+    event.raw_record_index = session->episodic.count - 1u;
+    if (metis_event_store_apply(&session->events, &event) != 0)
+        AUTO_FAIL(
+            -1, "failed to apply autonomous typed event");
+    result->event_index = session->events.count - 1u;
+    status = 0;
+cleanup:
+    free(decoded);
+    free(offsets);
+    free(entity);
+    free(predicate);
+    free(value);
+    free(valid_time);
+    if (status != 0)
+        typed_text_encoding_clear(&result->encoding);
+#undef AUTO_FAIL
+    return status;
+}
+
+static void add_autonomous_memory_json(
+    cJSON *root, const autonomous_memory_result_t *result,
+    const metis_event_store_t *events) {
+    const metis_event_record_t *event;
+    if (root == NULL || result == NULL || events == NULL ||
+        result->event_index >= events->count)
+        return;
+    event = &events->events[result->event_index];
+    json_add_string(
+        root, "writer_fields_source", "neural_autonomous_writer");
+    json_add_number(root, "autonomous_writer", 1.0);
+    json_add_string(
+        root, "target_resolution",
+        result->target_status > 0 ? "neural_activation" :
+                                    "not_required");
+    if (result->target_status > 0) {
+        json_add_number(
+            root, "target_candidate_count",
+            (double)result->candidate_count);
+        json_add_number(
+            root, "target_exists_score", result->exists_score);
+        json_add_number(
+            root, "target_activation_score", result->target_score);
+    }
+    for (int field = 0;
+         field < METIS_TYPED_WRITER_FIELD_COUNT; ++field) {
+        static const char *names[] = {
+            "entity_anchor_token", "predicate_anchor_token",
+            "value_anchor_token", "time_anchor_token"
+        };
+        json_add_number(
+            root, names[field],
+            (double)result->prediction.anchor[field]);
+    }
+    add_event_json(root, event);
+}
+
+static void handle_memory_remember(
+    struct mg_connection *c, server_state_t *state, cJSON *request) {
+    const char *sid = json_get_string(request, "session_id", NULL);
+    const char *text = json_get_string(
+        request, "memory_record", NULL);
+    float priority;
+    cached_session_t *session;
+    autonomous_memory_result_t result;
+    char error[256];
+    int status;
+    cJSON *root = NULL;
+    memset(&result, 0, sizeof result);
+    if (!state->cfg.episodic_memory ||
+        state->typed_writer == NULL) {
+        send_error(c, 403, "typed_writer_disabled",
+                   "autonomous typed writer is not enabled");
+        return;
+    }
+    if (sid == NULL || sid[0] == '\0' ||
+        text == NULL || text[0] == '\0') {
+        send_error(c, 400, "invalid_request_error",
+                   "session_id and memory_record are required");
+        return;
+    }
+    session = find_session(state, sid);
+    if (session == NULL) session = create_session(state, sid);
+    if (session == NULL) {
+        send_error(c, 500, "server_error",
+                   "failed to create memory session");
+        return;
+    }
+    priority = json_get_float(
+        request, "memory_priority", 0.0f, 0.0f, 1.0f);
+    status = remember_autonomous_event(
+        state, session, text, priority, request,
+        MEMORY_ACTION_IGNORE,
+        &result, error, sizeof error);
+    if (status != 0) {
+        send_error(
+            c,
+            status == -2 ? 409 :
+            status == -3 ? 422 : 500,
+            status == -2 ? "memory_target_not_found" :
+            status == -3 ? "writer_span_error" :
+                           "server_error",
+            error);
+        return;
+    }
+    root = cJSON_CreateObject();
+    if (root == NULL) {
+        send_error(c, 500, "server_error",
+                   "failed to build autonomous writer response");
+        typed_text_encoding_clear(&result.encoding);
+        return;
+    }
+    json_add_string(root, "status", "ok");
+    json_add_string(root, "session_id", sid);
+    json_add_string(
+        root, "writer_fields_source", "neural_autonomous_writer");
+    json_add_number(root, "autonomous_writer", 1.0);
+    json_add_number(root, "kv_cache_touched", 0.0);
+    json_add_number(
+        root, "typed_events", (double)session->events.count);
+    json_add_number(
+        root, "episodic_records",
+        (double)session->episodic.count);
+    add_autonomous_memory_json(root, &result, &session->events);
+    send_json(c, 200, root);
+    cJSON_Delete(root);
+    typed_text_encoding_clear(&result.encoding);
+}
+
 static void add_event_json(cJSON *root,
                            const metis_event_record_t *event) {
     json_add_string(root, "event_id", event->event_id);
@@ -2572,20 +2374,194 @@ static void add_event_json(cJSON *root,
     }
 }
 
+static int select_typed_active_event(
+    server_state_t *state, cached_session_t *session,
+    const char *current_text,
+    const metis_event_record_t **selected_event,
+    float *selected_score, float *exists_score,
+    size_t *candidate_count, int query_mode) {
+    typed_text_encoding_t current;
+    typed_text_encoding_t candidate;
+    const metis_event_record_t **events = NULL;
+    float *scores = NULL;
+    float *entity_feature = NULL;
+    float *predicate_feature = NULL;
+    float *query_features = NULL;
+    float *entity_logits = NULL;
+    float *predicate_logits = NULL;
+    size_t count = 0;
+    size_t selected = SIZE_MAX;
+    size_t feature_dim;
+    int status = -1;
+    memset(&current, 0, sizeof current);
+    memset(&candidate, 0, sizeof candidate);
+    if (selected_event != NULL) *selected_event = NULL;
+    if (selected_score != NULL) *selected_score = 0.0f;
+    if (exists_score != NULL) *exists_score = 0.0f;
+    if (candidate_count != NULL) *candidate_count = 0;
+    if (state == NULL || session == NULL ||
+        state->typed_pair == NULL || state->typed_link == NULL ||
+        current_text == NULL || current_text[0] == '\0' ||
+        selected_event == NULL || selected_score == NULL ||
+        exists_score == NULL ||
+        candidate_count == NULL)
+        return -1;
+    for (size_t index = 0;
+         index < session->events.count; ++index)
+        count += session->events.events[index].active ? 1u : 0u;
+    *candidate_count = count;
+    if (count == 0) return 0;
+    feature_dim =
+        (size_t)state->typed_link->pair_feature_dim;
+    events = (const metis_event_record_t **)calloc(
+        count, sizeof(*events));
+    scores = (float *)malloc(count * sizeof(float));
+    entity_feature = (float *)malloc(
+        feature_dim * sizeof(float));
+    predicate_feature = (float *)malloc(
+        feature_dim * sizeof(float));
+    if (query_mode && state->typed_query != NULL) {
+        query_features = (float *)malloc(
+            count * feature_dim * 2u * sizeof(float));
+        entity_logits = (float *)malloc(
+            count * sizeof(float));
+        predicate_logits = (float *)malloc(
+            count * sizeof(float));
+    }
+    if (events == NULL || scores == NULL ||
+        entity_feature == NULL || predicate_feature == NULL ||
+        (query_mode && state->typed_query != NULL &&
+         (query_features == NULL || entity_logits == NULL ||
+          predicate_logits == NULL)) ||
+        encode_typed_pair_text(
+            state, current_text, &current) != 0)
+        goto cleanup;
+    count = 0;
+    for (size_t index = 0;
+         index < session->events.count; ++index) {
+        const metis_event_record_t *event =
+            &session->events.events[index];
+        float entity_logit;
+        float predicate_logit;
+        int pair_status;
+        if (!event->active) continue;
+        if (event->raw_record_index >=
+            session->episodic.count)
+            goto cleanup;
+        pair_status = encode_typed_pair_text(
+                state,
+                session->episodic.records[
+                    event->raw_record_index],
+                &candidate);
+        if (pair_status == 0)
+            pair_status = metis_typed_pair_encoder_score(
+                state->typed_pair,
+                current.hidden, current.token_count,
+                current.identity,
+                candidate.hidden, candidate.token_count,
+                candidate.identity,
+                entity_feature, predicate_feature,
+                &entity_logit, &predicate_logit);
+        if (pair_status != 0)
+            goto cleanup;
+        if (query_mode && state->typed_query != NULL) {
+            memcpy(
+                query_features +
+                    count * feature_dim * 2u,
+                entity_feature,
+                feature_dim * sizeof(float));
+            memcpy(
+                query_features +
+                    count * feature_dim * 2u +
+                    feature_dim,
+                predicate_feature,
+                feature_dim * sizeof(float));
+            entity_logits[count] = entity_logit;
+            predicate_logits[count] = predicate_logit;
+        } else if (metis_typed_link_score_pairs(
+                       state->typed_link,
+                       entity_feature, predicate_feature,
+                       &entity_logit, &predicate_logit, 1,
+                       &scores[count]) != 0) {
+            goto cleanup;
+        }
+        typed_text_encoding_clear(&candidate);
+        events[count++] = event;
+    }
+    if (count != *candidate_count)
+        goto cleanup;
+    if (query_mode && state->typed_query != NULL) {
+        if (metis_typed_query_select(
+                state->typed_query,
+                query_features,
+                entity_logits,
+                predicate_logits,
+                count, &selected,
+                selected_score,
+                exists_score) != 0)
+            goto cleanup;
+    } else if (metis_typed_link_select_predecessor(
+                   state->typed_link, scores, count,
+                   &selected, exists_score) != 0) {
+        goto cleanup;
+    }
+    if (selected == SIZE_MAX) {
+        status = 0;
+        goto cleanup;
+    }
+    if (selected >= count) goto cleanup;
+    *selected_event = events[selected];
+    if (!(query_mode && state->typed_query != NULL))
+        *selected_score = scores[selected];
+    status = 1;
+cleanup:
+    typed_text_encoding_clear(&candidate);
+    typed_text_encoding_clear(&current);
+    free(events);
+    free(scores);
+    free(entity_feature);
+    free(predicate_feature);
+    free(query_features);
+    free(entity_logits);
+    free(predicate_logits);
+    return status;
+}
+
 static void handle_memory_event(
     struct mg_connection *c, server_state_t *state, cJSON *request) {
     const char *sid = json_get_string(request, "session_id", NULL);
+    const char *memory_record = json_get_string(
+        request, "memory_record", NULL);
     cached_session_t *session;
     metis_event_record_t event;
     cJSON *root;
     int raw_index;
+    int neural_target_status = 0;
+    float neural_target_score = 0.0f;
+    float neural_exists_score = 0.0f;
+    size_t neural_candidate_count = 0;
     memset(&event, 0, sizeof event);
     if (!state->cfg.episodic_memory) {
         send_error(c, 403, "episodic_memory_disabled",
                    "episodic memory is not enabled");
         return;
     }
+    if (sid == NULL || sid[0] == '\0') {
+        send_error(c, 400, "invalid_request_error",
+                   "session_id is required");
+        return;
+    }
     session = find_session(state, sid);
+    if (session == NULL && memory_record != NULL)
+        session = create_session(state, sid);
+    if (session != NULL && memory_record != NULL &&
+        store_episodic_record(
+            state, session, memory_record,
+            MEMORY_ACTION_STORE, 0.0f) != 0) {
+        send_error(c, 500, "server_error",
+                   "failed to store event source evidence");
+        return;
+    }
     if (session == NULL || session->episodic.count == 0) {
         send_error(c, 404, "not_found_error",
                    "session or source episode not found");
@@ -2649,6 +2625,31 @@ static void handle_memory_event(
             "subject/value evidence must be exact, unambiguous UTF-8 byte spans");
         return;
     }
+    if (event.operation != METIS_EVENT_ASSERT &&
+        event.target_event_id[0] == '\0' &&
+        state->typed_pair != NULL &&
+        state->typed_link != NULL) {
+        const char *selected_target = NULL;
+        const metis_event_record_t *selected_event = NULL;
+        neural_target_status = select_typed_active_event(
+            state, session,
+            session->episodic.records[event.raw_record_index],
+            &selected_event, &neural_target_score,
+            &neural_exists_score,
+            &neural_candidate_count, 0);
+        if (neural_target_status < 0) {
+            send_error(c, 500, "server_error",
+                       "neural predecessor selection failed");
+            return;
+        }
+        if (neural_target_status == 0) {
+            send_error(c, 409, "memory_target_not_found",
+                       "neural predecessor activation rejected all candidates");
+            return;
+        }
+        selected_target = selected_event->event_id;
+        event.target_event_id = (char *)selected_target;
+    }
     if (metis_event_store_apply(&session->events, &event) != 0) {
         send_error(c, 400, "invalid_request_error",
                    "invalid, duplicate, or unresolved typed event");
@@ -2662,8 +2663,26 @@ static void handle_memory_event(
     }
     json_add_string(root, "status", "ok");
     json_add_string(root, "session_id", sid);
+    json_add_string(
+        root, "writer_fields_source", "structured_request");
+    json_add_number(root, "autonomous_writer", 0.0);
     json_add_number(root, "typed_events",
                     (double)session->events.count);
+    json_add_string(
+        root, "target_resolution",
+        neural_target_status > 0 ? "neural_activation" :
+                                  "provided_or_not_required");
+    if (neural_target_status > 0) {
+        json_add_number(
+            root, "target_candidate_count",
+            (double)neural_candidate_count);
+        json_add_number(
+            root, "target_exists_score",
+            neural_exists_score);
+        json_add_number(
+            root, "target_activation_score",
+            neural_target_score);
+    }
     add_event_json(
         root, &session->events.events[session->events.count - 1]);
     send_json(c, 200, root);
@@ -2755,18 +2774,23 @@ static void handle_memory_event_active(
 }
 
 static void handle_memory_extract(
-    struct mg_connection *c, server_state_t *state, cJSON *request) {
+    struct mg_connection *c, server_state_t *state,
+    cJSON *request) {
     const char *sid = json_get_string(request, "session_id", NULL);
     const char *query = json_get_string(request, "query", NULL);
     cached_session_t *session;
     char *answer = NULL;
     float confidence = 0.0f;
+    float null_score = 0.0f;
+    float span_score = 0.0f;
     size_t record_index = 0;
     int extracted;
     cJSON *root;
-    if (state->memory_pointer == NULL) {
-        send_error(c, 403, "memory_pointer_disabled",
-                   "memory pointer is not configured");
+
+    if (state->typed_pair == NULL || state->typed_link == NULL ||
+        state->typed_query == NULL) {
+        send_error(c, 403, "typed_memory_disabled",
+                   "typed neural recall is not configured");
         return;
     }
     if (sid == NULL || query == NULL || query[0] == '\0') {
@@ -2779,23 +2803,33 @@ static void handle_memory_extract(
         send_error(c, 404, "not_found_error", "session not found");
         return;
     }
-    extracted = extract_episodic_answer(
-        state, session, query, &answer, &confidence, &record_index);
+    extracted = extract_typed_value_answer(
+        state, session, query, &answer,
+        &confidence, &null_score,
+        &span_score, &record_index);
     if (extracted < 0) {
         send_error(c, 500, "server_error",
-                   "memory pointer extraction failed");
+                   "typed memory extraction failed");
         return;
     }
     root = cJSON_CreateObject();
     if (root == NULL) {
         free(answer);
-        send_error(c, 500, "server_error", "failed to build response");
+        send_error(c, 500, "server_error",
+                   "failed to build response");
         return;
     }
-    json_add_string(root, "status", extracted ? "extracted" : "fallback");
+    json_add_string(
+        root, "status", extracted ? "extracted" : "fallback");
     json_add_string(root, "session_id", sid);
     json_add_string(root, "answer", answer == NULL ? "" : answer);
     json_add_number(root, "confidence", confidence);
+    json_add_number(root, "activation_exists_score", null_score);
+    json_add_number(root, "span_score", span_score);
+    json_add_number(root, "kv_cache_touched", 0);
+    json_add_string(
+        root, "recall_mode",
+        "neural_typed_query_activation_then_compiled_pointer");
     if (extracted)
         json_add_number(root, "record_index", (double)record_index);
     send_json(c, 200, root);
@@ -2808,20 +2842,24 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     char error[256];
     char id[64];
     char *prompt = NULL;
-    char *episodic_context = NULL;
-    char *augmented_prompt = NULL;
     char *pointer_answer = NULL;
     const char *session_id = NULL;
     const char *user_content = NULL;
     const char *memory_record = NULL;
     float pointer_confidence = 0.0f;
+    float pointer_null_score = 0.0f;
+    float pointer_span_score = 0.0f;
     float memory_priority = 0.0f;
     size_t pointer_record_index = 0;
     int pointer_used = 0;
+    int memory_auto_requested = 0;
+    int auto_typed_handled = 0;
+    int auto_memory_stored = 0;
+    int auto_memory_status = 0;
+    char auto_memory_error[256];
+    autonomous_memory_result_t auto_memory_result;
     memory_record_action_t memory_action = MEMORY_ACTION_IGNORE;
     int max_tokens = 0;
-    int commit_memory = 1;
-    int memory_activation = -1;
     int reset_existing_session = 0;
     int reset_context_only = 0;
     int generation_reset = 0;
@@ -2831,6 +2869,8 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     cJSON *choices = NULL;
     cJSON *choice = NULL;
     cJSON *message = NULL;
+    memset(&auto_memory_result, 0, sizeof auto_memory_result);
+    auto_memory_error[0] = '\0';
 
     session_id = json_get_string(request, "session_id", NULL);
     reset_existing_session = json_get_bool(request, "reset_session", 0);
@@ -2838,17 +2878,31 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     generation_reset = reset_existing_session;
     max_tokens = json_get_int(request, "max_tokens", state->cfg.default_max_tokens,
                               1, state->cfg.max_request_tokens);
-    commit_memory = json_get_bool(request, "memory_commit", 1);
-    {
-        cJSON *activation = cJSON_GetObjectItem(
-            request, "memory_activation");
-        if (activation != NULL && cJSON_IsBool(activation))
-            memory_activation = cJSON_IsTrue(activation) ? 1 : 0;
-    }
     user_content = last_user_content(request);
     memory_record = json_get_string(
         request, "memory_record", user_content);
     memory_action = request_memory_action(state, request, user_content);
+    memory_auto_requested = json_get_bool(
+        request, "memory_auto",
+        state->typed_writer != NULL ? 1 : 0);
+    {
+        cJSON *automatic = cJSON_GetObjectItem(
+            request, "memory_auto");
+        if (automatic != NULL &&
+            cJSON_IsBool(automatic) &&
+            !cJSON_IsTrue(automatic) &&
+            !request_has_memory_action(request))
+            memory_action = MEMORY_ACTION_IGNORE;
+    }
+    if (memory_auto_requested &&
+        !request_has_memory_action(request) &&
+        state->memory_controller == NULL) {
+        memory_record_action_t typed_action =
+            typed_auto_fallback_action(user_content);
+        if (typed_action != MEMORY_ACTION_IGNORE ||
+            typed_auto_input_is_query(user_content))
+            memory_action = typed_action;
+    }
     memory_priority = json_get_float(
         request, "memory_priority", 0.0f, 0.0f, 1.0f);
     if (session_id != NULL && session_id[0] != '\0') {
@@ -2871,64 +2925,66 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
         send_error(c, 400, "invalid_request_error", "messages must be a non-empty array");
         return;
     }
-    if (state->cfg.episodic_memory &&
-        state->cfg.episodic_context_injection &&
-        episodic_session != NULL &&
-        memory_action == MEMORY_ACTION_IGNORE) {
-        episodic_context = retrieve_episodic_context(
-            state, episodic_session, user_content,
-            state->cfg.episodic_top_k);
-        if (episodic_context != NULL) {
-            augmented_prompt = prepend_episodic_context(
-                prompt, episodic_context);
-            if (augmented_prompt == NULL) {
-                free(episodic_context);
-                free(prompt);
-                send_error(c, 500, "server_error",
-                           "failed to build episodic memory prompt");
-                return;
-            }
-            free(prompt);
-            prompt = augmented_prompt;
-            if (strstr(
-                    episodic_context,
-                    "[memory 1] DELETED MEMORY") != NULL) {
-                pointer_answer = dup_n(
-                    "No information available.",
-                    strlen("No information available."));
-                if (pointer_answer == NULL) {
-                    free(episodic_context);
-                    free(prompt);
-                    send_error(c, 500, "server_error",
-                               "failed to build tombstone answer");
-                    return;
-                }
-                pointer_used = 2;
+    if (memory_auto_requested &&
+        (memory_action == MEMORY_ACTION_STORE ||
+         memory_action == MEMORY_ACTION_UPDATE)) {
+        cached_session_t *session = NULL;
+        auto_typed_handled = 1;
+        if (state->typed_writer == NULL) {
+            auto_memory_status = -1;
+            snprintf(
+                auto_memory_error, sizeof auto_memory_error,
+                "typed writer is not loaded");
+        } else if (session_id == NULL || session_id[0] == '\0') {
+            auto_memory_status = -1;
+            snprintf(
+                auto_memory_error, sizeof auto_memory_error,
+                "session_id is required for automatic memory");
+        } else {
+            session = find_session(state, session_id);
+            if (session == NULL)
+                session = create_session(state, session_id);
+            if (session == NULL) {
+                auto_memory_status = -1;
+                snprintf(
+                    auto_memory_error, sizeof auto_memory_error,
+                    "failed to create automatic memory session");
+            } else {
+                auto_memory_status = remember_autonomous_event(
+                    state, session, memory_record,
+                    memory_priority, request,
+                    memory_action,
+                    &auto_memory_result,
+                    auto_memory_error,
+                    sizeof auto_memory_error);
+                auto_memory_stored =
+                    auto_memory_status == 0;
+                typed_text_encoding_clear(
+                    &auto_memory_result.encoding);
+                episodic_session = session;
             }
         }
-        if (pointer_used == 0 &&
-            !json_get_bool(request, "stream", 0) &&
-            json_get_bool(request, "memory_copy", 0) &&
-            state->memory_pointer != NULL &&
-            extract_episodic_answer(
-                state, episodic_session, user_content,
-                &pointer_answer, &pointer_confidence,
-                &pointer_record_index) > 0)
-            pointer_used = 1;
     }
+    if (state->cfg.episodic_memory &&
+        state->typed_pair != NULL &&
+        state->typed_link != NULL &&
+        state->typed_query != NULL &&
+        episodic_session != NULL &&
+        episodic_session->events.count > 0 &&
+        memory_action == MEMORY_ACTION_IGNORE &&
+        !json_get_bool(request, "stream", 0) &&
+        (json_get_bool(request, "memory_copy", 0) ||
+         memory_auto_requested) &&
+        extract_typed_value_answer(
+            state, episodic_session, user_content,
+            &pointer_answer, &pointer_confidence,
+            &pointer_null_score, &pointer_span_score,
+            &pointer_record_index) > 0)
+        pointer_used = 1;
     if (json_get_bool(request, "stream", 0)) {
         handle_streaming_completion(
             c, state, prompt, max_tokens, session_id,
-            generation_reset, commit_memory, memory_activation, 1);
-        if (state->cfg.episodic_memory &&
-            memory_action != MEMORY_ACTION_IGNORE) {
-            cached_session_t *session = find_session(state, session_id);
-            if (session != NULL)
-                (void)store_episodic_record(
-                    state, session, memory_record,
-                    memory_action, memory_priority);
-        }
-        free(episodic_context);
+            generation_reset, 1);
         free(prompt);
         return;
     }
@@ -2947,38 +3003,13 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     } else {
         if (generate_text(
                 state, prompt, max_tokens, session_id, generation_reset,
-                commit_memory, memory_activation,
                 &result, error, sizeof(error)) != 0) {
             free(pointer_answer);
-            free(episodic_context);
             free(prompt);
             send_error(c, 500, "server_error", error);
             return;
         }
     }
-    if (state->cfg.episodic_memory &&
-        memory_action != MEMORY_ACTION_IGNORE) {
-        cached_session_t *session = find_session(state, session_id);
-        int store_status = session == NULL ? -12 :
-            store_episodic_record(
-                state, session, memory_record,
-                memory_action, memory_priority);
-        if (store_status != 0) {
-            generation_result_free(&result);
-            free(episodic_context);
-            free(prompt);
-            snprintf(
-                error, sizeof(error),
-                "failed to store episodic memory record "
-                "(action=%s, status=%d, key_dim=%d, count=%zu)",
-                memory_action_name(memory_action), store_status,
-                session == NULL ? -1 : session->episodic.key_dim,
-                session == NULL ? 0 : session->episodic.count);
-            send_error(c, 500, "server_error", error);
-            return;
-        }
-    }
-    free(episodic_context);
     free(prompt);
 
     snprintf(id, sizeof(id), "chatcmpl-%lld", (long long)time(NULL));
@@ -3002,6 +3033,42 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     json_add_string(root, "model", state->cfg.model_id);
     json_add_string(root, "memory_action", memory_action_name(memory_action));
     json_add_number(root, "memory_priority", memory_priority);
+    if (memory_auto_requested) {
+        cJSON *automatic = cJSON_CreateObject();
+        if (automatic != NULL) {
+            json_add_number(
+                automatic, "enabled",
+                state->typed_writer != NULL ? 1.0 : 0.0);
+            json_add_string(
+                automatic, "decision",
+                memory_action_name(memory_action));
+            json_add_number(
+                automatic, "attempted",
+                auto_typed_handled ? 1.0 : 0.0);
+            json_add_number(
+                automatic, "stored",
+                auto_memory_stored ? 1.0 : 0.0);
+            json_add_string(
+                automatic, "status",
+                auto_memory_stored ? "stored" :
+                auto_typed_handled ? "failed" :
+                memory_action == MEMORY_ACTION_IGNORE ?
+                    "ignored" : "not_typed");
+            if (auto_memory_error[0] != '\0')
+                json_add_string(
+                    automatic, "error", auto_memory_error);
+            if (auto_memory_stored) {
+                cached_session_t *session =
+                    find_session(state, session_id);
+                if (session != NULL)
+                    add_autonomous_memory_json(
+                        automatic,
+                        &auto_memory_result,
+                        &session->events);
+            }
+            cJSON_AddItemToObject(root, "memory_auto", automatic);
+        }
+    }
     json_add_number(choice, "index", 0);
     json_add_string(message, "role", "assistant");
     {
@@ -3023,9 +3090,13 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
         if (copy != NULL) {
             json_add_string(
                 copy, "mode",
-                pointer_used == 2 ? "deletion_tombstone" :
-                                    "extractive_pointer");
+                "neural_typed_query_activation_then_compiled_pointer");
             json_add_number(copy, "confidence", pointer_confidence);
+            json_add_number(
+                copy, "span_score", pointer_span_score);
+            json_add_number(
+                copy, "activation_exists_score",
+                pointer_null_score);
             json_add_number(
                 copy, "record_index", (double)pointer_record_index);
             cJSON_AddItemToObject(root, "memory_copy", copy);
@@ -3047,8 +3118,6 @@ static void handle_completions(struct mg_connection *c, server_state_t *state,
     const char *session_id = NULL;
     int max_tokens = 0;
     int reset_existing_session = 0;
-    int commit_memory = 1;
-    int memory_activation = -1;
     generation_result_t result;
     cJSON *root = NULL;
     cJSON *choices = NULL;
@@ -3063,17 +3132,10 @@ static void handle_completions(struct mg_connection *c, server_state_t *state,
     reset_existing_session = json_get_bool(request, "reset_session", 0);
     max_tokens = json_get_int(request, "max_tokens", state->cfg.default_max_tokens,
                               1, state->cfg.max_request_tokens);
-    commit_memory = json_get_bool(request, "memory_commit", 1);
-    {
-        cJSON *activation = cJSON_GetObjectItem(
-            request, "memory_activation");
-        if (activation != NULL && cJSON_IsBool(activation))
-            memory_activation = cJSON_IsTrue(activation) ? 1 : 0;
-    }
     if (json_get_bool(request, "stream", 0)) {
         handle_streaming_completion(
             c, state, prompt, max_tokens, session_id,
-            reset_existing_session, commit_memory, memory_activation, 0);
+            reset_existing_session, 0);
         free(prompt);
         return;
     }
@@ -3081,7 +3143,6 @@ static void handle_completions(struct mg_connection *c, server_state_t *state,
     memset(&result, 0, sizeof(result));
     if (generate_text(
             state, prompt, max_tokens, session_id, reset_existing_session,
-            commit_memory, memory_activation,
             &result, error, sizeof(error)) != 0) {
         free(prompt);
         send_error(c, 500, "server_error", error);
@@ -3141,8 +3202,6 @@ static void handle_post_json(struct mg_connection *c,
         handle_memory_state(c, state, request, 0);
     } else if (action == 3) {
         handle_memory_state(c, state, request, 1);
-    } else if (action == 4) {
-        handle_memory_search(c, state, request);
     } else if (action == 5) {
         handle_memory_extract(c, state, request);
     } else if (action == 6) {
@@ -3151,6 +3210,8 @@ static void handle_post_json(struct mg_connection *c,
         handle_memory_event_current(c, state, request);
     } else if (action == 8) {
         handle_memory_event_active(c, state, request);
+    } else if (action == 11) {
+        handle_memory_remember(c, state, request);
     } else if (action == 1) {
         handle_chat_completions(c, state, request);
     } else {
@@ -3182,8 +3243,8 @@ static void http_handler(struct mg_connection *c, int ev, void *ev_data) {
                    mg_match(hm->uri, mg_str("/v1/memory/import"), NULL)) {
             handle_post_json(c, hm, state, 3);
         } else if (is_method(hm, "POST") &&
-                   mg_match(hm->uri, mg_str("/v1/memory/search"), NULL)) {
-            handle_post_json(c, hm, state, 4);
+                   mg_match(hm->uri, mg_str("/v1/memory/remember"), NULL)) {
+            handle_post_json(c, hm, state, 11);
         } else if (is_method(hm, "POST") &&
                    mg_match(hm->uri, mg_str("/v1/memory/extract"), NULL)) {
             handle_post_json(c, hm, state, 5);
@@ -3213,16 +3274,27 @@ static void print_usage(const char *argv0) {
             "       [--repeat-last-n N]\n"
             "       [--repeat-penalty PENALTY]\n"
             "       [--lora PATH] [--lora-scale SCALE]\n"
-            "       [--memory-model PATH] [--memory-state-dir DIR]\n"
-            "       [--episodic-memory] [--episodic-context-injection]"
-            " [--episodic-top-k N]\n"
+            "       [--memory-state-dir DIR] [--episodic-memory]\n"
             "       [--memory-controller PATH]"
-            " [--memory-pointer PATH]"
-            " [--memory-retriever PATH]"
-            " [--episodic-lexical-weight WEIGHT]"
-            " [--episodic-priority-weight WEIGHT]"
-            " [--memory-address-threshold SCORE]\n",
+            " [--typed-pair-model PATH]"
+            " [--typed-link-model PATH]"
+            " [--typed-query-model PATH]"
+            " [--typed-writer-model PATH]\n",
             argv0);
+}
+
+static void free_memory_sidecars(server_state_t *state) {
+    if (state == NULL) return;
+    metis_typed_link_model_free(state->typed_link);
+    metis_typed_query_activator_free(state->typed_query);
+    metis_typed_pair_encoder_free(state->typed_pair);
+    metis_typed_writer_model_free(state->typed_writer);
+    metis_memory_controller_free(state->memory_controller);
+    state->typed_link = NULL;
+    state->typed_query = NULL;
+    state->typed_pair = NULL;
+    state->typed_writer = NULL;
+    state->memory_controller = NULL;
 }
 
 int main(int argc, char **argv) {
@@ -3241,107 +3313,87 @@ int main(int argc, char **argv) {
     state.cfg.repeat_last_n = DEFAULT_REPEAT_LAST_N;
     state.cfg.repeat_penalty = DEFAULT_REPEAT_PENALTY;
     state.cfg.lora_scale = 1.0f;
-    state.cfg.episodic_top_k = 3;
-    state.cfg.episodic_lexical_weight = 0.75f;
-    state.cfg.episodic_priority_weight = 0.0f;
-    state.cfg.memory_address_threshold = 0.80f;
 
     if (argc < 2) {
         print_usage(argv[0]);
         return 1;
     }
     model_path = argv[1];
-    for (int i = 2; i < argc; ++i) {
-        if (strcmp(argv[i], "--host") == 0 && i + 1 < argc) {
-            state.cfg.host = argv[++i];
-        } else if (strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
-            state.cfg.port = argv[++i];
-        } else if (strcmp(argv[i], "--model-id") == 0 && i + 1 < argc) {
-            state.cfg.model_id = argv[++i];
-        } else if (strcmp(argv[i], "--ctx") == 0 && i + 1 < argc) {
-            state.cfg.max_context_tokens = parse_int_arg(argv[++i], DEFAULT_CONTEXT_TOKENS,
-                                                         MIN_CONTEXT_TOKENS, 32768);
-        } else if (strcmp(argv[i], "--max-tokens") == 0 && i + 1 < argc) {
-            state.cfg.max_request_tokens = parse_int_arg(argv[++i], MAX_REQUEST_TOKENS,
-                                                         1, MAX_REQUEST_TOKENS);
-        } else if (strcmp(argv[i], "--default-max-tokens") == 0 && i + 1 < argc) {
-            state.cfg.default_max_tokens = parse_int_arg(argv[++i], DEFAULT_MAX_TOKENS,
-                                                         1, MAX_REQUEST_TOKENS);
-        } else if (strcmp(argv[i], "--repeat-last-n") == 0 && i + 1 < argc) {
-            state.cfg.repeat_last_n = parse_int_arg(argv[++i], DEFAULT_REPEAT_LAST_N,
-                                                    0, 4096);
-        } else if (strcmp(argv[i], "--repeat-penalty") == 0 && i + 1 < argc) {
-            state.cfg.repeat_penalty = parse_float_arg(argv[++i], DEFAULT_REPEAT_PENALTY,
-                                                       1.0f, 10.0f);
-        } else if (strcmp(argv[i], "--lora") == 0 && i + 1 < argc) {
-            state.cfg.lora_path = argv[++i];
-        } else if (strcmp(argv[i], "--lora-scale") == 0 && i + 1 < argc) {
-            state.cfg.lora_scale = parse_float_arg(argv[++i], 1.0f, 0.0f, 100.0f);
-        } else if (strcmp(argv[i], "--memory-model") == 0 && i + 1 < argc) {
-            state.cfg.memory_model_path = argv[++i];
-        } else if (strcmp(argv[i], "--memory-state-dir") == 0 && i + 1 < argc) {
-            state.cfg.memory_state_dir = argv[++i];
-        } else if (strcmp(argv[i], "--episodic-memory") == 0) {
+    for (int index = 2; index < argc; ++index) {
+        if (strcmp(argv[index], "--host") == 0 && index + 1 < argc) {
+            state.cfg.host = argv[++index];
+        } else if (strcmp(argv[index], "--port") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.port = argv[++index];
+        } else if (strcmp(argv[index], "--model-id") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.model_id = argv[++index];
+        } else if (strcmp(argv[index], "--ctx") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.max_context_tokens = parse_int_arg(
+                argv[++index], DEFAULT_CONTEXT_TOKENS,
+                MIN_CONTEXT_TOKENS, 32768);
+        } else if (strcmp(argv[index], "--max-tokens") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.max_request_tokens = parse_int_arg(
+                argv[++index], MAX_REQUEST_TOKENS,
+                1, MAX_REQUEST_TOKENS);
+        } else if (strcmp(argv[index], "--default-max-tokens") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.default_max_tokens = parse_int_arg(
+                argv[++index], DEFAULT_MAX_TOKENS,
+                1, MAX_REQUEST_TOKENS);
+        } else if (strcmp(argv[index], "--repeat-last-n") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.repeat_last_n = parse_int_arg(
+                argv[++index], DEFAULT_REPEAT_LAST_N, 0, 4096);
+        } else if (strcmp(argv[index], "--repeat-penalty") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.repeat_penalty = parse_float_arg(
+                argv[++index], DEFAULT_REPEAT_PENALTY, 1.0f, 10.0f);
+        } else if (strcmp(argv[index], "--lora") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.lora_path = argv[++index];
+        } else if (strcmp(argv[index], "--lora-scale") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.lora_scale = parse_float_arg(
+                argv[++index], 1.0f, 0.0f, 100.0f);
+        } else if (strcmp(argv[index], "--memory-state-dir") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.memory_state_dir = argv[++index];
+        } else if (strcmp(argv[index], "--episodic-memory") == 0) {
             state.cfg.episodic_memory = 1;
-        } else if (strcmp(
-                       argv[i], "--episodic-context-injection") == 0) {
-            state.cfg.episodic_context_injection = 1;
-        } else if (strcmp(argv[i], "--episodic-top-k") == 0 &&
-                   i + 1 < argc) {
-            state.cfg.episodic_top_k = parse_int_arg(
-                argv[++i], 3, 1, 32);
-        } else if (strcmp(argv[i], "--memory-controller") == 0 &&
-                   i + 1 < argc) {
-            state.cfg.memory_controller_path = argv[++i];
-        } else if (strcmp(argv[i], "--memory-pointer") == 0 &&
-                   i + 1 < argc) {
-            state.cfg.memory_pointer_path = argv[++i];
-        } else if (strcmp(argv[i], "--memory-retriever") == 0 &&
-                   i + 1 < argc) {
-            state.cfg.memory_retriever_path = argv[++i];
-        } else if (strcmp(argv[i], "--episodic-lexical-weight") == 0 &&
-                   i + 1 < argc) {
-            state.cfg.episodic_lexical_weight = parse_float_arg(
-                argv[++i], 0.75f, 0.0f, 1.0f);
-        } else if (strcmp(argv[i], "--episodic-priority-weight") == 0 &&
-                   i + 1 < argc) {
-            state.cfg.episodic_priority_weight = parse_float_arg(
-                argv[++i], 0.0f, 0.0f, 0.49f);
-        } else if (strcmp(argv[i], "--memory-address-threshold") == 0 &&
-                   i + 1 < argc) {
-            state.cfg.memory_address_threshold = parse_float_arg(
-                argv[++i], 0.80f, -1.0f, 1.0f);
+        } else if (strcmp(argv[index], "--memory-controller") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.memory_controller_path = argv[++index];
+        } else if (strcmp(argv[index], "--typed-pair-model") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.typed_pair_path = argv[++index];
+        } else if (strcmp(argv[index], "--typed-link-model") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.typed_link_path = argv[++index];
+        } else if (strcmp(argv[index], "--typed-query-model") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.typed_query_path = argv[++index];
+        } else if (strcmp(argv[index], "--typed-writer-model") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.typed_writer_path = argv[++index];
         } else {
             print_usage(argv[0]);
             return 1;
         }
     }
-    if (state.cfg.default_max_tokens > state.cfg.max_request_tokens) {
+    if (state.cfg.default_max_tokens > state.cfg.max_request_tokens)
         state.cfg.default_max_tokens = state.cfg.max_request_tokens;
-    }
-    if (state.cfg.max_context_tokens < state.cfg.max_request_tokens + MIN_CONTEXT_TOKENS) {
-        state.cfg.max_context_tokens = state.cfg.max_request_tokens + MIN_CONTEXT_TOKENS;
-    }
+    if (state.cfg.max_context_tokens <
+        state.cfg.max_request_tokens + MIN_CONTEXT_TOKENS)
+        state.cfg.max_context_tokens =
+            state.cfg.max_request_tokens + MIN_CONTEXT_TOKENS;
+
     if (state.cfg.episodic_memory &&
         state.cfg.memory_state_dir == NULL) {
         fprintf(stderr,
                 "--episodic-memory requires --memory-state-dir\n");
-        return 1;
-    }
-    if (state.cfg.episodic_context_injection &&
-        !state.cfg.episodic_memory) {
-        fprintf(stderr,
-                "--episodic-context-injection requires --episodic-memory\n");
-        return 1;
-    }
-    if (state.cfg.episodic_memory &&
-        state.cfg.memory_model_path == NULL &&
-        state.cfg.memory_controller_path == NULL &&
-        state.cfg.memory_pointer_path == NULL &&
-        state.cfg.memory_retriever_path == NULL) {
-        fprintf(stderr,
-                "--episodic-memory requires a memory model, controller, "
-                "or pointer\n");
         return 1;
     }
     if (state.cfg.memory_controller_path != NULL &&
@@ -3350,17 +3402,35 @@ int main(int argc, char **argv) {
                 "--memory-controller requires --episodic-memory\n");
         return 1;
     }
-    if (state.cfg.memory_pointer_path != NULL &&
-        !state.cfg.episodic_memory) {
-        fprintf(stderr,
-                "--memory-pointer requires --episodic-memory\n");
-        return 1;
-    }
-    if (state.cfg.memory_retriever_path != NULL &&
-        !state.cfg.episodic_memory) {
-        fprintf(stderr,
-                "--memory-retriever requires --episodic-memory\n");
-        return 1;
+    {
+        int typed_count =
+            (state.cfg.typed_pair_path != NULL) +
+            (state.cfg.typed_link_path != NULL) +
+            (state.cfg.typed_query_path != NULL) +
+            (state.cfg.typed_writer_path != NULL);
+        if (typed_count != 0 && typed_count != 4) {
+            fprintf(stderr,
+                    "typed memory requires pair, link, query, and writer "
+                    "models together\n");
+            return 1;
+        }
+        if (state.cfg.episodic_memory && typed_count != 4) {
+            fprintf(stderr,
+                    "--episodic-memory requires the complete typed-memory "
+                    "model set\n");
+            return 1;
+        }
+        if (typed_count != 0 && !state.cfg.episodic_memory) {
+            fprintf(stderr,
+                    "typed memory models require --episodic-memory\n");
+            return 1;
+        }
+        if (typed_count != 0 && state.cfg.lora_path != NULL) {
+            fprintf(stderr,
+                    "typed memory cannot use LoRA because its hidden-state "
+                    "domain is bound to the unmodified backbone\n");
+            return 1;
+        }
     }
 
     fprintf(stderr, "Loading model: %s\n", model_path);
@@ -3370,8 +3440,11 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (state.cfg.lora_path != NULL) {
-        if (bitnet_load_lora(state.model, state.cfg.lora_path, state.cfg.lora_scale) != 0) {
-            fprintf(stderr, "Failed to load LoRA: %s\n", state.cfg.lora_path);
+        if (bitnet_load_lora(
+                state.model, state.cfg.lora_path,
+                state.cfg.lora_scale) != 0) {
+            fprintf(stderr, "Failed to load LoRA: %s\n",
+                    state.cfg.lora_path);
             bitnet_free_model(state.model);
             return 1;
         }
@@ -3379,16 +3452,6 @@ int main(int argc, char **argv) {
                 state.cfg.lora_path,
                 bitnet_lora_count(state.model),
                 state.cfg.lora_scale);
-    }
-    if (state.cfg.memory_model_path != NULL) {
-        if (bitnet_load_memory_model(state.model, state.cfg.memory_model_path) != 0) {
-            fprintf(stderr, "Failed to load memory model: %s\n",
-                    state.cfg.memory_model_path);
-            bitnet_free_model(state.model);
-            return 1;
-        }
-        fprintf(stderr, "Memory model loaded: %s\n",
-                state.cfg.memory_model_path);
     }
     if (state.cfg.memory_controller_path != NULL) {
         char controller_error[256];
@@ -3403,91 +3466,131 @@ int main(int argc, char **argv) {
             return 1;
         }
         fprintf(stderr,
-                "Memory controller loaded: %s "
-                "(rank=%d pooling=%d lexical_weight=%.2f)\n",
+                "Memory action controller loaded: %s "
+                "(rank=%d pooling=%d)\n",
                 state.cfg.memory_controller_path,
                 state.memory_controller->rank,
-                state.memory_controller->pooling,
-                state.cfg.episodic_lexical_weight);
+                state.memory_controller->pooling);
     }
-    if (state.cfg.memory_pointer_path != NULL) {
-        char pointer_error[256];
-        state.memory_pointer = metis_memory_pointer_load(
-            state.cfg.memory_pointer_path, model_path,
+    if (state.cfg.typed_pair_path != NULL) {
+        char typed_error[256];
+        int compatible;
+        state.typed_pair = metis_typed_pair_encoder_load(
+            state.cfg.typed_pair_path, model_path,
             bitnet_embedding_length(state.model),
-            pointer_error, sizeof pointer_error);
-        if (state.memory_pointer == NULL) {
-            fprintf(stderr, "Failed to load memory pointer: %s\n",
-                    pointer_error);
-            metis_memory_controller_free(state.memory_controller);
+            typed_error, sizeof typed_error);
+        if (state.typed_pair == NULL) {
+            fprintf(stderr, "Failed to load typed pair model: %s\n",
+                    typed_error);
+            free_memory_sidecars(&state);
+            bitnet_free_model(state.model);
+            return 1;
+        }
+        state.typed_link = metis_typed_link_model_load(
+            state.cfg.typed_link_path, model_path,
+            typed_error, sizeof typed_error);
+        compatible =
+            state.typed_link != NULL &&
+            state.typed_link->rank == state.typed_pair->rank &&
+            state.typed_link->pair_feature_dim ==
+                state.typed_pair->head_width &&
+            memcmp(
+                state.typed_link->backbone_sha256,
+                state.typed_pair->backbone_sha256,
+                sizeof state.typed_link->backbone_sha256) == 0;
+        if (!compatible) {
+            fprintf(stderr, "Failed to load typed link model: %s%s\n",
+                    typed_error,
+                    state.typed_link != NULL ?
+                        "geometry does not match pair encoder" : "");
+            free_memory_sidecars(&state);
+            bitnet_free_model(state.model);
+            return 1;
+        }
+        state.typed_writer = metis_typed_writer_model_load(
+            state.cfg.typed_writer_path, model_path,
+            bitnet_embedding_length(state.model),
+            typed_error, sizeof typed_error);
+        compatible =
+            state.typed_writer != NULL &&
+            state.typed_writer->hidden_dim ==
+                state.typed_pair->hidden_dim &&
+            state.typed_writer->rank == state.typed_pair->rank &&
+            state.typed_writer->band_count ==
+                state.typed_pair->band_count &&
+            memcmp(
+                state.typed_writer->backbone_sha256,
+                state.typed_pair->backbone_sha256,
+                sizeof state.typed_writer->backbone_sha256) == 0;
+        for (int band = 0;
+             compatible && band < state.typed_writer->band_count;
+             ++band) {
+            compatible =
+                state.typed_writer->band_start[band] ==
+                    state.typed_pair->band_start[band] &&
+                state.typed_writer->band_end[band] ==
+                    state.typed_pair->band_end[band];
+        }
+        if (!compatible) {
+            fprintf(stderr, "Failed to load typed writer model: %s%s\n",
+                    typed_error,
+                    state.typed_writer != NULL ?
+                        "geometry does not match pair encoder" : "");
+            free_memory_sidecars(&state);
+            bitnet_free_model(state.model);
+            return 1;
+        }
+        state.typed_query = metis_typed_query_activator_load(
+            state.cfg.typed_query_path, model_path,
+            state.cfg.typed_pair_path,
+            state.typed_pair->head_width * 2,
+            typed_error, sizeof typed_error);
+        if (state.typed_query == NULL) {
+            fprintf(stderr,
+                    "Failed to load typed query activator: %s\n",
+                    typed_error);
+            free_memory_sidecars(&state);
             bitnet_free_model(state.model);
             return 1;
         }
         fprintf(stderr,
-                "Memory pointer loaded: %s "
-                "(max_span=%d threshold=%.4f)\n",
-                state.cfg.memory_pointer_path,
-                state.memory_pointer->max_span,
-                state.memory_pointer->threshold);
-    }
-    if (state.cfg.memory_retriever_path != NULL) {
-        char retriever_error[256];
-        state.memory_retriever = metis_memory_retriever_load(
-            state.cfg.memory_retriever_path, model_path,
-            bitnet_embedding_length(state.model),
-            retriever_error, sizeof retriever_error);
-        if (state.memory_retriever == NULL) {
-            fprintf(stderr, "Failed to load memory retriever: %s\n",
-                    retriever_error);
-            metis_memory_pointer_free(state.memory_pointer);
-            metis_memory_controller_free(state.memory_controller);
-            bitnet_free_model(state.model);
-            return 1;
-        }
-        fprintf(stderr,
-                "Memory retriever loaded: %s "
-                "(rank=%d late_weight=%.4f max_residual=%.4f)\n",
-                state.cfg.memory_retriever_path,
-                state.memory_retriever->rank,
-                state.memory_retriever->late_weight,
-                state.memory_retriever->max_residual);
-    }
-    if (state.cfg.episodic_memory) {
-        fprintf(stderr,
-                "Episodic store enabled: context_injection=%s, top_k=%d, "
-                "KV reuse disabled per request\n",
-                state.cfg.episodic_context_injection ? "RAG-baseline" : "off",
-                state.cfg.episodic_top_k);
+                "Typed memory loaded: writer=%s pair=%s link=%s query=%s "
+                "(rank=%d bands=%d)\n",
+                state.cfg.typed_writer_path,
+                state.cfg.typed_pair_path,
+                state.cfg.typed_link_path,
+                state.cfg.typed_query_path,
+                state.typed_pair->rank,
+                state.typed_pair->band_count);
     }
 
-    snprintf(listen_url, sizeof(listen_url), "http://%s:%s", state.cfg.host, state.cfg.port);
+    snprintf(listen_url, sizeof listen_url, "http://%s:%s",
+             state.cfg.host, state.cfg.port);
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
     mg_log_set(MG_LL_ERROR);
     mg_mgr_init(&mgr);
-    if (mg_http_listen(&mgr, listen_url, http_handler, &state) == NULL) {
+    if (mg_http_listen(
+            &mgr, listen_url, http_handler, &state) == NULL) {
         fprintf(stderr, "Failed to listen on %s\n", listen_url);
         mg_mgr_free(&mgr);
-        metis_memory_pointer_free(state.memory_pointer);
-        metis_memory_retriever_free(state.memory_retriever);
-        metis_memory_controller_free(state.memory_controller);
+        free_memory_sidecars(&state);
         bitnet_free_model(state.model);
         return 1;
     }
-    fprintf(stderr, "OpenAI-compatible server listening on %s\n", listen_url);
+    fprintf(stderr, "OpenAI-compatible server listening on %s\n",
+            listen_url);
     fprintf(stderr, "Model id: %s\n", state.cfg.model_id);
-    fprintf(stderr, "Default max_tokens: %d, request max_tokens cap: %d, ctx: %d\n",
+    fprintf(stderr,
+            "Default max_tokens: %d, request max_tokens cap: %d, ctx: %d\n",
             state.cfg.default_max_tokens,
             state.cfg.max_request_tokens,
             state.cfg.max_context_tokens);
-    while (!g_stop) {
+    while (!g_stop)
         mg_mgr_poll(&mgr, 100);
-    }
     mg_mgr_free(&mgr);
     free_sessions(&state);
-    metis_memory_pointer_free(state.memory_pointer);
-    metis_memory_retriever_free(state.memory_retriever);
-    metis_memory_controller_free(state.memory_controller);
+    free_memory_sidecars(&state);
     bitnet_free_model(state.model);
     return 0;
 }

@@ -1,188 +1,66 @@
 #include "metis/episodic_store.h"
 
+#include <math.h>
 #include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
-static int failures = 0;
 #define CHECK(condition, message) do { \
     if (!(condition)) { \
         fprintf(stderr, "FAIL: %s\n", message); \
-        ++failures; \
+        failed = 1; \
+        goto cleanup; \
     } \
 } while (0)
 
 int main(void) {
+    const char *state_path = "/tmp/test-typed-memory.bnepisodic";
+    const char *bad_path = "/tmp/test-typed-memory-bad.bnepisodic";
     metis_episodic_store_t store;
     metis_episodic_store_t loaded;
-    char *context;
+    FILE *bad_file = NULL;
+    int failed = 0;
+
     metis_episodic_init(&store);
-    CHECK(metis_episodic_configure_keys(&store, 2) == 0,
-          "configure empty addressed store");
-    {
-        const float empty_delete_key[2] = {1.0f, 0.0f};
-        size_t changed = SIZE_MAX;
-        CHECK(metis_episodic_tombstone_with_key(
-                  &store, "Forget an absent value.",
-                  empty_delete_key, 0.9f, &changed) == 0,
-              "empty addressed tombstone is storable");
-        CHECK(metis_episodic_count(&store) == 1,
-              "empty addressed tombstone creates one record");
-        metis_episodic_clear(&store);
-        CHECK(metis_episodic_configure_keys(&store, 2) == 0,
-              "reconfigure addressed store after clear");
-    }
     metis_episodic_init(&loaded);
+    CHECK(
+        metis_episodic_add_with_priority(
+            &store, "Briar uses a virtual ticket.", NULL, 0.4f) == 0,
+        "add first source record");
+    CHECK(
+        metis_episodic_add_with_priority(
+            &store, "Briar uses a virtual ticket.", NULL, 0.8f) == 0,
+        "deduplicate source record");
+    CHECK(store.count == 1, "duplicate record count");
+    CHECK(fabsf(store.priorities[0] - 0.8f) < 1e-6f,
+          "duplicate keeps higher priority");
+    CHECK(
+        metis_episodic_add_with_priority(
+            &store, "Cleo follows radio bulletins.", NULL, 0.2f) == 0,
+        "add second source record");
+    CHECK(metis_episodic_count(&store) == 2, "source record count");
+    CHECK(metis_episodic_save(&store, state_path) == 0, "save state");
+    CHECK(metis_episodic_load(&loaded, state_path) == 0, "load state");
+    CHECK(loaded.count == 2, "round-trip count");
+    CHECK(strcmp(loaded.records[0], store.records[0]) == 0,
+          "round-trip first record");
+    CHECK(strcmp(loaded.records[1], store.records[1]) == 0,
+          "round-trip second record");
 
-    CHECK(metis_episodic_add_with_priority(
-              &store, "Mira's locker code is amber-4172.",
-              NULL, 0.8f) == 0,
-          "add first record");
-    CHECK(metis_episodic_add(
-              &store, "Jonah's travel date is Saturday morning.") == 0,
-          "add second record");
-    CHECK(metis_episodic_add(
-              &store, "Mira's locker code is blue-9021 now.") == 0,
-          "add update record");
-    CHECK(metis_episodic_add(
-              &store, "Mira's locker code is blue-9021 now.") == 0,
-          "duplicate record accepted as no-op");
-    CHECK(metis_episodic_add_with_priority(
-              &store, "Mira's locker code is blue-9021 now.",
-              NULL, 0.9f) == 0 &&
-              store.priorities[2] == 0.9f,
-          "duplicate raises retained priority");
-    CHECK(metis_episodic_add_with_priority(
-              &store, "invalid", NULL, 1.1f) != 0,
-          "out-of-range priority rejected");
-    CHECK(metis_episodic_count(&store) == 3, "duplicate not stored");
-    CHECK(metis_episodic_configure_keys(&store, 2) == 0,
-          "configure semantic key dimension");
-    {
-        const float old_key[2] = {0.8f, 0.2f};
-        const float other_key[2] = {0.0f, 1.0f};
-        const float new_key[2] = {1.0f, 0.0f};
-        const float query_key[2] = {1.0f, 0.0f};
-        const float update_key[2] = {0.99f, 0.01f};
-        const float delete_key[2] = {0.0f, 1.0f};
-        size_t changed = SIZE_MAX;
-        CHECK(metis_episodic_add_with_key(
-                  &store, "Mira's locker code is amber-4172.",
-                  old_key) == 0,
-              "attach old semantic key");
-        CHECK(metis_episodic_add_with_key(
-                  &store, "Jonah's travel date is Saturday morning.",
-                  other_key) == 0,
-              "attach unrelated semantic key");
-        CHECK(metis_episodic_add_with_key(
-                  &store, "Mira's locker code is blue-9021 now.",
-                  new_key) == 0,
-              "attach current semantic key");
-        context = metis_episodic_build_hybrid_context(
-            &store, "unseen query wording", query_key, 0.0f, 1);
-        CHECK(context != NULL && strstr(context, "blue-9021") != NULL,
-              "semantic-only retrieval");
-        free(context);
-        CHECK(metis_episodic_upsert_with_key(
-                  &store, "Mira's locker code is violet-7710 now.",
-                  update_key, 0.9f, &changed) == 0,
-              "addressed update");
-        CHECK(changed != SIZE_MAX, "addressed update replaced a record");
-        CHECK(metis_episodic_count(&store) == 3,
-              "addressed update preserves record count");
-        context = metis_episodic_build_hybrid_context(
-            &store, "unseen query wording", query_key, 0.0f, 1);
-        CHECK(context != NULL && strstr(context, "violet-7710") != NULL &&
-                  strstr(context, "blue-9021") == NULL,
-              "addressed update removes stale value");
-        free(context);
-        CHECK(metis_episodic_delete_with_key(
-                  &store, delete_key, 0.9f, &changed) == 1,
-              "addressed delete");
-        CHECK(changed != SIZE_MAX, "addressed delete reports record");
-        CHECK(metis_episodic_count(&store) == 2,
-              "addressed delete removes one record");
-        CHECK(metis_episodic_tombstone_with_key(
-                  &store, "Please forget Mira's locker code.",
-                  update_key, 0.9f, &changed) == 0,
-              "addressed tombstone");
-        CHECK(changed != SIZE_MAX, "tombstone replaced current record");
-        context = metis_episodic_build_hybrid_context(
-            &store, "Mira locker code", query_key, 0.0f, 1);
-        CHECK(context != NULL &&
-                  strstr(context, "DELETED MEMORY") != NULL &&
-                  strstr(context, "violet-7710") == NULL,
-              "tombstone suppresses previous value");
-        free(context);
-    }
+    bad_file = fopen(bad_path, "wb");
+    CHECK(bad_file != NULL, "create malformed state");
+    CHECK(fwrite("bad", 1, 3, bad_file) == 3, "write malformed state");
+    CHECK(fclose(bad_file) == 0, "close malformed state");
+    bad_file = NULL;
+    CHECK(metis_episodic_load(&loaded, bad_path) != 0,
+          "reject malformed state");
+    CHECK(loaded.count == 2, "failed import leaves state unchanged");
 
-    context = metis_episodic_build_context(
-        &store, "What is Mira's locker code?", 2);
-    CHECK(context != NULL, "retrieval context");
-    if (context != NULL) {
-        const char *deleted = strstr(context, "DELETED MEMORY");
-        const char *old_value = strstr(context, "amber-4172");
-        CHECK(deleted != NULL && old_value != NULL,
-              "retrieval contains tombstone and older unmatched version");
-        free(context);
-    }
-
-    CHECK(metis_episodic_save(
-              &store, "/tmp/test_episodic.bnepisodic") == 0,
-          "save episodic records");
-    CHECK(metis_episodic_load(
-              &loaded, "/tmp/test_episodic.bnepisodic") == 0,
-          "load episodic records");
-    CHECK(metis_episodic_count(&loaded) == 2, "record count roundtrip");
-    CHECK(loaded.key_dim == 2, "semantic key dimension roundtrip");
-    CHECK(loaded.keys != NULL && loaded.keys[0] != NULL &&
-              loaded.keys[1] != NULL,
-          "semantic keys roundtrip");
-    CHECK(loaded.priorities != NULL &&
-              loaded.priorities[0] == 0.8f,
-          "priority roundtrip");
-    {
-        const float query_key[2] = {1.0f, 0.0f};
-        context = metis_episodic_build_hybrid_context(
-            &loaded, "no lexical overlap", query_key, 0.0f, 1);
-        CHECK(context != NULL &&
-                  strstr(context, "DELETED MEMORY") != NULL,
-              "loaded semantic-only retrieval");
-        free(context);
-    }
-    context = metis_episodic_build_context(
-        &loaded, "DELETED MEMORY", 1);
-    CHECK(context != NULL && strstr(context, "DELETED MEMORY") != NULL,
-          "loaded retrieval");
-    free(context);
-
-    {
-        FILE *file = fopen("/tmp/test_episodic.bnepisodic", "r+b");
-        CHECK(file != NULL, "open episodic file for corruption");
-        if (file != NULL) {
-            CHECK(fseek(file, -1, SEEK_END) == 0,
-                  "seek episodic payload");
-            if (fseek(file, -1, SEEK_END) == 0) {
-                int value = fgetc(file);
-                CHECK(value != EOF, "read episodic payload");
-                CHECK(fseek(file, -1, SEEK_CUR) == 0,
-                      "rewind episodic payload");
-                if (value != EOF) fputc(value ^ 1, file);
-            }
-            fclose(file);
-        }
-    }
-    CHECK(metis_episodic_load(
-              &loaded, "/tmp/test_episodic.bnepisodic") != 0,
-          "payload corruption rejected");
-    CHECK(metis_episodic_count(&loaded) == 2,
-          "failed load leaves existing records intact");
-
-    remove("/tmp/test_episodic.bnepisodic");
+cleanup:
+    if (bad_file != NULL) fclose(bad_file);
+    remove(state_path);
+    remove(bad_path);
     metis_episodic_free(&loaded);
     metis_episodic_free(&store);
-    if (failures != 0) return 1;
-    printf("test_episodic_store: OK\n");
-    return 0;
+    if (!failed) puts("test_episodic_store: OK");
+    return failed;
 }

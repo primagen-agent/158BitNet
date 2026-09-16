@@ -4,7 +4,6 @@
 #include "bitnet_internal.h"
 #include "gguf.h"
 #include "sha256.h"
-#include "metis/metis_file.h"
 #include "ops.h"
 #include "quant_q4k.h"
 #include "quant_q6k.h"
@@ -206,7 +205,6 @@ struct bitnet_model {
     int use_ffn_sub_norm;
     int chat_template_kind;
     bitnet_lora_adapter_t *lora;
-    metis_file_model_t *metis;   /* memory model, NULL if none */
 };
 
 struct bitnet_context {
@@ -227,6 +225,13 @@ struct bitnet_context {
     float *last_eval_hidden;
     size_t last_eval_hidden_capacity;
     int last_eval_hidden_count;
+    int layer_band_count;
+    int *layer_to_band;
+    int *layer_band_width;
+    float *last_eval_layer_bands;
+    size_t last_eval_layer_band_capacity;
+    int last_eval_layer_band_token_count;
+    int skip_output_projection;
 
     /* pre-allocated eval buffers */
     float *hidden;
@@ -252,27 +257,6 @@ struct bitnet_context {
     size_t tq2_lut_count;
     size_t tq2_tl1_lut_size;
 
-    /* Metis memory-model state (set by bitnet_context_attach_memory).
-     * When ctx->metis == NULL every field below stays zero and the eval
-     * hot path is bit-exact unchanged. */
-    const metis_file_model_t *metis;   /* borrowed from the model */
-    int metis_active;       /* fusion engaged (reference: always after attach) */
-    float *metis_M;         /* [n_layers][kv_dim*kv_dim] */
-    float *metis_S;         /* [n_layers][kv_dim] */
-    float *metis_capture;   /* [n_layers][cap_rows x d_model]: RAW RESIDUAL
-                             * rows of each memory layer's input */
-    int metis_saved_rows;   /* rows accumulated since the last commit */
-    int metis_capture_rows; /* capacity in rows per layer (METIS_CAP_ROWS) */
-    float *metis_mem_out;   /* read scratch [q_dim] */
-    float *metis_fused;     /* fusion scratch [d_model] */
-    float *metis_h_raw;     /* read query source: layer INPUT residual
-                             * [d_model] (snapshot before the attn-norm swap) */
-    float *metis_q_base;    /* backbone pre-RoPE query [q_dim], reused */
-    float *metis_lut;       /* scalar-tier LUT [lut_count] for o_proj */
-    size_t metis_lut_count;
-    int8_t *metis_qhidden;  /* i8 quantized mem vector [q_dim] for o_proj */
-    unsigned long long metis_activation_count;
-    double metis_activation_l2_sum;
 };
 
 #if defined(__ARM_NEON) && defined(__ARM_FEATURE_DOTPROD)
@@ -330,6 +314,40 @@ static int bitnet_f16_embedding_lookup(const void *data, int token_id,
         out[i] = bitnet_fp16_to_fp32(row[i]);
     }
     return 0;
+}
+
+static int bitnet_raw_token_embedding_lookup(
+    const bitnet_model_t *model, int token_id, float *output) {
+    const void *data;
+
+    if (model == NULL || output == NULL ||
+        model->tensor_cache.token_embd == NULL ||
+        model->embedding_length == 0 ||
+        model->embedding_length > (uint32_t)INT_MAX ||
+        model->vocab_size == 0 ||
+        model->vocab_size > (uint32_t)INT_MAX) {
+        return -1;
+    }
+    data = gguf_get_tensor_ptr(
+        &model->gguf, model->tensor_cache.token_embd);
+    if (data == NULL) return -1;
+    if (model->token_embd_type ==
+        BITNET_TARGET_TENSOR_TYPE_F16) {
+        return bitnet_f16_embedding_lookup(
+            data, token_id,
+            (int)model->embedding_length,
+            (int)model->vocab_size,
+            output);
+    }
+    if (model->token_embd_type ==
+        BITNET_TARGET_TENSOR_TYPE_Q4_K) {
+        return bitnet_q4k_embedding_lookup(
+            data, token_id,
+            (int)model->embedding_length,
+            (int)model->vocab_size,
+            output, (size_t)model->embedding_length);
+    }
+    return -1;
 }
 
 static double monotonic_seconds(void) {
@@ -730,6 +748,32 @@ int bitnet_embedding_length(const bitnet_model_t *model) {
 int bitnet_vocab_size(const bitnet_model_t *model) {
     if (model == NULL || model->vocab_size > (uint32_t)INT_MAX) return -1;
     return (int)model->vocab_size;
+}
+
+int bitnet_token_embedding_lookup(
+    const bitnet_model_t *model,
+    const int *tokens, int token_count,
+    float *output, size_t output_count) {
+    size_t required;
+
+    if (model == NULL || tokens == NULL ||
+        token_count <= 0 || output == NULL ||
+        model->embedding_length == 0 ||
+        (size_t)token_count >
+            SIZE_MAX / (size_t)model->embedding_length) {
+        return -1;
+    }
+    required =
+        (size_t)token_count * (size_t)model->embedding_length;
+    if (output_count < required) return -1;
+    for (int index = 0; index < token_count; ++index)
+        if (bitnet_raw_token_embedding_lookup(
+                model, tokens[index],
+                output +
+                    (size_t)index *
+                        (size_t)model->embedding_length) != 0)
+            return -1;
+    return 0;
 }
 
 int bitnet_chat_template_kind(const bitnet_model_t *model) {
@@ -3198,6 +3242,73 @@ int bitnet_reset_context(bitnet_context_t *ctx) {
                sizeof(*ctx->last_pooled_hidden));
     }
     ctx->last_eval_hidden_count = 0;
+    ctx->last_eval_layer_band_token_count = 0;
+    return 0;
+}
+
+int bitnet_context_configure_layer_bands(
+    bitnet_context_t *ctx, const int *band_start,
+    const int *band_end, int band_count) {
+    int *layer_to_band = NULL;
+    int *band_width = NULL;
+    int expected_start = 0;
+    int block_count;
+    if (ctx == NULL || ctx->model == NULL || band_count < 0)
+        return -1;
+    if (band_count == 0) {
+        free(ctx->layer_to_band);
+        free(ctx->layer_band_width);
+        free(ctx->last_eval_layer_bands);
+        ctx->layer_to_band = NULL;
+        ctx->layer_band_width = NULL;
+        ctx->last_eval_layer_bands = NULL;
+        ctx->last_eval_layer_band_capacity = 0;
+        ctx->layer_band_count = 0;
+        ctx->last_eval_layer_band_token_count = 0;
+        return 0;
+    }
+    if (band_start == NULL || band_end == NULL ||
+        band_count > (int)ctx->model->block_count)
+        return -1;
+    block_count = (int)ctx->model->block_count;
+    layer_to_band = (int *)malloc(
+        (size_t)block_count * sizeof(int));
+    band_width = (int *)malloc(
+        (size_t)band_count * sizeof(int));
+    if (layer_to_band == NULL || band_width == NULL) {
+        free(layer_to_band);
+        free(band_width);
+        return -1;
+    }
+    for (int band = 0; band < band_count; ++band) {
+        if (band_start[band] != expected_start ||
+            band_end[band] < band_start[band] ||
+            band_end[band] >= block_count) {
+            free(layer_to_band);
+            free(band_width);
+            return -1;
+        }
+        band_width[band] =
+            band_end[band] - band_start[band] + 1;
+        for (int layer = band_start[band];
+             layer <= band_end[band]; ++layer)
+            layer_to_band[layer] = band;
+        expected_start = band_end[band] + 1;
+    }
+    if (expected_start != block_count) {
+        free(layer_to_band);
+        free(band_width);
+        return -1;
+    }
+    free(ctx->layer_to_band);
+    free(ctx->layer_band_width);
+    free(ctx->last_eval_layer_bands);
+    ctx->layer_to_band = layer_to_band;
+    ctx->layer_band_width = band_width;
+    ctx->last_eval_layer_bands = NULL;
+    ctx->last_eval_layer_band_capacity = 0;
+    ctx->layer_band_count = band_count;
+    ctx->last_eval_layer_band_token_count = 0;
     return 0;
 }
 
@@ -3379,126 +3490,6 @@ static void BITNET_MAYBE_UNUSED rope_apply_cached(float *x, int n_heads, int hea
     }
 }
 
-/* ---- Metis memory runtime hook ---- */
-
-/* True when backbone block `blk` carries a memory fusion (layer_ids is
- * strictly increasing, n_layers <= METIS_MAX_LAYERS = 4, so a linear scan
- * over at most 4 ints beats any index structure). Returns the slot index of
- * the block in layer_ids (>= 0) when found, -1 otherwise. */
-static int metis_is_memory_block(const metis_file_model_t *m, int blk) {
-    if (m == NULL) return -1;
-    for (int i = 0; i < m->params.n_layers; ++i) {
-        if (m->params.layer_ids[i] == blk) return i;
-        if (m->params.layer_ids[i] > blk) break;   /* strictly increasing */
-    }
-    return -1;
-}
-
-
-/* fusion: q_pre_rope [q_dim] is the frozen backbone q_proj output (saved
- * before RoPE); reads the layer's M/S, applies mem_norm (trainable, over
- * q_dim), then the FROZEN backbone o_proj via the same TQ2 kernels the attn
- * branch uses, and blends into attn_branch in place:
- *   attn' = gamma*attn + (1-gamma)*o_proj(memnorm(GQA_read(q)))
- * v4: the read query is the TRAINED query_proj applied to the layer INPUT
- * residual (metis_h_raw snapshot) instead of the backbone q snapshot.
- * Only called when ctx->metis != NULL && metis_active. Returns 0. */
-static int metis_apply_layer(bitnet_context_t *ctx, int slot,
-                                int block_idx, float *attn_branch /*down*/) {
-    const metis_params_t *p = &ctx->metis->params;
-    const int d = (int)ctx->model->embedding_length;
-    const int q_dim = p->q_dim;
-    const bitnet_tensor_cache_t *cache = &ctx->model->tensor_cache;
-    const bitnet_block_tensors_t *bt BITNET_MAYBE_UNUSED =
-        &cache->blocks[block_idx];
-    float *mem_out = ctx->metis_mem_out;   /* [q_dim] */
-    float *fused = ctx->metis_fused;       /* [d_model] */
-
-    metis_read(p, slot, ctx->metis_h_raw, ctx->metis_q_base,
-                     ctx->metis_M + (size_t)slot * (size_t)p->kv_dim *
-                         (size_t)p->kv_dim,
-                     ctx->metis_S + (size_t)slot * (size_t)p->kv_dim, mem_out);
-
-    /* mem_norm: standard RMSNorm over mem_out, followed by the learned
-     * per-dimension weight. The reference uses eps=1e-6 here. */
-    {
-        const float *mnw = p->mem_norm + (size_t)slot * (size_t)q_dim;
-        float sum = 0.0f;
-        for (int i = 0; i < q_dim; ++i) {
-            sum += mem_out[i] * mem_out[i];
-        }
-        float inv = 1.0f / sqrtf(sum / (float)q_dim + 1e-6f);
-        for (int i = 0; i < q_dim; ++i) mem_out[i] *= inv * mnw[i];
-    }
-
-    /* fused = o_proj @ mem_out through the TQ2 kernels (weights from GGUF,
-     * quantized input exactly like the attn branch consumes its input). */
-    {
-        float mem_scale = 0.0f;
-        int32_t bsums[BITNET_MAX_TQ2_BLOCKS];
-#if BITNET_USE_TQ2_I2S
-        const bitnet_block_i2s_weights_t *bw =
-            &ctx->model->i2s_cache.blocks[block_idx];
-        if (bitnet_tq2_0_quantize_vec_i8(mem_out, q_dim, ctx->metis_qhidden,
-                                         &mem_scale, bsums) != 0) return -1;
-        if (bitnet_tq2_0_matmul_i2s_neon_parallel(bw->attn_output,
-                ctx->model->i2s_cache.scales[block_idx * 7 + 3],
-                bsums, d, q_dim, ctx->metis_qhidden, mem_scale, fused) != 0)
-            return -1;
-#else
-        const void *w = gguf_get_tensor_ptr(&ctx->model->gguf, bt->attn_output);
-        if (w == NULL) return -1;
-#if BITNET_USE_TQ2_NEON_ATTN
-        const bitnet_block_scale_cache_t *bs = &ctx->model->scale_cache.blocks[block_idx];
-        if (bitnet_tq2_0_quantize_vec_i8(mem_out, q_dim, ctx->metis_qhidden,
-                                         &mem_scale, bsums) != 0) return -1;
-        if (bitnet_tq2_0_matmul_vector_i8_neon_scales(w, bs->attn_output,
-                d, q_dim, ctx->metis_qhidden, mem_scale, bsums, fused) != 0)
-            return -1;
-#else
-        if (bitnet_tq2_0_build_vec_lut(mem_out, q_dim, ctx->metis_lut,
-                                       ctx->metis_lut_count) != 0)
-            return -1;
-        const bitnet_block_scale_cache_t *bs = &ctx->model->scale_cache.blocks[block_idx];
-        (void)bs;
-        (void)bitnet_tq2_0_matmul_vector_lut_scales(w, bs->attn_output,
-                                                    d, q_dim, ctx->metis_lut, fused);
-#endif
-#endif
-    }
-    {
-        float activation_scale = 0.0f;
-        double activation_sq = 0.0;
-        if (p->fusion_gate_w != NULL && p->fusion_gate_b != NULL) {
-            const float *gate_w =
-                p->fusion_gate_w + (size_t)slot * (size_t)d;
-            float gate_logit = p->fusion_gate_b[slot];
-            for (int i = 0; i < d; ++i)
-                gate_logit += gate_w[i] * ctx->metis_h_raw[i];
-            {
-                float gate = 1.0f / (1.0f + expf(-gate_logit));
-                activation_scale = gate;
-                for (int o = 0; o < d; ++o)
-                    attn_branch[o] += gate * fused[o];
-            }
-        } else {
-            activation_scale = 1.0f - p->gamma;
-            for (int o = 0; o < d; ++o)
-                attn_branch[o] = p->gamma * attn_branch[o] +
-                                 activation_scale * fused[o];
-        }
-        for (int o = 0; o < d; ++o) {
-            const double contribution =
-                (double)activation_scale * (double)fused[o];
-            activation_sq += contribution * contribution;
-        }
-        ctx->metis_activation_count++;
-        ctx->metis_activation_l2_sum +=
-            sqrt(activation_sq / (double)d);
-    }
-    return 0;
-}
-
 /* ---- bitnet_eval: full 28-block llama transformer forward pass (mmap) ---- */
 
 int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
@@ -3531,8 +3522,6 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     int token_idx = 0;
     int block_idx = 0;
     int eval_start_pos = 0;
-    int metis_row_base = -1;   /* >= 0 only after this eval's capture
-                                * reservation was made (post -3 check) */
     int profile_eval = 0;
     double profile_start = 0.0;
     double profile_output_start = 0.0;
@@ -3585,22 +3574,28 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     kv_dim = (int)bitnet_kv_dim_for_model(model);
     attn_dim = q_dim;
     eval_start_pos = ctx->n_pos;
+    ctx->last_eval_layer_band_token_count = 0;
 
-    if (ctx->metis != NULL) {
-        /* Capture ACCUMULATES across evals within a commit window, one
-         * window shared by every memory layer (each layer's capture
-         * buffer holds the same rows). A server's prefill + per-token
-         * decode steps all reach the single bitnet_memory_commit at the
-         * end of generation. The trainer resets the window with
-         * bitnet_memory_discard_captured / bitnet_memory_commit. */
-        /* accumulate-across-evals rule, one window shared by every
-         * memory layer (each layer's capture buffer holds the same rows). */
-        if (n_tokens > ctx->metis_capture_rows - ctx->metis_saved_rows) {
-            error_ret = -3;
+    if (ctx->layer_band_count > 0) {
+        size_t needed;
+        if ((size_t)n_tokens >
+                SIZE_MAX / (size_t)ctx->layer_band_count ||
+            (size_t)n_tokens * (size_t)ctx->layer_band_count >
+                SIZE_MAX / (size_t)emb_dim)
             goto cleanup;
+        needed = (size_t)n_tokens *
+                 (size_t)ctx->layer_band_count *
+                 (size_t)emb_dim;
+        if (ctx->last_eval_layer_band_capacity < needed) {
+            float *grown = (float *)realloc(
+                ctx->last_eval_layer_bands,
+                needed * sizeof(float));
+            if (grown == NULL) goto cleanup;
+            ctx->last_eval_layer_bands = grown;
+            ctx->last_eval_layer_band_capacity = needed;
         }
-        metis_row_base = ctx->metis_saved_rows;
-        ctx->metis_saved_rows += n_tokens;
+        memset(ctx->last_eval_layer_bands, 0,
+               needed * sizeof(float));
     }
 
     if (n_tokens > 1) {
@@ -3641,26 +3636,9 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 
         /* --- embedding lookup via mmap --- */
         {
-            const uint8_t *emb_base = (const uint8_t *)gguf_get_tensor_ptr(&model->gguf, cache->token_embd);
-
-            if (emb_base == NULL) goto cleanup;
-            if (model->token_embd_type == BITNET_TARGET_TENSOR_TYPE_F16) {
-                if (bitnet_f16_embedding_lookup(emb_base, token,
-                                                emb_dim, vocab_size,
-                                                hidden) != 0) {
-                    goto cleanup;
-                }
-            } else {
-                size_t blocks_per_row = (size_t)emb_dim / BITNET_Q4K_QK;
-                size_t emb_row_size = blocks_per_row * BITNET_Q4K_BLOCK_SIZE;
-                const uint8_t *emb_row = emb_base + (size_t)token * emb_row_size;
-
-                if (bitnet_q4k_embedding_lookup(emb_row, 0,
-                                                emb_dim, vocab_size,
-                                                hidden, (size_t)emb_dim * sizeof(float)) != 0) {
-                    goto cleanup;
-                }
-            }
+            if (bitnet_raw_token_embedding_lookup(
+                    model, token, hidden) != 0)
+                goto cleanup;
             if (model->is_minicpm) {
                 bitnet_scale_vector(hidden, model->embedding_scale, emb_dim);
             }
@@ -3676,11 +3654,6 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                      ctx->prefill_hidden + (size_t)token_idx * (size_t)emb_dim : ctx->hidden;
             tmp_out = ctx->tmp_out;
             const bitnet_block_tensors_t *bt = &cache->blocks[block_idx];
-            if (ctx->metis != NULL) {
-                /* v4: the trained read query is query_proj(RAW layer input
-                 * residual). Snapshot it BEFORE the attn-norm swap. */
-                memcpy(ctx->metis_h_raw, hidden, (size_t)emb_dim * sizeof(float));
-            }
 #if !BITNET_USE_TQ2_I2S
             const bitnet_block_scale_cache_t *bs = &model->scale_cache.blocks[block_idx];
 #else
@@ -3833,12 +3806,6 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_ATTN_K, hidden, k) != 0 ||
                 bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_ATTN_V, hidden, v) != 0) {
                 goto cleanup;
-            }
-            if (ctx->metis != NULL &&
-                ctx->metis->params.query_add_backbone &&
-                metis_is_memory_block(ctx->metis, block_idx) >= 0) {
-                memcpy(ctx->metis_q_base, q,
-                       (size_t)q_dim * sizeof(float));
             }
             if (profile_eval) {
                 profile_qkv_sec += monotonic_seconds() - profile_step_start;
@@ -4099,34 +4066,6 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                       attn_buffer, down) != 0) {
                     goto cleanup;
                 }
-                if (ctx->metis != NULL) {
-                    /* every memory layer captures rows
-                     * and fuses the o_proj-mapped GQA read into the attn
-                     * branch. `down` holds the pre-fusion attn output.
-                     * v3: capture `hidden` (attn-normed after the step-1
-                     * swap); v4: capture `tmp_out` (the RAW layer-input
-                     * residual; the reference commits input_layernorm(raw)
-                     * with a single norm) and ALWAYS fuse (reference has no
-                     * bypass; empty state reads 0/(0+1)=0). */
-                    const int metis_slot = metis_is_memory_block(ctx->metis,
-                                                                 block_idx);
-                    if (metis_slot >= 0) {
-                        const metis_params_t *mp = &ctx->metis->params;
-                        float *cap = ctx->metis_capture +
-                                     ((size_t)metis_slot * (size_t)ctx->metis_capture_rows +
-                                      (size_t)metis_row_base + (size_t)token_idx) *
-                                         (size_t)emb_dim;
-                        memcpy(cap,
-                               tmp_out,
-                               (size_t)emb_dim * sizeof(float));
-                        if (ctx->metis_active &&
-                            metis_apply_layer(ctx, metis_slot, block_idx,
-                                                 down) != 0) {
-                            goto cleanup;
-                        }
-                        (void)mp;
-                    }
-                }
                 /* residual add: use saved residual (in tmp_out) + attention output */
                 bitnet_residual_add_scaled(hidden, tmp_out, down,
                                            model->is_minicpm ? model->residual_scale : 1.0f,
@@ -4383,6 +4322,26 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                        model->is_minicpm ? model->residual_scale : 1.0f,
                                        emb_dim);
 
+            if (ctx->layer_band_count > 0) {
+                int band = ctx->layer_to_band[block_idx];
+                float squared = 0.0f;
+                float scale;
+                float *band_row =
+                    ctx->last_eval_layer_bands +
+                    ((size_t)token_idx *
+                         (size_t)ctx->layer_band_count +
+                     (size_t)band) * (size_t)emb_dim;
+                for (int column = 0; column < emb_dim; ++column)
+                    squared += hidden[column] * hidden[column];
+                squared = sqrtf(
+                    squared / (float)emb_dim);
+                if (squared < 1e-6f) squared = 1e-6f;
+                scale = 1.0f /
+                    (squared * (float)ctx->layer_band_width[band]);
+                for (int column = 0; column < emb_dim; ++column)
+                    band_row[column] += hidden[column] * scale;
+            }
+
         }
     }
     ctx->n_pos = eval_start_pos + n_tokens;
@@ -4435,6 +4394,12 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     }
 
     /* ---- output projection via Q6_K (mmap) ---- */
+    if (ctx->skip_output_projection) {
+        error_ret = 0;
+        if (ctx->layer_band_count > 0)
+            ctx->last_eval_layer_band_token_count = n_tokens;
+        goto cleanup;
+    }
     if (profile_eval) {
         profile_output_start = monotonic_seconds();
     }
@@ -4524,6 +4489,8 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     }
 
     error_ret = 0;
+    if (ctx->layer_band_count > 0)
+        ctx->last_eval_layer_band_token_count = n_tokens;
 
 cleanup:
     if (error_ret != 0) {
@@ -4531,14 +4498,20 @@ cleanup:
         for (i = 0; i < vocab_size; ++i) {
             ctx->logits[i] = 0.0f;
         }
-        if (ctx->metis != NULL && metis_row_base >= 0) {
-            /* a failed eval computed nothing: rewind the window to its
-             * pre-eval state so commit never runs on a partial capture. */
-            ctx->metis_saved_rows = metis_row_base;
-        }
+        ctx->last_eval_layer_band_token_count = 0;
     }
     (void)pthread_mutex_unlock(&g_eval_mutex);
     return error_ret;
+}
+
+int bitnet_eval_hidden(
+    bitnet_context_t *ctx, const int *tokens, int n_tokens) {
+    int result;
+    if (ctx == NULL) return -1;
+    ctx->skip_output_projection = 1;
+    result = bitnet_eval(ctx, tokens, n_tokens);
+    ctx->skip_output_projection = 0;
+    return result;
 }
 
 int bitnet_sample_greedy(bitnet_context_t *ctx) {
@@ -4600,6 +4573,24 @@ int bitnet_last_eval_hidden_count(const bitnet_context_t *ctx) {
     return ctx == NULL ? 0 : ctx->last_eval_hidden_count;
 }
 
+const float *bitnet_get_last_eval_layer_bands(
+    const bitnet_context_t *ctx) {
+    if (ctx == NULL ||
+        ctx->last_eval_layer_band_token_count <= 0)
+        return NULL;
+    return ctx->last_eval_layer_bands;
+}
+
+int bitnet_last_eval_layer_band_token_count(
+    const bitnet_context_t *ctx) {
+    return ctx == NULL ? 0 :
+        ctx->last_eval_layer_band_token_count;
+}
+
+int bitnet_layer_band_count(const bitnet_context_t *ctx) {
+    return ctx == NULL ? 0 : ctx->layer_band_count;
+}
+
 void bitnet_free_context(bitnet_context_t *ctx) {
     if (ctx == NULL) return;
     free(ctx->key_cache);
@@ -4609,6 +4600,9 @@ void bitnet_free_context(bitnet_context_t *ctx) {
     free(ctx->last_hidden);
     free(ctx->last_pooled_hidden);
     free(ctx->last_eval_hidden);
+    free(ctx->layer_to_band);
+    free(ctx->layer_band_width);
+    free(ctx->last_eval_layer_bands);
     free(ctx->hidden);
     free(ctx->q);
     free(ctx->k);
@@ -4626,15 +4620,6 @@ void bitnet_free_context(bitnet_context_t *ctx) {
     free(ctx->rope_cos);
     free(ctx->rope_sin);
     free(ctx->prefill_hidden);
-    free(ctx->metis_M);
-    free(ctx->metis_S);
-    free(ctx->metis_capture);
-    free(ctx->metis_mem_out);
-    free(ctx->metis_fused);
-    free(ctx->metis_h_raw);
-    free(ctx->metis_q_base);
-    free(ctx->metis_lut);
-    free(ctx->metis_qhidden);
     free(ctx);
 }
 
@@ -4648,241 +4633,11 @@ void bitnet_free_model(bitnet_model_t *model) {
     free_tq2_tl1_cache(&model->tl1_cache, model->block_count);
     bitnet_free_tensor_cache(&model->tensor_cache);
     bitnet_free_lora_adapter(model->lora);
-    metis_model_free_loaded(model->metis);   /* NULL-safe; load returns a HEAP container */
     gguf_close(&model->gguf);
     bitnet_tokenizer_free(model->tokenizer);
     free(model->model_path);
     free(model);
 }
-
-/* ---- Metis memory public API ----
- *
- * These five live in bitnet.c (not metis_runtime.c) because they need the
- * struct bitnet_model / struct bitnet_context internals. */
-
-int bitnet_load_memory_model(bitnet_model_t *model, const char *path) {
-    char err[256];
-    uint8_t backbone_sha256[32];
-
-    if (model == NULL || path == NULL) return -1;
-    err[0] = '\0';
-    metis_file_model_t *mf = metis_model_load(
-        path, (int)model->embedding_length,
-        (int)bitnet_attention_dim_for_model(model),
-        (int)bitnet_kv_dim_for_model(model),
-        (int)model->attention_key_length,
-        (int)model->block_count, err, sizeof err);
-    if (mf == NULL) {
-        fprintf(stderr, "bitnet: memory model load failed: %s\n",
-                err[0] != '\0' ? err : "unknown error");
-        return -1;
-    }
-    if (!mf->params.has_backbone_sha256) {
-        fprintf(stderr,
-                "bitnet: memory model is not bound to a backbone SHA-256\n");
-        metis_model_free_loaded(mf);
-        return -1;
-    }
-    if (bitnet_sha256_file(model->model_path, backbone_sha256) != 0) {
-        fprintf(stderr, "bitnet: failed to hash backbone model\n");
-        metis_model_free_loaded(mf);
-        return -1;
-    }
-    if (memcmp(backbone_sha256, mf->params.backbone_sha256,
-               sizeof backbone_sha256) != 0) {
-        fprintf(stderr,
-                "bitnet: memory model was trained for a different backbone\n");
-        metis_model_free_loaded(mf);
-        return -1;
-    }
-    metis_model_free_loaded(model->metis);
-    model->metis = mf;
-    return 0;
-}
-
-int bitnet_context_attach_memory(bitnet_context_t *ctx, const bitnet_model_t *model) {
-    const metis_file_model_t *mm = NULL;
-    int emb_dim = 0, q_dim = 0;
-
-    if (ctx == NULL || model == NULL) return -1;
-    if (model != ctx->model) return -1;
-    mm = model->metis;
-    if (mm == NULL) return -1;
-    if (ctx->metis != NULL) return -1;   /* already attached */
-
-    emb_dim = (int)ctx->model->embedding_length;
-    q_dim = (int)bitnet_attention_dim_for_model(ctx->model);
-    const metis_params_t *p = &mm->params;
-    const size_t NL = (size_t)p->n_layers;
-    const int cap = METIS_CAP_ROWS;
-
-    ctx->metis_M = (float *)calloc(NL * (size_t)p->kv_dim * (size_t)p->kv_dim,
-                                sizeof(float));
-    ctx->metis_S = (float *)calloc(NL * (size_t)p->kv_dim, sizeof(float));
-    ctx->metis_capture = (float *)calloc(
-        NL * (size_t)cap * (size_t)emb_dim, sizeof(float));
-    ctx->metis_mem_out = (float *)calloc((size_t)q_dim, sizeof(float));
-    ctx->metis_fused = (float *)calloc((size_t)emb_dim, sizeof(float));
-    ctx->metis_h_raw = (float *)calloc((size_t)emb_dim, sizeof(float));
-    ctx->metis_q_base = (float *)calloc((size_t)q_dim, sizeof(float));
-    ctx->metis_lut = NULL;
-    ctx->metis_lut_count = bitnet_tq2_0_lut_float_count(q_dim);
-#if !BITNET_USE_TQ2_I2S && !BITNET_USE_TQ2_NEON_ATTN
-    ctx->metis_lut = (float *)calloc(ctx->metis_lut_count, sizeof(float));
-#endif
-    ctx->metis_qhidden = (int8_t *)calloc((size_t)q_dim, sizeof(int8_t));
-    if (ctx->metis_M == NULL || ctx->metis_S == NULL || ctx->metis_capture == NULL ||
-        ctx->metis_mem_out == NULL || ctx->metis_fused == NULL ||
-        ctx->metis_h_raw == NULL || ctx->metis_q_base == NULL ||
-        ctx->metis_qhidden == NULL) {
-        free(ctx->metis_M); ctx->metis_M = NULL;
-        free(ctx->metis_S); ctx->metis_S = NULL;
-        free(ctx->metis_capture); ctx->metis_capture = NULL;
-        free(ctx->metis_mem_out); ctx->metis_mem_out = NULL;
-        free(ctx->metis_fused); ctx->metis_fused = NULL;
-        free(ctx->metis_h_raw); ctx->metis_h_raw = NULL;
-        free(ctx->metis_q_base); ctx->metis_q_base = NULL;
-        free(ctx->metis_lut); ctx->metis_lut = NULL;
-        free(ctx->metis_qhidden); ctx->metis_qhidden = NULL;
-        ctx->metis_lut_count = 0;
-        ctx->metis_active = 0;
-        ctx->metis_saved_rows = 0;
-        ctx->metis_capture_rows = 0;
-        return -1;
-    }
-    /* v4 models ALWAYS fuse (reference semantics: attn' = gamma*attn +
-     * (1-gamma)*fused from step 0; empty memory reads 0/(0+1)=0). */
-    ctx->metis_active = 1;
-    ctx->metis_saved_rows = 0;
-    ctx->metis_capture_rows = cap;
-    ctx->metis = mm;
-    return 0;
-}
-
-void bitnet_memory_reset(bitnet_context_t *ctx) {
-    if (ctx == NULL) return;
-    if (ctx->metis != NULL) {
-        const metis_params_t *p = &ctx->metis->params;
-        if (ctx->metis_M != NULL) {
-            memset(ctx->metis_M, 0,
-                   (size_t)p->n_layers * (size_t)p->kv_dim * (size_t)p->kv_dim *
-                       sizeof(float));
-        }
-        if (ctx->metis_S != NULL) {
-            memset(ctx->metis_S, 0,
-                   (size_t)p->n_layers * (size_t)p->kv_dim * sizeof(float));
-        }
-        /* fusion has no bypass: a reset clears the state but keeps the
-         * model live (reads return 0/(0+1)=0 exactly as a fresh session).
-         * Also drop any uncommitted capture rows -- a session reset
-         * mid-exchange must not fold the aborted exchange into the fresh
-         * M/S at the next commit. */
-        ctx->metis_active = 1;
-        ctx->metis_saved_rows = 0;
-        return;
-    }
-    if (ctx->metis == NULL) return;
-}
-
-static int bitnet_memory_commit_impl(bitnet_context_t *ctx) {
-    const metis_params_t *p = NULL;
-    const bitnet_tensor_cache_t *cache = NULL;
-    const int L = ctx->metis_saved_rows;
-    int failed = 0;
-
-    if (ctx->metis_capture == NULL || L <= 0) return -1;
-    p = &ctx->metis->params;
-    cache = &ctx->model->tensor_cache;
-    for (int slot = 0; slot < p->n_layers; ++slot) {
-        const float *norm_w = (const float *)gguf_get_tensor_ptr(
-            &ctx->model->gguf, cache->blocks[p->layer_ids[slot]].attn_norm);
-        float *cap = ctx->metis_capture +
-                     (size_t)slot * (size_t)ctx->metis_capture_rows *
-                         (size_t)p->d_model;
-        if (norm_w == NULL) return -1;
-        for (int off = 0; off < L; off += METIS_CAP_ROWS) {
-            const int slice = (L - off) < METIS_CAP_ROWS ?
-                              (L - off) : METIS_CAP_ROWS;
-            const int rc = metis_commit_states(
-                p, slot,
-                ctx->metis_M + (size_t)slot *
-                    (size_t)p->kv_dim * (size_t)p->kv_dim,
-                ctx->metis_S + (size_t)slot * (size_t)p->kv_dim,
-                cap + (size_t)off * (size_t)p->d_model,
-                slice, norm_w, ctx->model->rms_norm_eps);
-            if (rc != 0) {
-                failed = 1;
-                break;
-            }
-        }
-        if (failed) break;
-    }
-    if (failed) return -1;
-    ctx->metis_saved_rows = 0;
-    ctx->metis_active = 1;
-    return 0;
-}
-
-int bitnet_memory_commit(bitnet_context_t *ctx) {
-    if (ctx == NULL) return -1;
-    return bitnet_memory_commit_impl(ctx);
-}
-
-void bitnet_memory_discard_captured(bitnet_context_t *ctx) {
-    if (ctx == NULL) return;
-    ctx->metis_saved_rows = 0;
-}
-
-int bitnet_memory_active(const bitnet_context_t *ctx) {
-    if (ctx == NULL || ctx->metis == NULL) return 0;
-    return ctx->metis_active ? 1 : 0;
-}
-
-int bitnet_memory_set_active(bitnet_context_t *ctx, int active) {
-    if (ctx == NULL || ctx->metis == NULL) return -1;
-    ctx->metis_active = active ? 1 : 0;
-    return 0;
-}
-
-unsigned long long bitnet_memory_activation_count(
-        const bitnet_context_t *ctx) {
-    if (ctx == NULL || ctx->metis == NULL) return 0;
-    return ctx->metis_activation_count;
-}
-
-double bitnet_memory_activation_l2_sum(const bitnet_context_t *ctx) {
-    if (ctx == NULL || ctx->metis == NULL) return 0.0;
-    return ctx->metis_activation_l2_sum;
-}
-
-int bitnet_memory_export(const bitnet_context_t *ctx, const char *path) {
-    if (ctx == NULL || ctx->metis == NULL || ctx->metis_M == NULL ||
-        ctx->metis_S == NULL || path == NULL) {
-        return -1;
-    }
-    return metis_state_save(&ctx->metis->params, ctx->metis_M, ctx->metis_S,
-                            ctx->metis_active, path);
-}
-
-int bitnet_memory_import(bitnet_context_t *ctx, const char *path) {
-    char err[256];
-    int active = 0;
-    if (ctx == NULL || ctx->metis == NULL || ctx->metis_M == NULL ||
-        ctx->metis_S == NULL || path == NULL) {
-        return -1;
-    }
-    err[0] = '\0';
-    if (metis_state_load(&ctx->metis->params, ctx->metis_M, ctx->metis_S,
-                         &active, path, err, sizeof err) != 0) {
-        fprintf(stderr, "bitnet: memory state import failed: %s\n",
-                err[0] != '\0' ? err : "unknown error");
-        return -1;
-    }
-    ctx->metis_active = active;
-    ctx->metis_saved_rows = 0;
-    return 0;
-}
-
 
 /* Phase 4.2 trampolines — route the promoted bitnet.c hot-path helpers
  * through the dispatch table so x86 tiers can supply SIMD variants. Callers

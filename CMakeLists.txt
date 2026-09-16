@@ -84,14 +84,13 @@ add_library(bitnet STATIC
     src/cpu_detect.c
     src/sha256.c
     src/bitnet_dispatch.c
-    src/metis/metis_file.c
     src/metis/episodic_store.c
     src/metis/event_store.c
     src/metis/memory_controller.c
-    src/metis/memory_retriever.c
-    src/metis/retrieval_index.c
-    src/metis/memory_pointer.c
-    src/metis/episode_pointer.c
+    src/metis/typed_link_model.c
+    src/metis/typed_pair_encoder.c
+    src/metis/typed_query_activator.c
+    src/metis/typed_writer_model.c
     src/x86/kernel_registry.c
     src/x86/ops_x86.c
     src/x86/bitnet_hotpath_x86.c
@@ -114,9 +113,6 @@ if(UNIX AND NOT APPLE AND NOT ANDROID)
     # glibc keeps libm separate; needed for expf/powf/sincosf.
     target_link_libraries(bitnet PUBLIC m)
 endif()
-
-# Trainer-only backward pass over the Metis memory module. NEVER linked into
-# the bitnet library -- inference binaries must not pull backprop code.
 
 add_executable(gguf_inspect tools/gguf_inspect.c)
 target_include_directories(gguf_inspect PRIVATE src)
@@ -297,13 +293,6 @@ target_compile_definitions(test_concurrent_eval PRIVATE BITNET_SOURCE_DIR="${CMA
 target_link_libraries(test_concurrent_eval PRIVATE bitnet)
 add_test(NAME test_concurrent_eval COMMAND test_concurrent_eval)
 
-add_executable(test_metis_memory tests/test_metis_memory.c)
-target_include_directories(test_metis_memory PRIVATE src)
-target_compile_definitions(test_metis_memory PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_compile_definitions(test_metis_memory PRIVATE BITNET_BINARY_DIR="${CMAKE_BINARY_DIR}")
-target_link_libraries(test_metis_memory PRIVATE bitnet m)
-add_test(NAME test_metis_memory COMMAND test_metis_memory)
-
 add_executable(test_episodic_store tests/test_episodic_store.c)
 target_include_directories(test_episodic_store PRIVATE src)
 target_link_libraries(test_episodic_store PRIVATE bitnet)
@@ -319,25 +308,52 @@ target_include_directories(test_memory_controller PRIVATE src)
 target_link_libraries(test_memory_controller PRIVATE bitnet m)
 add_test(NAME test_memory_controller COMMAND test_memory_controller)
 
-add_executable(test_memory_retriever tests/test_memory_retriever.c)
-target_include_directories(test_memory_retriever PRIVATE src)
-target_link_libraries(test_memory_retriever PRIVATE bitnet m)
-add_test(NAME test_memory_retriever COMMAND test_memory_retriever)
+add_executable(
+    test_typed_writer_parity
+    tests/test_typed_writer_parity.c)
+target_include_directories(
+    test_typed_writer_parity PRIVATE src)
+target_link_libraries(
+    test_typed_writer_parity PRIVATE bitnet m)
 
-add_executable(test_retrieval_index tests/test_retrieval_index.c)
-target_include_directories(test_retrieval_index PRIVATE src)
-target_link_libraries(test_retrieval_index PRIVATE bitnet m)
-add_test(NAME test_retrieval_index COMMAND test_retrieval_index)
+add_executable(
+    test_typed_link_model tests/test_typed_link_model.c)
+target_include_directories(
+    test_typed_link_model PRIVATE src)
+target_link_libraries(
+    test_typed_link_model PRIVATE bitnet m)
+add_test(
+    NAME test_typed_link_model
+    COMMAND test_typed_link_model)
 
-add_executable(test_memory_pointer tests/test_memory_pointer.c)
-target_include_directories(test_memory_pointer PRIVATE src)
-target_link_libraries(test_memory_pointer PRIVATE bitnet m)
-add_test(NAME test_memory_pointer COMMAND test_memory_pointer)
+add_executable(
+    test_typed_link_parity tests/test_typed_link_parity.c)
+target_include_directories(
+    test_typed_link_parity PRIVATE src)
+target_link_libraries(
+    test_typed_link_parity PRIVATE bitnet m)
 
-add_executable(test_episode_pointer_c tests/test_episode_pointer.c)
-target_include_directories(test_episode_pointer_c PRIVATE src)
-target_link_libraries(test_episode_pointer_c PRIVATE bitnet m)
-add_test(NAME test_episode_pointer_c COMMAND test_episode_pointer_c)
+add_executable(
+    test_typed_pair_parity tests/test_typed_pair_parity.c)
+target_include_directories(
+    test_typed_pair_parity PRIVATE src)
+target_link_libraries(
+    test_typed_pair_parity PRIVATE bitnet m)
+
+add_executable(
+    test_typed_runtime_parity tests/test_typed_runtime_parity.c)
+target_include_directories(
+    test_typed_runtime_parity PRIVATE src)
+target_link_libraries(
+    test_typed_runtime_parity PRIVATE bitnet m)
+
+add_executable(
+    test_typed_runtime_link_parity
+    tests/test_typed_runtime_link_parity.c)
+target_include_directories(
+    test_typed_runtime_link_parity PRIVATE src)
+target_link_libraries(
+    test_typed_runtime_link_parity PRIVATE bitnet m)
 
 
 

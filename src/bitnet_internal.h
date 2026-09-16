@@ -50,11 +50,6 @@ int bitnet_validate_target_model(const gguf_file_t *file);
 int bitnet_build_tensor_cache(const gguf_file_t *file, uint32_t block_count, bitnet_tensor_cache_t *cache);
 void bitnet_free_tensor_cache(bitnet_tensor_cache_t *cache);
 
-/* Zero the commit-capture row counter WITHOUT touching M/S or the active
- * flag: a caller that consumed the current window resets it so the next
- * commit does not see stale rows. NULL/no-metis safe. */
-void bitnet_memory_discard_captured(bitnet_context_t *ctx);
-
 /* Phase 4.2 — promoted bitnet.c hot-path helpers. The `_impl` symbols hold
  * the original scalar/NEON body (selected by __ARM_NEON inside bitnet.c);
  * dispatch-table shims call them directly. The public names (without
