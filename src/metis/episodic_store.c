@@ -96,7 +96,26 @@ int metis_episodic_configure_keys(
 int metis_episodic_add_with_priority(
     metis_episodic_store_t *store, const char *text, const float *key,
     float priority) {
+    return metis_episodic_add_indexed(store, text, key, priority, NULL);
+}
+
+void metis_episodic_truncate(metis_episodic_store_t *store, size_t count) {
+    if (store == NULL) return;
+    while (store->count > count) {
+        size_t index = --store->count;
+        free(store->records[index]);
+        free(store->keys[index]);
+        store->records[index] = NULL;
+        store->keys[index] = NULL;
+        store->priorities[index] = 0.0f;
+    }
+}
+
+int metis_episodic_add_indexed(
+    metis_episodic_store_t *store, const char *text, const float *key,
+    float priority, size_t *record_index) {
     char *copy;
+    if (record_index != NULL) *record_index = SIZE_MAX;
     if (store == NULL || text == NULL || text[0] == '\0') return -1;
     if (!isfinite(priority) || priority < 0.0f || priority > 1.0f)
         return -1;
@@ -114,6 +133,7 @@ int metis_episodic_add_with_priority(
             }
             if (priority > store->priorities[i])
                 store->priorities[i] = priority;
+            if (record_index != NULL) *record_index = i;
             return 0;
         }
     }
@@ -159,6 +179,7 @@ int metis_episodic_add_with_priority(
         memcpy(store->keys[store->count], key,
                (size_t)store->key_dim * sizeof(float));
     }
+    if (record_index != NULL) *record_index = store->count;
     ++store->count;
     return 0;
 }

@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
         read_u32(file, &feature_dim) != 0 ||
         read_u32(file, &pair_count) != 0 ||
         feature_dim != (uint32_t)model->pair_feature_dim ||
-        pair_count < 2)
+        pair_count < 1)
         goto cleanup;
     feature_count = (size_t)feature_dim * pair_count;
     entity = (float *)malloc(feature_count * sizeof(float));

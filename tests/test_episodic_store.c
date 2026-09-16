@@ -38,6 +38,17 @@ int main(void) {
             &store, "Cleo follows radio bulletins.", NULL, 0.2f) == 0,
         "add second source record");
     CHECK(metis_episodic_count(&store) == 2, "source record count");
+    size_t source_index = 99;
+    CHECK(metis_episodic_add_indexed(&store,
+          "Briar uses a virtual ticket.", NULL, 0.4f, &source_index) == 0,
+          "repeat non-final source");
+    CHECK(source_index == 0 && store.count == 2,
+          "deduplication returns the original index");
+    CHECK(metis_episodic_add_indexed(&store,
+          "A rejected source.", NULL, 0.0f, &source_index) == 0,
+          "append source before event compilation");
+    metis_episodic_truncate(&store, 2);
+    CHECK(store.count == 2, "rollback failed event source");
     CHECK(metis_episodic_save(&store, state_path) == 0, "save state");
     CHECK(metis_episodic_load(&loaded, state_path) == 0, "load state");
     CHECK(loaded.count == 2, "round-trip count");

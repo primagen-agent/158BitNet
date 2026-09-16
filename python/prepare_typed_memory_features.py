@@ -18,6 +18,7 @@ from typed_memory_training import (
     encode_backbone_features,
     file_fingerprint,
     parse_hidden_layer_bands,
+    reject_evaluation_row,
 )
 
 
@@ -52,7 +53,18 @@ def compile_episode_native_row(row):
     evidence = str(row.get("evidence", ""))
     question = str(row.get("question", "")).strip()
     episodes = split_evidence_episodes(evidence)
-    if not question or len(episodes) < 2:
+    raw_episodes = (row.get("metadata") or {}).get("raw_episodes")
+    if raw_episodes is not None:
+        if not raw_episodes or any(not isinstance(text, str) or not text or "\n" in text for text in raw_episodes):
+            raise ValueError("raw episodes must be nonempty single-line messages")
+        if evidence != "\n".join(raw_episodes):
+            raise ValueError("raw episode evidence mismatch")
+        episodes = []
+        offset = 0
+        for text in raw_episodes:
+            episodes.append({"text": text, "char_start": offset, "char_end": offset + len(text)})
+            offset += len(text) + 1
+    if not question or len(episodes) < 1:
         return None
     null_target = is_null_example(row)
     gold = set()
@@ -98,6 +110,7 @@ def load_episode_native_jsonl(path, seed, limit):
             if not line.strip():
                 continue
             raw = json.loads(line)
+            reject_evaluation_row(raw)
             counters["input"] += 1
             if (raw.get("metadata") or {}).get("source") == "CoQA":
                 counters["coqa_skipped"] += 1
@@ -138,8 +151,9 @@ def encode_rows(
             episode_ids = []
             episode_hidden = []
             for episode in row["episodes"]:
-                token_ids = tokenizer.encode(
-                    episode, add_bos=True)[:max_episode_tokens]
+                token_ids = tokenizer.encode(episode, add_bos=True)
+                if len(token_ids) > max_episode_tokens:
+                    raise ValueError("episode exceeds token budget; refusing to truncate supervised fields")
                 episode_ids.append(token_ids)
                 episode_hidden.append(encode_backbone_features(
                     backbone, token_ids, layer_bands))

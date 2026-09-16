@@ -50,11 +50,13 @@ def export_typed_link_binary(
         or not checkpoint.get("set_link_head", False)
         or int(checkpoint.get(
             "set_link_head_version", 0
-        )) != SET_LINK_HEAD_VERSION
+        )) not in (2, 3)
     ):
         raise ValueError(
-            "typed-link export requires set-link v2 checkpoint")
+            "typed-link export requires a v2 or v3 set-link checkpoint")
     state = checkpoint["verifier_state_dict"]
+    version = int(checkpoint["set_link_head_version"])
+    exists_features = 7 if version == 3 else 5
     payloads = []
     tensors = {}
     for name in TYPED_LINK_TENSORS:
@@ -81,7 +83,7 @@ def export_typed_link_binary(
         or tensors["joint_head.2.bias"].shape != (1,)
         or tensors[
             "predecessor_exists_head.0.weight"
-        ].shape != (rank, 5)
+        ].shape != (rank, exists_features)
         or tensors[
             "predecessor_exists_head.0.bias"
         ].shape != (rank,)
@@ -98,11 +100,11 @@ def export_typed_link_binary(
     header += struct.pack(
         "<IIIIIII",
         1,
-        SET_LINK_HEAD_VERSION,
+        version,
         rank,
         joint_input // 2,
         joint_hidden,
-        5,
+        exists_features,
         len(payloads),
     )
     header += bytes.fromhex(
@@ -365,6 +367,7 @@ class TypedPairVerifier(nn.Module):
         dual_path=False,
         trainable_context_localizer=False,
         set_link_head=False,
+        exists_feature_count=5,
     ):
         super().__init__()
         self.writer = writer
@@ -377,6 +380,9 @@ class TypedPairVerifier(nn.Module):
         self.trainable_context_localizer = bool(
             trainable_context_localizer)
         self.set_link_head = bool(set_link_head)
+        if exists_feature_count not in (5, 7):
+            raise ValueError("unsupported predecessor feature geometry")
+        self.exists_feature_count = exists_feature_count
         if self.dual_path and not writer.use_token_embeddings:
             raise ValueError(
                 "dual path requires tied token embeddings")
@@ -487,7 +493,7 @@ class TypedPairVerifier(nn.Module):
             nn.init.zeros_(
                 self.joint_head[-1].bias)
             self.predecessor_exists_head = nn.Sequential(
-                nn.Linear(5, rank),
+                nn.Linear(exists_feature_count, rank),
                 nn.GELU(),
                 nn.Linear(rank, 1),
             )
@@ -774,7 +780,7 @@ class TypedPairVerifier(nn.Module):
         return result
 
     @staticmethod
-    def set_link_features(scores):
+    def set_link_features(scores, feature_count=5):
         if scores.numel() < 1:
             raise ValueError(
                 "set-link features need at least one candidate")
@@ -797,7 +803,7 @@ class TypedPairVerifier(nn.Module):
                 float(scores.numel())).log()
         else:
             entropy = entropy.new_zeros(())
-        return torch.stack((
+        features = torch.stack((
             (top1 - mean) / std,
             (top1 - top2) / std,
             probability.max(),
@@ -805,13 +811,18 @@ class TypedPairVerifier(nn.Module):
             scores.new_tensor(
                 float(scores.numel())).log1p(),
         ))
+        if feature_count == 7:
+            return torch.cat((features, torch.stack((top1, top2))))
+        if feature_count != 5:
+            raise ValueError("unsupported predecessor feature geometry")
+        return features
 
     def predecessor_exists_logits(self, score_groups):
         if not self.set_link_head:
             raise ValueError(
                 "predecessor existence needs set-link head")
         features = torch.stack([
-            self.set_link_features(scores)
+            self.set_link_features(scores, self.exists_feature_count)
             for scores in score_groups
         ])
         return self.predecessor_exists_head(

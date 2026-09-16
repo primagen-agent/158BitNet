@@ -7,6 +7,13 @@ from pathlib import Path
 import torch
 
 
+def reject_evaluation_row(row):
+    metadata = row.get("metadata") or {}
+    if (row.get("evaluation_only") or metadata.get("evaluation_only")
+            or metadata.get("locomo_used")):
+        raise ValueError("evaluation-only data cannot enter training")
+
+
 def clone_state_dict(model):
     return {
         name: tensor.detach().cpu().clone()

@@ -1,6 +1,7 @@
 #include "bitnet.h"
 #include "metis/episodic_store.h"
 #include "metis/event_store.h"
+#include "metis/memory_snapshot.h"
 #include "metis/memory_controller.h"
 #include "metis/typed_link_model.h"
 #include "metis/typed_pair_encoder.h"
@@ -1116,6 +1117,17 @@ static void handle_streaming_completion(struct mg_connection *c,
             build_chat_stream_chunk(state, id, NULL, finish_reason, 0) :
             build_completion_stream_chunk(state, id, "", finish_reason);
         if (final_chunk != NULL) {
+            generation_result_t metrics;
+            memset(&metrics, 0, sizeof metrics);
+            metrics.session_id = gen.session_id;
+            metrics.cached_tokens = gen.cached_tokens;
+            metrics.reused_tokens = gen.reused_tokens;
+            metrics.context_tokens = gen.history_count;
+            metrics.prompt_tokens = gen.prompt_tokens;
+            metrics.completion_tokens = gen.emitted;
+            if (metrics.session_id != NULL)
+                cJSON_AddItemToObject(final_chunk, "bitnet_session", build_session_json(&metrics));
+            cJSON_AddItemToObject(final_chunk, "usage", build_usage_json(&metrics));
             send_sse_json(c, final_chunk);
             cJSON_Delete(final_chunk);
         }
@@ -1160,24 +1172,6 @@ static int memory_session_base_path(
     }
     return snprintf(out, out_size, "%s/%s",
                     state->cfg.memory_state_dir, sid) < (int)out_size ? 0 : -1;
-}
-
-static int episodic_state_path(const server_state_t *state, const char *sid,
-                               char *out, size_t out_size) {
-    char base[1024];
-    if (memory_session_base_path(
-            state, sid, base, sizeof base) != 0) return -1;
-    return snprintf(out, out_size, "%s.bnepisodic", base) < (int)out_size
-        ? 0 : -1;
-}
-
-static int event_state_path(const server_state_t *state, const char *sid,
-                            char *out, size_t out_size) {
-    char base[1024];
-    if (memory_session_base_path(
-            state, sid, base, sizeof base) != 0) return -1;
-    return snprintf(out, out_size, "%s.bnevent", base) < (int)out_size
-        ? 0 : -1;
 }
 
 static const char *last_user_content(cJSON *request) {
@@ -1566,17 +1560,6 @@ static int extract_typed_value_answer(
     return 1;
 }
 
-static int store_episodic_record(
-    server_state_t *state, cached_session_t *session, const char *text,
-    memory_record_action_t action, float priority) {
-    if (state == NULL || session == NULL || text == NULL)
-        return -1;
-    if (!state->cfg.episodic_memory || action != MEMORY_ACTION_STORE)
-        return -1;
-    return metis_episodic_add_with_priority(
-        &session->episodic, text, NULL, priority);
-}
-
 static int event_spans_are_unknown(
     const metis_event_record_t *event) {
     return event->subject_start == METIS_EVENT_SPAN_UNKNOWN &&
@@ -1594,7 +1577,10 @@ static int event_spans_fit_source(
     return event->subject_end > event->subject_start &&
            event->value_end > event->value_start &&
            event->subject_end <= length &&
-           event->value_end <= length;
+           event->value_end <= length && event->value != NULL &&
+           strlen(event->value) == event->value_end - event->value_start &&
+           memcmp(source + event->value_start, event->value,
+                  event->value_end - event->value_start) == 0;
 }
 
 static void handle_memory_state(
@@ -1602,8 +1588,9 @@ static void handle_memory_state(
     cJSON *request, int do_import) {
     const char *sid = json_get_string(request, "session_id", NULL);
     cached_session_t *session;
-    char episodic_path[1024];
-    char event_path[1024];
+    char base_path[1024];
+    char episodic_path[1200];
+    char event_path[1200];
     metis_episodic_store_t imported_episodic;
     metis_event_store_t imported_events;
     cJSON *root;
@@ -1616,10 +1603,7 @@ static void handle_memory_state(
                    "typed memory state is not configured");
         return;
     }
-    if (episodic_state_path(
-            state, sid, episodic_path, sizeof episodic_path) != 0 ||
-        event_state_path(
-            state, sid, event_path, sizeof event_path) != 0) {
+    if (memory_session_base_path(state, sid, base_path, sizeof base_path) != 0) {
         send_error(c, 400, "invalid_request_error",
                    "invalid session_id");
         return;
@@ -1632,7 +1616,9 @@ static void handle_memory_state(
         return;
     }
     if (do_import) {
-        if (metis_episodic_load(
+        if (metis_memory_snapshot_paths(base_path,
+                episodic_path, sizeof episodic_path, event_path, sizeof event_path) != 0 ||
+            metis_episodic_load(
                 &imported_episodic, episodic_path) != 0 ||
             metis_event_store_load(
                 &imported_events, event_path) != 0) {
@@ -1665,10 +1651,8 @@ static void handle_memory_state(
         session->events = imported_events;
         metis_episodic_init(&imported_episodic);
         metis_event_store_init(&imported_events);
-    } else if (metis_episodic_save(
-                   &session->episodic, episodic_path) != 0 ||
-               metis_event_store_save(
-                   &session->events, event_path) != 0) {
+    } else if (metis_memory_snapshot_save(base_path,
+                   &session->episodic, &session->events) != 0) {
         send_error(c, 500, "server_error",
                    "failed to export typed memory state");
         return;
@@ -1850,6 +1834,19 @@ static int typed_word_byte(unsigned char value) {
            value == '-' || value == '\'' || value >= 0x80u;
 }
 
+/* Latin word completion must not swallow adjacent unsegmented CJK text. */
+static size_t typed_value_word_width(const char *text) {
+    unsigned char first = (unsigned char)text[0];
+    if (first < 0x80u)
+        return first != 0 && typed_word_byte(first) ? 1u : 0u;
+    if (first >= 0xC3u && first <= 0xCAu &&
+        ((unsigned char)text[1] & 0xC0u) == 0x80u) {
+        unsigned code = ((first & 0x1fu) << 6) | ((unsigned char)text[1] & 0x3fu);
+        if (code <= 0x02afu && code != 0x00d7u && code != 0x00f7u) return 2u;
+    }
+    return 0;
+}
+
 static int decode_typed_source(
     server_state_t *state, const typed_text_encoding_t *encoding,
     const char *source, char **decoded_output,
@@ -1918,7 +1915,18 @@ static int typed_token_span_to_source(
     while (end > start &&
            isspace((unsigned char)decoded[end - 1u]))
         --end;
-    if (expand_entity) {
+    if (expand_entity == 2) {
+        while (start > source_offset && ((unsigned char)decoded[start] & 0xC0u) == 0x80u) --start;
+        while (((unsigned char)decoded[end] & 0xC0u) == 0x80u) ++end;
+        while (start > source_offset) {
+            size_t previous = start - 1u;
+            while (previous > source_offset && ((unsigned char)decoded[previous] & 0xC0u) == 0x80u) --previous;
+            if (typed_value_word_width(decoded + previous) != start - previous) break;
+            start = previous;
+        }
+        size_t width;
+        while ((width = typed_value_word_width(decoded + end)) != 0) end += width;
+    } else if (expand_entity) {
         while (start < end &&
                !typed_word_byte((unsigned char)decoded[start]))
             ++start;
@@ -1927,11 +1935,11 @@ static int typed_token_span_to_source(
             --start;
         while (typed_word_byte((unsigned char)decoded[end]))
             ++end;
-        if (end >= start + 2u &&
+        if (expand_entity == 1 && end >= start + 2u &&
             decoded[end - 2u] == '\'' &&
             decoded[end - 1u] == 's')
             end -= 2u;
-        else if (end >= start + 4u &&
+        else if (expand_entity == 1 && end >= start + 4u &&
                  memcmp(decoded + end - 4u, "\xE2\x80\x99s", 4) == 0)
             end -= 4u;
     }
@@ -2047,6 +2055,7 @@ typedef struct autonomous_memory_result {
     size_t candidate_count;
     size_t event_index;
     int target_status;
+    int deduplicated;
 } autonomous_memory_result_t;
 
 static int remember_autonomous_event(
@@ -2066,6 +2075,7 @@ static int remember_autonomous_event(
     const char *requested;
     int time_known = 1;
     int status = -1;
+    size_t source_count = session == NULL ? 0 : session->episodic.count;
     memset(&event, 0, sizeof event);
     if (result != NULL) memset(result, 0, sizeof *result);
     if (error != NULL && error_size > 0) error[0] = '\0';
@@ -2079,6 +2089,19 @@ static int remember_autonomous_event(
         text == NULL || text[0] == '\0' ||
         result == NULL || state->typed_writer == NULL)
         AUTO_FAIL(-1, "invalid autonomous writer arguments");
+    if (operation_hint == MEMORY_ACTION_IGNORE &&
+        (request == NULL || cJSON_GetObjectItem(request, "event_id") == NULL)) {
+        for (size_t index = 0; index < session->events.count; ++index) {
+            const metis_event_record_t *previous = &session->events.events[index];
+            if (previous->active && previous->raw_record_index < source_count &&
+                strcmp(session->episodic.records[previous->raw_record_index], text) == 0) {
+                result->event_index = index;
+                result->deduplicated = 1;
+                result->prediction.operation = previous->operation == METIS_EVENT_SUPERSEDE;
+                return 0;
+            }
+        }
+    }
     if (
         encode_typed_pair_text(
             state, text, &result->encoding) != 0 ||
@@ -2103,8 +2126,16 @@ static int remember_autonomous_event(
                 source_offset, text,
                 result->prediction.span_start[field],
                 result->prediction.span_end[field],
-                field == METIS_TYPED_WRITER_ENTITY,
+                field == METIS_TYPED_WRITER_ENTITY ? 1 :
+                    (field == METIS_TYPED_WRITER_VALUE ? 2 : 0),
                 &field_start[field], &field_end[field]);
+        if (span_status != 0 && field == METIS_TYPED_WRITER_ENTITY) {
+            /* A malformed span may still have a valid learned entity anchor. */
+            span_status = typed_token_span_to_source(
+                decoded, offsets, result->encoding.token_count, source_offset, text,
+                result->prediction.anchor[field], result->prediction.anchor[field], 1,
+                &field_start[field], &field_end[field]);
+        }
         if (field == METIS_TYPED_WRITER_TIME &&
             (span_status != 0 ||
              !source_span_is_iso_date(
@@ -2203,12 +2234,11 @@ static int remember_autonomous_event(
         event.entity = selected_event->entity;
         event.predicate = selected_event->predicate;
     }
-    if (store_episodic_record(
-            state, session, text,
-            MEMORY_ACTION_STORE, priority) != 0)
+    if (metis_episodic_add_indexed(
+            &session->episodic, text, NULL, priority,
+            &event.raw_record_index) != 0)
         AUTO_FAIL(
             -1, "failed to store autonomous memory record");
-    event.raw_record_index = session->episodic.count - 1u;
     if (metis_event_store_apply(&session->events, &event) != 0)
         AUTO_FAIL(
             -1, "failed to apply autonomous typed event");
@@ -2221,8 +2251,10 @@ cleanup:
     free(predicate);
     free(value);
     free(valid_time);
-    if (status != 0)
-        typed_text_encoding_clear(&result->encoding);
+    if (status != 0) {
+        if (session != NULL) metis_episodic_truncate(&session->episodic, source_count);
+        if (result != NULL) typed_text_encoding_clear(&result->encoding);
+    }
 #undef AUTO_FAIL
     return status;
 }
@@ -2238,6 +2270,7 @@ static void add_autonomous_memory_json(
     json_add_string(
         root, "writer_fields_source", "neural_autonomous_writer");
     json_add_number(root, "autonomous_writer", 1.0);
+    json_add_number(root, "deduplicated", result->deduplicated);
     json_add_string(
         root, "target_resolution",
         result->target_status > 0 ? "neural_activation" :
@@ -2540,6 +2573,9 @@ static void handle_memory_event(
     float neural_target_score = 0.0f;
     float neural_exists_score = 0.0f;
     size_t neural_candidate_count = 0;
+    size_t source_index = 0;
+    size_t source_count;
+    const char *source;
     memset(&event, 0, sizeof event);
     if (!state->cfg.episodic_memory) {
         send_error(c, 403, "episodic_memory_disabled",
@@ -2554,18 +2590,19 @@ static void handle_memory_event(
     session = find_session(state, sid);
     if (session == NULL && memory_record != NULL)
         session = create_session(state, sid);
-    if (session != NULL && memory_record != NULL &&
-        store_episodic_record(
-            state, session, memory_record,
-            MEMORY_ACTION_STORE, 0.0f) != 0) {
-        send_error(c, 500, "server_error",
-                   "failed to store event source evidence");
-        return;
-    }
-    if (session == NULL || session->episodic.count == 0) {
+    if (session == NULL || (memory_record == NULL && session->episodic.count == 0)) {
         send_error(c, 404, "not_found_error",
                    "session or source episode not found");
         return;
+    }
+    source_count = session->episodic.count;
+    source_index = source_count;
+    if (memory_record != NULL) {
+        for (size_t i = 0; i < source_count; ++i)
+            if (strcmp(session->episodic.records[i], memory_record) == 0) {
+                source_index = i;
+                break;
+            }
     }
     event.event_id = (char *)json_get_string(
         request, "event_id", NULL);
@@ -2613,13 +2650,18 @@ static void handle_memory_event(
     }
     raw_index = json_get_int(
         request, "raw_record_index",
-        (int)session->episodic.count - 1, 0,
-        (int)session->episodic.count - 1);
+        memory_record != NULL ? (int)source_index : (int)session->episodic.count - 1, 0,
+        memory_record != NULL ? (int)source_index : (int)session->episodic.count - 1);
+    if (memory_record != NULL && (size_t)raw_index != source_index) {
+        send_error(c, 400, "invalid_request_error", "source record index does not match memory_record");
+        return;
+    }
     event.raw_record_index = (size_t)raw_index;
+    source = memory_record != NULL ? memory_record : session->episodic.records[event.raw_record_index];
     event.active = 1;
     if (resolve_event_evidence(
             request, &event,
-            session->episodic.records[event.raw_record_index]) != 0) {
+            source) != 0) {
         send_error(
             c, 400, "invalid_request_error",
             "subject/value evidence must be exact, unambiguous UTF-8 byte spans");
@@ -2633,7 +2675,7 @@ static void handle_memory_event(
         const metis_event_record_t *selected_event = NULL;
         neural_target_status = select_typed_active_event(
             state, session,
-            session->episodic.records[event.raw_record_index],
+            source,
             &selected_event, &neural_target_score,
             &neural_exists_score,
             &neural_candidate_count, 0);
@@ -2650,7 +2692,13 @@ static void handle_memory_event(
         selected_target = selected_event->event_id;
         event.target_event_id = (char *)selected_target;
     }
+    if (memory_record != NULL && metis_episodic_add_indexed(
+            &session->episodic, memory_record, NULL, 0.0f, &event.raw_record_index) != 0) {
+        send_error(c, 500, "server_error", "failed to store event source evidence");
+        return;
+    }
     if (metis_event_store_apply(&session->events, &event) != 0) {
+        metis_episodic_truncate(&session->episodic, source_count);
         send_error(c, 400, "invalid_request_error",
                    "invalid, duplicate, or unresolved typed event");
         return;
@@ -2953,12 +3001,15 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
                 auto_memory_status = remember_autonomous_event(
                     state, session, memory_record,
                     memory_priority, request,
-                    memory_action,
+                    request_has_memory_action(request) ? memory_action : MEMORY_ACTION_IGNORE,
                     &auto_memory_result,
                     auto_memory_error,
                     sizeof auto_memory_error);
                 auto_memory_stored =
                     auto_memory_status == 0;
+                if (auto_memory_stored && !request_has_memory_action(request))
+                    memory_action = auto_memory_result.prediction.operation == 0 ?
+                        MEMORY_ACTION_STORE : MEMORY_ACTION_UPDATE;
                 typed_text_encoding_clear(
                     &auto_memory_result.encoding);
                 episodic_session = session;
@@ -2972,7 +3023,6 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
         episodic_session != NULL &&
         episodic_session->events.count > 0 &&
         memory_action == MEMORY_ACTION_IGNORE &&
-        !json_get_bool(request, "stream", 0) &&
         (json_get_bool(request, "memory_copy", 0) ||
          memory_auto_requested) &&
         extract_typed_value_answer(
@@ -2981,7 +3031,7 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
             &pointer_null_score, &pointer_span_score,
             &pointer_record_index) > 0)
         pointer_used = 1;
-    if (json_get_bool(request, "stream", 0)) {
+    if (json_get_bool(request, "stream", 0) && !pointer_used) {
         handle_streaming_completion(
             c, state, prompt, max_tokens, session_id,
             generation_reset, 1);
@@ -3105,7 +3155,33 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     if (result.session_id != NULL) {
         cJSON_AddItemToObject(root, "bitnet_session", build_session_json(&result));
     }
-    send_json(c, 200, root);
+    if (pointer_used && json_get_bool(request, "stream", 0)) {
+        cJSON *chunk = build_chat_stream_chunk(state, id, result.text, NULL, 1);
+        cJSON *final_chunk = build_chat_stream_chunk(state, id, NULL, "stop", 0);
+        if (chunk == NULL || final_chunk == NULL) {
+            send_error(c, 500, "server_error", "failed to build memory stream");
+        } else {
+            const char *fields[] = {"memory_action", "memory_auto", "memory_copy",
+                                    "bitnet_session", "usage"};
+            for (size_t i = 0; i < sizeof fields / sizeof fields[0]; ++i) {
+                cJSON *value = cJSON_GetObjectItem(root, fields[i]);
+                if (value != NULL) {
+                    char *encoded = cJSON_Print(value);
+                    cJSON *copy = encoded == NULL ? NULL : cJSON_Parse(encoded);
+                    free(encoded);
+                    if (copy != NULL) cJSON_AddItemToObject(final_chunk, fields[i], copy);
+                }
+            }
+            send_sse_headers(c);
+            send_sse_json(c, chunk);
+            send_sse_json(c, final_chunk);
+            send_sse_done(c);
+        }
+        cJSON_Delete(chunk);
+        cJSON_Delete(final_chunk);
+    } else {
+        send_json(c, 200, root);
+    }
     cJSON_Delete(root);
     generation_result_free(&result);
 }

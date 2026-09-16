@@ -52,7 +52,8 @@ def load_typed_pair_model(checkpoint_path):
         bool(checkpoint.get("dual_path", False)),
         bool(checkpoint.get(
             "trainable_context_localizer", False)),
-        bool(checkpoint.get("set_link_head", False)))
+        bool(checkpoint.get("set_link_head", False)),
+        7 if checkpoint.get("set_link_head_version") == 3 else 5)
     missing, unexpected = model.load_state_dict(
         checkpoint["verifier_state_dict"],
         strict=False)

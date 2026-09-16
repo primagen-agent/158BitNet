@@ -8,6 +8,7 @@ typedef struct metis_typed_link_model {
     int rank;
     int pair_feature_dim;
     int joint_hidden_dim;
+    int exists_feature_count;
     uint8_t backbone_sha256[32];
 
     float *joint_hidden_weight;

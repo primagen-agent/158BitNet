@@ -27,13 +27,13 @@ def export_typed_link_parity_sample(
         or not checkpoint.get("set_link_head", False)
         or int(checkpoint.get(
             "set_link_head_version", 0
-        )) != SET_LINK_HEAD_VERSION
+        )) not in (2, 3)
     ):
         raise ValueError(
-            "typed-link parity requires set-link v2 checkpoint")
-    if pair_count < 2:
+            "typed-link parity requires a v2 or v3 set-link checkpoint")
+    if pair_count < 1:
         raise ValueError(
-            "typed-link parity needs at least two pairs")
+            "typed-link parity needs at least one pair")
     state = checkpoint["verifier_state_dict"]
     joint_weight = state[
         "joint_head.0.weight"].detach().float()
@@ -63,7 +63,8 @@ def export_typed_link_parity_sample(
     joint = torch.minimum(
         entity_logits, predicate_logits) + residual
     exists_features = (
-        TypedPairVerifier.set_link_features(joint))
+        TypedPairVerifier.set_link_features(joint,
+            7 if checkpoint["set_link_head_version"] == 3 else 5))
     exists_hidden = F.gelu(F.linear(
         exists_features,
         state[

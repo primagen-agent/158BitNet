@@ -39,6 +39,7 @@ def export_typed_writer_binary(
     writer_path, tagger_path, anchor_path, output_path,
     predicate_anchor_weight=1.0,
     value_anchor_weight=0.25,
+    operation_path=None,
 ):
     writer = torch.load(
         writer_path, map_location="cpu", weights_only=True
@@ -184,10 +185,19 @@ def export_typed_writer_binary(
                 (), prefix + "residual_scale",
             ),
         ))
+    if operation_path is not None:
+        operation = torch.load(operation_path, map_location="cpu", weights_only=True)
+        if (operation.get("format") != "TYPED_CONTEXT_OPERATION_V1" or
+            operation.get("backbone_sha256") != writer["backbone_sha256"] or
+            operation.get("writer_checkpoint_fingerprint") != writer_fingerprint):
+            raise ValueError("context operation component identity mismatch")
+        for name, shape in (("0.weight", (rank, hidden * 2)), ("0.bias", (rank,)),
+                            ("2.weight", (2, rank)), ("2.bias", (2,))):
+            payloads.append(tensor_payload(operation["state_dict"][name], shape, name))
     header = bytearray(MAGIC)
     header += struct.pack(
         "<IIIIIIIff",
-        VERSION,
+        2 if operation_path is not None else VERSION,
         hidden,
         rank,
         len(bands),
@@ -220,6 +230,7 @@ def main():
     parser.add_argument("tagger_checkpoint")
     parser.add_argument("anchor_checkpoint")
     parser.add_argument("output")
+    parser.add_argument("--operation-model")
     parser.add_argument(
         "--predicate-anchor-weight",
         type=float, default=1.0,
@@ -236,6 +247,7 @@ def main():
         args.output,
         args.predicate_anchor_weight,
         args.value_anchor_weight,
+        args.operation_model,
     ))
 
 

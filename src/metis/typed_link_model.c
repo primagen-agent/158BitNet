@@ -11,7 +11,7 @@
 
 enum {
     TYPED_LINK_TENSOR_COUNT = 8,
-    TYPED_LINK_EXISTS_FEATURES = 5
+    TYPED_LINK_EXISTS_FEATURES = 7
 };
 
 static int read_exact(FILE *file, void *output, size_t size) {
@@ -103,7 +103,7 @@ metis_typed_link_model_t *metis_typed_link_model_load(
         memcmp(actual_magic, magic, sizeof magic) != 0 ||
         read_u32(file, &version) != 0 || version != 1 ||
         read_u32(file, &set_link_version) != 0 ||
-        set_link_version != 2 ||
+        (set_link_version != 2 && set_link_version != 3) ||
         read_u32(file, &rank) != 0 ||
         read_u32(file, &feature_dim) != 0 ||
         read_u32(file, &joint_hidden) != 0 ||
@@ -113,7 +113,7 @@ metis_typed_link_model_t *metis_typed_link_model_load(
     if (rank < 1 || rank > 4096u ||
         feature_dim < 1 || feature_dim > 16384u ||
         joint_hidden != rank * 2u ||
-        exists_features != TYPED_LINK_EXISTS_FEATURES ||
+        exists_features != (set_link_version == 3 ? 7u : 5u) ||
         tensor_count != TYPED_LINK_TENSOR_COUNT)
         FAIL("typed-link model geometry mismatch");
     model = (metis_typed_link_model_t *)calloc(
@@ -122,6 +122,7 @@ metis_typed_link_model_t *metis_typed_link_model_load(
     model->rank = (int)rank;
     model->pair_feature_dim = (int)feature_dim;
     model->joint_hidden_dim = (int)joint_hidden;
+    model->exists_feature_count = (int)exists_features;
     if (read_exact(file, model->backbone_sha256,
                    sizeof model->backbone_sha256) != 0)
         FAIL("truncated typed-link model header");
@@ -267,6 +268,7 @@ int metis_typed_link_predecessor_exists(
     size_t pair_count,
     float *exists_score) {
     float features[TYPED_LINK_EXISTS_FEATURES];
+    int feature_count = model != NULL && model->exists_feature_count == 7 ? 7 : 5;
     float *normalized = NULL;
     float *hidden = NULL;
     float top1 = -FLT_MAX;
@@ -331,11 +333,13 @@ int metis_typed_link_predecessor_exists(
         ? 1.0f - entropy / logf((float)pair_count)
         : 1.0f;
     features[4] = log1pf((float)pair_count);
+    features[5] = top1;
+    features[6] = top2;
     for (int row = 0; row < model->rank; ++row)
         hidden[row] = dense_gelu_row(
             model->exists_hidden_weight +
-                (size_t)row * TYPED_LINK_EXISTS_FEATURES,
-            features, TYPED_LINK_EXISTS_FEATURES,
+                (size_t)row * (size_t)feature_count,
+            features, feature_count,
             model->exists_hidden_bias[row]);
     *exists_score = model->exists_output_bias;
     for (int row = 0; row < model->rank; ++row)

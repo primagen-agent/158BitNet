@@ -236,11 +236,16 @@ def compile_pair_row(
 def load_or_compile(
     source_cache, output_cache, pair_checkpoint,
     pair_model, embedding_table, device, pair_batch,
+    expected_backbone=None,
 ):
     source = torch.load(
         source_cache, map_location="cpu",
         weights_only=True,
     )
+    if source.get("evaluation_only"):
+        raise ValueError("evaluation-only features cannot enter training")
+    if expected_backbone is not None and source.get("backbone_sha256") != expected_backbone:
+        raise ValueError("query feature cache backbone mismatch")
     metadata = {
         "format": PAIR_FEATURE_CACHE,
         "source_fingerprint":
@@ -594,18 +599,21 @@ def main():
         args.train_pair_cache,
         args.pair_checkpoint,
         pair_model, embedding_table,
-        args.device, args.pair_batch,
+        args.device, args.pair_batch, backbone_sha,
     )
     valid_rows = load_or_compile(
         args.valid_feature_cache,
         args.valid_pair_cache,
         args.pair_checkpoint,
         pair_model, embedding_table,
-        args.device, args.pair_batch,
+        args.device, args.pair_batch, backbone_sha,
     )
     del pair_model
     del embedding_table
     torch.cuda.empty_cache()
+    train_worlds = {row["world_id"] for row in train_rows}
+    if train_worlds.intersection(row["world_id"] for row in valid_rows):
+        raise ValueError("query training and validation worlds overlap")
 
     model = TypedQueryActivator(
         checkpoint
@@ -629,6 +637,10 @@ def main():
         "set_feature_count": SET_FEATURE_COUNT,
         "state_dict": clone_state_dict(model),
         "valid_metrics": metrics,
+        "validation_role": "checkpoint_selection_not_final_test",
+        "training_config": vars(args),
+        "train_sample_ids": [row["sample_id"] for row in train_rows],
+        "valid_sample_ids": [row["sample_id"] for row in valid_rows],
         "objective":
             "candidate_cross_entropy_plus_hard_margin"
             "_with_candidate_set_null",

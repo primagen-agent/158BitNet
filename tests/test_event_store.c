@@ -104,6 +104,25 @@ int main(void) {
     metis_event_store_init(&store);
     metis_event_store_init(&loaded);
     metis_event_store_init(&legacy);
+    /* Every capacity boundary must invalidate a predecessor in the new array. */
+    for (int i = 0; i < 65; ++i) {
+        char id[32], previous[32];
+        snprintf(id, sizeof id, "boundary-%d", i);
+        snprintf(previous, sizeof previous, "boundary-%d", i - 1);
+        metis_event_record_t item = event(id, "Tokyo",
+            i == 0 ? METIS_EVENT_ASSERT : METIS_EVENT_SUPERSEDE,
+            i == 0 ? NULL : previous);
+        if (metis_event_store_apply(&store, &item) ||
+            metis_event_store_active_count(&store, "Alice", "lives_in") != 1)
+            return 1;
+    }
+    if (metis_event_store_save(&store, "/tmp/test-events-boundary.bnevent") ||
+        metis_event_store_load(&loaded, "/tmp/test-events-boundary.bnevent") ||
+        metis_event_store_active_count(&loaded, "Alice", "lives_in") != 1)
+        return 1;
+    remove("/tmp/test-events-boundary.bnevent");
+    metis_event_store_clear(&store);
+    metis_event_store_clear(&loaded);
     metis_event_record_t first = event(
         "event-1", "Seattle", METIS_EVENT_ASSERT, NULL);
     metis_event_record_t second = event(

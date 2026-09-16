@@ -86,6 +86,7 @@ add_library(bitnet STATIC
     src/bitnet_dispatch.c
     src/metis/episodic_store.c
     src/metis/event_store.c
+    src/metis/memory_snapshot.c
     src/metis/memory_controller.c
     src/metis/typed_link_model.c
     src/metis/typed_pair_encoder.c
@@ -115,6 +116,9 @@ if(UNIX AND NOT APPLE AND NOT ANDROID)
 endif()
 
 add_executable(gguf_inspect tools/gguf_inspect.c)
+add_executable(tok_probe python/tok_probe.c)
+target_include_directories(tok_probe PRIVATE src include)
+target_link_libraries(tok_probe PRIVATE bitnet m)
 target_include_directories(gguf_inspect PRIVATE src)
 target_link_libraries(gguf_inspect PRIVATE bitnet)
 
@@ -307,6 +311,11 @@ add_executable(test_memory_controller tests/test_memory_controller.c)
 target_include_directories(test_memory_controller PRIVATE src)
 target_link_libraries(test_memory_controller PRIVATE bitnet m)
 add_test(NAME test_memory_controller COMMAND test_memory_controller)
+
+add_executable(test_memory_snapshot tests/test_memory_snapshot.c)
+target_include_directories(test_memory_snapshot PRIVATE src)
+target_link_libraries(test_memory_snapshot PRIVATE bitnet m)
+add_test(NAME test_memory_snapshot COMMAND test_memory_snapshot)
 
 add_executable(
     test_typed_writer_parity

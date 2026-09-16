@@ -232,6 +232,27 @@ int main(void) {
                 "wrong backbone was not rejected: %s\n", error);
         goto cleanup;
     }
+    {
+        metis_typed_link_model_t absolute = {0};
+        float weight[7] = {0, 0, 0, 0, 0, 1, 0};
+        float bias = 0, output_weight = 1;
+        float positive[2] = {10, 8}, negative[2] = {-10, -12};
+        absolute.rank = 1;
+        absolute.exists_feature_count = 7;
+        absolute.exists_hidden_weight = weight;
+        absolute.exists_hidden_bias = &bias;
+        absolute.exists_output_weight = &output_weight;
+        absolute.exists_output_bias = -1;
+        for (size_t count = 1; count <= 2; ++count) {
+            if (metis_typed_link_select_predecessor(&absolute, positive, count, &selected, &exists) ||
+                selected != 0 ||
+                metis_typed_link_select_predecessor(&absolute, negative, count, &selected, &exists) ||
+                selected != SIZE_MAX) {
+                fprintf(stderr, "absolute evidence was lost for a small bank\n");
+                goto cleanup;
+            }
+        }
+    }
     status = 0;
     puts("test_typed_link_model: OK");
 cleanup:

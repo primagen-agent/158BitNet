@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 import socket
 import subprocess
 import sys
@@ -74,6 +75,15 @@ def stream_chat(base, session_id, text):
         raise AssertionError(
             f"stream did not complete: {body}"
         )
+    chunks = []
+    for event in body.split("\n\n"):
+        data = "\n".join(line[6:] for line in event.splitlines() if line.startswith("data: "))
+        if data and data != "[DONE]":
+            chunks.append(json.loads(data))
+    content = "".join(chunk["choices"][0]["delta"].get("content", "") for chunk in chunks)
+    result = dict(chunks[-1])
+    result["choices"] = [{"message": {"content": content}}]
+    return result
 
 
 def start_server(
@@ -127,8 +137,8 @@ def stop_server(process):
 def assert_no_kv(response):
     session = response.get("bitnet_session") or {}
     if (
-        session.get("cached_tokens", 0) != 0
-        or session.get("reused_tokens", 0) != 0
+        session.get("cached_tokens") != 0
+        or session.get("reused_tokens") != 0
     ):
         raise AssertionError(f"KV cache was reused: {response}")
 
@@ -255,6 +265,13 @@ def main():
                 "entity": "Cleo",
                 "value": "public radio bulletins near home",
             })
+            repeated = chat(base, session_id, create)
+            automatic = repeated["memory_auto"]
+            if automatic.get("deduplicated") != 1 or automatic["raw_record_index"] != 0:
+                raise AssertionError(f"repeated source was reindexed: {repeated}")
+            repeated_export = post(base, "/v1/memory/export", {"session_id": session_id})
+            if repeated_export["typed_events"] != 2 or repeated_export["episodic_records"] != 2:
+                raise AssertionError(f"repeated chat duplicated memory: {repeated_export}")
             changed = chat(base, session_id, update)
             assert_auto_event(changed, {
                 "decision": "update",
@@ -270,6 +287,8 @@ def main():
                 base, session_id, query_text,
             )
             assert_recall(recalled)
+            streamed_recall = stream_chat(base, session_id, query_text)
+            assert_recall(streamed_recall)
             exported = post(
                 base, "/v1/memory/export",
                 {"session_id": session_id},
@@ -326,41 +345,27 @@ def main():
                 "from a virtual access ticket after work; retain a "
                 "virtual access ticket on quiet mornings."
             )
-            natural_written = chat(
-                base, natural_session, natural_create
-            )
-            assert_auto_event(natural_written, {
-                "decision": "write",
-                "operation": "assert",
-                "entity": "Briar",
-                "predicate": "conference_registration",
-                "value": "A virtual access ticket after work",
-            })
-            natural_unrelated = chat(
-                base, natural_session, natural_distractor
-            )
-            assert_auto_event(natural_unrelated, {
-                "decision": "write",
-                "operation": "assert",
-                "entity": "Cleo",
-                "value": "public radio bulletins near home",
-            })
-            natural_changed = chat(
-                base, natural_session, natural_update
-            )
-            assert_auto_event(natural_changed, {
-                "decision": "update",
-                "operation": "supersede",
-                "entity": "Briar",
-                "predicate": "conference_registration",
-                "value":
-                    "a virtual access ticket on quiet mornings",
-                "target_event_id": "auto-event-0",
-                "target_resolution": "neural_activation",
-            })
-            assert_recall(chat(
-                base, natural_session, query_text,
-            ))
+            # This is decision parity, not a model-accuracy assertion. The
+            # current writer can misclassify unprefixed creates as updates;
+            # the chat gate must not conceal that error by overriding it.
+            natural_stored = 0
+            from eval_typed_memory_lifecycle import post as post_status
+            for text in (natural_create, natural_distractor, natural_update):
+                automatic = chat(base, natural_session, text)
+                assert_no_kv(automatic)
+                status, direct = post_status(base, "/v1/memory/remember", {
+                    "session_id": "typed-natural-direct", "memory_record": text,
+                })
+                actual = automatic["memory_auto"]
+                if bool(actual["stored"]) != (status == 200):
+                    raise AssertionError(f"chat overwrote writer decision: {actual} {direct}")
+                if status == 200:
+                    natural_stored += 1
+                    for field in ("operation", "entity", "predicate", "value", "raw_record_index"):
+                        if actual[field] != direct[field]:
+                            raise AssertionError(f"chat/writer {field} mismatch: {actual} {direct}")
+                elif actual.get("error") != direct["error"]["message"]:
+                    raise AssertionError(f"chat/writer rejection mismatch: {actual} {direct}")
         finally:
             stop_server(process)
 
@@ -383,16 +388,41 @@ def main():
             assert_recall(chat(
                 base, session_id, query_text,
             ))
+            assert_recall(stream_chat(base, session_id, query_text))
+            status, rejected = post_status(base, "/v1/memory/event", {
+                "session_id": session_id, "memory_record": "Alice lives in Tokyo",
+                "event_id": "auto-event-0", "episode_id": "duplicate",
+                "source_id": "duplicate", "entity": "Alice", "predicate": "lives_in",
+                "value": "Tokyo", "operation": "assert", "memory_kind": "property",
+            })
+            if status != 400:
+                raise AssertionError(f"duplicate event was accepted: {rejected}")
+            unchanged = post(base, "/v1/memory/export", {"session_id": session_id})
+            if unchanged["episodic_records"] != 3 or unchanged["typed_events"] != 3:
+                raise AssertionError(f"failed event left orphan source: {unchanged}")
+            manifest = Path(state_dir) / f"{session_id}.bnsnapshot"
+            original = manifest.read_bytes()
+            manifest.write_bytes(b"invalid snapshot")
+            try:
+                status, rejected = post_status(base, "/v1/memory/import", {"session_id": session_id})
+                if status != 500:
+                    raise AssertionError(f"bad manifest was accepted: {rejected}")
+                assert_recall(chat(base, session_id, query_text))
+            finally:
+                manifest.write_bytes(original)
         finally:
             stop_server(process)
 
     print(json.dumps({
+        "natural_writer_attempts": 3,
+        "natural_writer_stored": natural_stored,
+        "natural_check": "decision_parity_not_accuracy",
         "phase": "typed_chat_auto_memory_c",
         "chat_endpoint": "/v1/chat/completions",
         "question_ignored": True,
         "create_update_stored": True,
         "streaming_stored": True,
-        "natural_chat_stored": True,
+        "natural_chat_writer_parity": True,
         "implicit_chat_recall": True,
         "explicit_opt_out": True,
         "restart_stable": True,

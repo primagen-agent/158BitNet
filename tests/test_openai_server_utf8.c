@@ -89,6 +89,32 @@ int main(void) {
     free(gen.text);
 
     failures += test_bitnet_b158_prompt_system_folds_into_next_user();
+    {
+        const char *word = "caf\xC3\xA9teria";
+        size_t offsets[] = {0, 3};
+        size_t start = 99, end = 99;
+        if (typed_token_span_to_source(word, offsets, 1, 0, word,
+                0, 0, 2, &start, &end) || start != 0 || end != strlen(word)) {
+            fprintf(stderr, "value boundary truncated a UTF-8 word\n");
+            ++failures;
+        }
+        word = "Mira's";
+        offsets[1] = 4;
+        if (typed_token_span_to_source(word, offsets, 1, 0, word,
+                0, 0, 2, &start, &end) || end != 6 ||
+            typed_token_span_to_source(word, offsets, 1, 0, word,
+                0, 0, 1, &start, &end) || end != 4) {
+            fprintf(stderr, "entity and value possessive handling diverged\n");
+            ++failures;
+        }
+        word = "北京天气";
+        offsets[1] = 6;
+        if (typed_token_span_to_source(word, offsets, 1, 0, word,
+                0, 0, 2, &start, &end) || start != 0 || end != 6) {
+            fprintf(stderr, "word completion consumed unrelated CJK characters\n");
+            ++failures;
+        }
+    }
 
     return failures == 0 ? 0 : 1;
 }

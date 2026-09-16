@@ -27,6 +27,7 @@ def export_sample(
     predicate_anchor_weight=1.0,
     value_anchor_weight=0.25,
     device="cpu",
+    operation_path=None,
 ):
     checkpoint, writer, tagger = load_writer_and_tagger(
         writer_path, tagger_path, device
@@ -62,6 +63,14 @@ def export_sample(
         operation_logits = writer_output[
             "operation_logits"
         ][0].float().cpu()
+        if operation_path is not None:
+            from train_context_memory_operation import operation_features
+            saved = torch.load(operation_path, map_location="cpu", weights_only=True)
+            state = saved["state_dict"]
+            feature = operation_features(batch["hidden"][0, :int(batch["mask"][0].sum())]).cpu()
+            operation_logits = torch.nn.functional.linear(torch.nn.functional.gelu(
+                torch.nn.functional.linear(feature, state["0.weight"], state["0.bias"])),
+                state["2.weight"], state["2.bias"])
         operation = int(operation_logits.argmax())
         spans = {}
         anchors = {}
@@ -160,6 +169,7 @@ def main():
         type=float, default=0.25,
     )
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--operation-model")
     args = parser.parse_args()
     print(export_sample(
         args.writer_checkpoint,
@@ -175,6 +185,7 @@ def main():
         args.predicate_anchor_weight,
         args.value_anchor_weight,
         args.device,
+        args.operation_model,
     ))
 
 

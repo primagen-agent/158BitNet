@@ -158,6 +158,7 @@ int metis_event_store_apply(
     metis_event_store_t *store, const metis_event_record_t *event) {
     metis_event_record_t copy;
     metis_event_record_t *target = NULL;
+    size_t target_index = SIZE_MAX;
     if (store == NULL || event == NULL ||
         !valid_operation(event->operation) ||
         !valid_memory_kind(event->memory_kind) ||
@@ -177,6 +178,7 @@ int metis_event_store_apply(
             return -1;
         target = find_mutable(store, event->target_event_id);
         if (target == NULL || !target->active) return -1;
+        target_index = (size_t)(target - store->events);
         if (strcmp(target->entity, event->entity) != 0 ||
             strcmp(target->predicate, event->predicate) != 0 ||
             target->memory_kind != event->memory_kind)
@@ -198,7 +200,7 @@ int metis_event_store_apply(
         store->events = grown;
         store->capacity = capacity;
     }
-    if (target != NULL) target->active = 0;
+    if (target_index != SIZE_MAX) store->events[target_index].active = 0;
     store->events[store->count++] = copy;
     return 0;
 }

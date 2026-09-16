@@ -10,7 +10,7 @@
 #include <string.h>
 
 enum {
-    TYPED_WRITER_TENSOR_COUNT = 39
+    TYPED_WRITER_TENSOR_COUNT = 43
 };
 
 static int read_exact(FILE *file, void *output, size_t size) {
@@ -109,7 +109,7 @@ metis_typed_writer_model_t *metis_typed_writer_model_load(
     if (file == NULL) FAIL("cannot open typed-writer model");
     if (read_exact(file, actual_magic, sizeof actual_magic) != 0 ||
         memcmp(actual_magic, magic, sizeof magic) != 0 ||
-        read_u32(file, &version) != 0 || version != 1 ||
+        read_u32(file, &version) != 0 || (version != 1 && version != 2) ||
         read_u32(file, &hidden) != 0 ||
         read_u32(file, &rank) != 0 ||
         read_u32(file, &bands) != 0 ||
@@ -128,7 +128,7 @@ metis_typed_writer_model_t *metis_typed_writer_model_load(
         bands < 2 || bands > 256u ||
         layers < bands || layers > 4096u ||
         max_span < 1 || max_span > 256u ||
-        tensor_count != TYPED_WRITER_TENSOR_COUNT ||
+        tensor_count != (version == 2 ? 43u : 39u) ||
         !isfinite(model->predicate_anchor_weight) ||
         !isfinite(model->value_anchor_weight))
         FAIL("typed-writer geometry mismatch");
@@ -205,7 +205,13 @@ metis_typed_writer_model_t *metis_typed_writer_model_load(
                          &expected[tensor++]) != 0)
             FAIL("typed-writer tensor geometry overflow");
     }
-    if (tensor != TYPED_WRITER_TENSOR_COUNT)
+    if (version == 2 &&
+        (tensor_bytes(rank, hidden * 2u, 1, &expected[tensor++]) ||
+         tensor_bytes(rank, 1, 1, &expected[tensor++]) ||
+         tensor_bytes(2, rank, 1, &expected[tensor++]) ||
+         tensor_bytes(2, 1, 1, &expected[tensor++])))
+        FAIL("context operation geometry overflow");
+    if ((uint32_t)tensor != tensor_count)
         FAIL("typed-writer internal tensor mismatch");
 
     tensor = 0;
@@ -245,6 +251,12 @@ metis_typed_writer_model_t *metis_typed_writer_model_load(
             !isfinite(model->field[field].residual_scale))
             FAIL("non-finite typed-writer scalar");
     }
+    if (version == 2) {
+        LOAD(model->context_operation_weight);
+        LOAD(model->context_operation_bias);
+        LOAD(model->context_operation_output_weight);
+        LOAD(model->context_operation_output_bias);
+    }
 #undef LOAD
     if (fgetc(file) != EOF)
         FAIL("typed-writer model has trailing data");
@@ -274,6 +286,10 @@ void metis_typed_writer_model_free(
     free(model->operation_hidden_bias);
     free(model->operation_output_weight);
     free(model->operation_output_bias);
+    free(model->context_operation_weight);
+    free(model->context_operation_bias);
+    free(model->context_operation_output_weight);
+    free(model->context_operation_output_bias);
     free(model->adapted_anchor_keys);
     for (int field = 0; field < 4; ++field) {
         free(model->field[field].context_weight);
@@ -525,6 +541,31 @@ int metis_typed_writer_predict(
                 model->operation_output_weight +
                     (size_t)operation * (size_t)model->rank,
                 operation_hidden, model->rank);
+    }
+    if (model->context_operation_weight != NULL) {
+        int width = model->hidden_dim;
+        float *features = (float *)calloc((size_t)width * 2u, sizeof(float));
+        size_t first = token_count > 1 ? 1u : 0u;
+        if (features == NULL) goto cleanup;
+        for (size_t token = first; token < token_count; ++token)
+            for (int band = 0; band < model->band_count; ++band)
+                for (int column = 0; column < width; ++column) {
+                    float value = hidden[(token * (size_t)model->band_count + (size_t)band) * (size_t)width + (size_t)column]
+                                  / (float)model->band_count;
+                    features[column] += value / (float)(token_count - first);
+                    if (token == token_count - 1u) features[width + column] += value;
+                }
+        normalize(features, width);
+        normalize(features + width, width);
+        for (int row = 0; row < model->rank; ++row)
+            operation_hidden[row] = gelu(model->context_operation_bias[row] + dot(
+                model->context_operation_weight + (size_t)row * (size_t)width * 2u,
+                features, width * 2));
+        for (int operation = 0; operation < 2; ++operation)
+            output->operation_logits[operation] = model->context_operation_output_bias[operation] + dot(
+                model->context_operation_output_weight + (size_t)operation * (size_t)model->rank,
+                operation_hidden, model->rank);
+        free(features);
     }
     output->operation =
         output->operation_logits[1] >

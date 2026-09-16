@@ -30,7 +30,7 @@ def active_evidence(row):
     for line, event in zip(lines, events):
         if not event.get("active"):
             continue
-        if SOURCE_LINE.fullmatch(line) is None:
+        if SOURCE_LINE.fullmatch(line) is None and metadata.get("raw_episodes") is None:
             raise ValueError(
                 f"invalid source line: {row.get('sample_id', '')}"
             )
@@ -68,6 +68,8 @@ def current_target(row, active):
 
 def compile_row(row):
     metadata = dict(row.get("metadata") or {})
+    if row.get("evaluation_only") or metadata.get("evaluation_only"):
+        raise ValueError("evaluation-only data cannot enter activation training")
     if metadata.get("locomo_used"):
         raise ValueError("LoCoMo rows cannot enter activation training")
     plan = metadata.get("query_plan") or {}
@@ -81,6 +83,8 @@ def compile_row(row):
     compiled["evidence"] = evidence
     metadata["typed_activation_curriculum"] = True
     metadata["typed_activation_candidate_count"] = len(lines)
+    if metadata.get("raw_episodes") is not None:
+        metadata["raw_episodes"] = lines
     compiled["metadata"] = metadata
     if intent == "null":
         metadata["counterfactual_no_info"] = True

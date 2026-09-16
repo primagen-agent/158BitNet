@@ -2,6 +2,7 @@
 """Tests for the autonomous typed-writer binary exporter."""
 
 import struct
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -125,6 +126,27 @@ class ExportTypedWriterModelTests(unittest.TestCase):
                     *paths, output
                 )
             payload = output.read_bytes()
+            operation_path = root / "operation.pt"
+            operation = {
+                "format": "TYPED_CONTEXT_OPERATION_V1",
+                "backbone_sha256": sha,
+                "writer_checkpoint_fingerprint": "writer-sha",
+                "writer_binary_sha256": hashlib.sha256(payload).hexdigest(),
+                "state_dict": {"0.weight": torch.ones(rank, hidden * 2), "0.bias": torch.zeros(rank),
+                               "2.weight": torch.ones(2, rank), "2.bias": torch.zeros(2)},
+            }
+            torch.save(operation, operation_path)
+            full = root / "full-v2.bntwrite"
+            with mock.patch("export_typed_writer_model.file_fingerprint", return_value="writer-sha"):
+                export_typed_writer_binary(*paths, full, operation_path=operation_path)
+            from attach_context_memory_operation import attach
+            attached = root / "attached-v2.bntwrite"
+            attach(output, operation_path, attached)
+            self.assertEqual(full.read_bytes(), attached.read_bytes())
+            self.assertEqual(struct.unpack_from("<I", attached.read_bytes(), 8)[0], 2)
+            self.assertEqual(struct.unpack_from("<I", attached.read_bytes(), 32)[0], 43)
+            with self.assertRaisesRegex(ValueError, "not bound"):
+                attach(full, operation_path, root / "wrong.bntwrite")
         self.assertEqual(payload[:8], MAGIC)
         values = struct.unpack_from("<IIIIIIIff", payload, 8)
         self.assertEqual(values[:7], (

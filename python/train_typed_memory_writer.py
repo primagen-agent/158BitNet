@@ -7,6 +7,7 @@ import collections
 import json
 import math
 import random
+import sys
 from pathlib import Path
 
 import torch
@@ -19,10 +20,32 @@ from typed_memory_training import (
     clone_state_dict,
     file_fingerprint,
     token_span_variants,
+    parse_hidden_layer_bands,
+    reject_evaluation_row,
 )
 
 
 SLOT_NAMES = ("entity", "predicate", "value", "time")
+
+
+def writer_backbone_config(gguf, lib, bands_spec, legacy_path=None):
+    """Read geometry from the actual backbone, without a pretrained memory model."""
+    weights = GGUFWeights(gguf, lib)
+    try:
+        bands = parse_hidden_layer_bands(bands_spec, weights.n_layers)
+        config = {
+            "backbone_sha256": file_fingerprint(gguf),
+            "hidden": weights.hidden,
+            "hidden_layer_bands": [list(band) for band in bands],
+        }
+    finally:
+        weights.close()
+    if legacy_path:
+        legacy = torch.load(legacy_path, map_location="cpu", weights_only=True)
+        for name, value in config.items():
+            if legacy.get(name) != value:
+                raise ValueError(f"legacy backbone configuration mismatch: {name}")
+    return config
 
 
 def load_raw_worlds(path):
@@ -32,6 +55,7 @@ def load_raw_worlds(path):
             if not line.strip():
                 continue
             row = json.loads(line)
+            reject_evaluation_row(row)
             metadata = row.get("metadata") or {}
             world_id = str(metadata.get("world_id", ""))
             semantic_world_id = str(
@@ -75,6 +99,8 @@ def load_writer_examples(
     if payload.get("backbone_sha256") != backbone_sha:
         raise ValueError(
             f"feature cache backbone mismatch: {feature_cache}")
+    if payload.get("source_fingerprint") != file_fingerprint(raw_jsonl):
+        raise ValueError(f"feature cache source mismatch: {feature_cache}")
     feature_worlds = {}
     for row in payload.get("rows") or []:
         world_id = str(row.get("world_id", ""))
@@ -147,7 +173,7 @@ def load_writer_examples(
                     token_embedding_table[
                         example["token_ids"]].clone())
             for field in SLOT_NAMES:
-                span = token_span_variants(
+                span = (0, 0) if field == "time" and not example["time_surface"] else token_span_variants(
                     example["token_ids"],
                     example[f"{field}_surface"],
                     tokenizer)
@@ -735,9 +761,10 @@ def writer_loss(
         output["operation_logits"],
         batch["operation"],
         weight=operation_weight)
-    time_loss = F.smooth_l1_loss(
-        output["time_position"],
-        batch["position"])
+    known_time = torch.tensor([bool(row.get("time", "known")) for row in batch["rows"]],
+                              device=output["time_position"].device)
+    time_loss = (F.smooth_l1_loss(output["time_position"][known_time], batch["position"][known_time])
+                 if known_time.any() else output["time_position"].sum() * 0.0)
     if span_attention_weight > 0.0:
         attention_parts = {
             name: attention_span_loss(
@@ -1376,7 +1403,15 @@ def train(
     span_attention_weight,
     span_boundary_weight,
     span_segment_weight,
+    writer_focus=False,
 ):
+    def selection(metrics):
+        if not writer_focus:
+            return metric_key(metrics)
+        return (min(metrics["create_accuracy"], metrics["update_accuracy"],
+                    metrics["entity_span_exact"], metrics["value_span_exact"],
+                    metrics["predicate_attention_hit_accuracy"]),
+                metrics["joint_span_exact"], metrics["operation_macro_accuracy"])
     operation_counts = collections.Counter(
         example["operation"]
         for example in train_examples)
@@ -1451,7 +1486,7 @@ def train(
             },
             **metrics,
         }, separators=(",", ":")), flush=True)
-        if metric_key(metrics) > metric_key(best):
+        if selection(metrics) > selection(best):
             best = metrics
             best_state = clone_state_dict(model)
             best_step = step
@@ -1466,7 +1501,8 @@ def train(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("base_checkpoint")
+    parser.add_argument("base_checkpoint", nargs="?",
+                        help="optional legacy metadata checkpoint; not needed for fresh training")
     parser.add_argument("train_features")
     parser.add_argument("train_jsonl")
     parser.add_argument("valid_features")
@@ -1475,6 +1511,8 @@ def main():
     parser.add_argument("--gguf", required=True)
     parser.add_argument("--tok-probe", required=True)
     parser.add_argument("--lib")
+    parser.add_argument("--hidden-layer-bands", default="0-5,6-11,12-17,18-23")
+    parser.add_argument("--writer-focus", action="store_true")
     parser.add_argument("--rank", type=int, default=128)
     parser.add_argument("--init-checkpoint")
     parser.add_argument("--steps", type=int, default=1500)
@@ -1519,6 +1557,8 @@ def main():
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=20260914)
     args = parser.parse_args()
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
     if args.hard_negative_weight < 0.0:
         parser.error("--hard-negative-weight must be non-negative")
     if not 0.0 <= args.same_world_fraction <= 1.0:
@@ -1563,11 +1603,8 @@ def main():
     if args.max_field_span < 1:
         parser.error("--max-field-span must be positive")
 
-    checkpoint = torch.load(
-        args.base_checkpoint,
-        map_location="cpu", weights_only=True)
-    if checkpoint.get("format") != "MULTISLOT_ACTIVATOR_V1":
-        raise ValueError("bad base activator checkpoint")
+    checkpoint = writer_backbone_config(
+        args.gguf, args.lib, args.hidden_layer_bands, args.base_checkpoint)
     if (
         args.use_token_embeddings
         and not args.lib
@@ -1597,6 +1634,9 @@ def main():
         args.valid_features, args.valid_jsonl,
         checkpoint["backbone_sha256"], tokenizer,
         token_embedding_table)
+    train_worlds = {row["semantic_world_id"] for row in train_examples}
+    if train_worlds.intersection(row["semantic_world_id"] for row in valid_examples):
+        raise ValueError("training and validation worlds overlap")
     model = TypedMemoryWriter(
         checkpoint["hidden"], args.rank,
         len(checkpoint["hidden_layer_bands"]),
@@ -1713,7 +1753,7 @@ def main():
         args.same_world_fraction,
         args.span_attention_weight,
         args.span_boundary_weight,
-        args.span_segment_weight)
+        args.span_segment_weight, args.writer_focus)
     version_threshold, train_version_accuracy = (
         calibrate_version_threshold(
             model, train_examples,
@@ -1736,6 +1776,10 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     torch.save({
         "format": "TYPED_MEMORY_WRITER_V1",
+        "training_command": [sys.executable, *sys.argv],
+        "training_config": vars(args),
+        "train_source_sha256": file_fingerprint(args.train_jsonl),
+        "valid_source_sha256": file_fingerprint(args.valid_jsonl),
         "backbone_sha256":
             checkpoint["backbone_sha256"],
         "hidden": checkpoint["hidden"],
@@ -1766,7 +1810,7 @@ def main():
         "max_field_span":
             args.max_field_span,
         "span_segment_weight":
-            args.span_segment_weight,
+        args.span_segment_weight,
         "valid_metrics": metrics,
         "version_threshold": version_threshold,
         "address_mode":

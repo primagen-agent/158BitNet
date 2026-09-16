@@ -44,6 +44,10 @@ typedef struct metis_typed_writer_model {
     float *operation_output_weight;
     float *operation_output_bias;
     float *adapted_anchor_keys;
+    float *context_operation_weight;
+    float *context_operation_bias;
+    float *context_operation_output_weight;
+    float *context_operation_output_bias;
     metis_typed_writer_field_t
         field[METIS_TYPED_WRITER_FIELD_COUNT];
 } metis_typed_writer_model_t;
