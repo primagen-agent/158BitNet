@@ -337,6 +337,9 @@ add_test(
 
 add_executable(
     test_typed_link_parity tests/test_typed_link_parity.c)
+add_executable(test_memory_gate_parity tests/test_memory_gate_parity.c)
+target_include_directories(test_memory_gate_parity PRIVATE src)
+target_link_libraries(test_memory_gate_parity PRIVATE bitnet m)
 target_include_directories(
     test_typed_link_parity PRIVATE src)
 target_link_libraries(

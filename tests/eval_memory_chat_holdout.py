@@ -3,6 +3,8 @@
 
 Gold fields never enter HTTP requests. NULL measures activation rejection only,
 not whether an ordinary generated response is a correct abstention.
+The optional forced-writer gate ablation is labeled separately and is not an
+automatic-chat accuracy result.
 """
 from __future__ import annotations
 import argparse
@@ -11,10 +13,33 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+import urllib.error
+import urllib.request
 
 from test_openai_server_typed_chat_auto_memory import (
     assert_no_kv, chat, free_port, post, start_server, stop_server, stream_chat,
 )
+
+
+def force_writer_diagnostic(base, session_id, text):
+    """Invoke the same neural writer without changing its operation prediction.
+
+    This is a gate ablation, never an automatic-chat accuracy measurement.
+    """
+    request = urllib.request.Request(base + "/v1/memory/remember",
+        data=json.dumps({"session_id": session_id, "memory_record": text}).encode(),
+        headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=240) as response:
+            result = json.loads(response.read())
+    except urllib.error.HTTPError as error:
+        if error.code not in (409, 422):
+            raise
+        return {"status": "failed", "stored": 0, "http_status": error.code,
+                "error": json.loads(error.read())}
+    if result.get("kv_cache_touched") != 0:
+        raise AssertionError("diagnostic write did not report zero KV use")
+    return {**result, "status": "stored", "stored": 1}
 
 
 def load_holdout(path):
@@ -36,6 +61,11 @@ def judge(query, response):
     return activated and answer == query["answer"]
 
 
+def assert_query_did_not_write(response):
+    if (response.get("memory_auto") or {}).get("stored", 0):
+        raise AssertionError(f"a recall question was written into memory: {response}")
+
+
 def summarize(rows):
     result = {}
     for kind in sorted({row["kind"] for row in rows}):
@@ -52,37 +82,47 @@ def main():
         parser.add_argument(name)
     parser.add_argument("--fixture", default=str(Path(__file__).parent / "fixtures/memory_chat_holdout_v1.json"))
     parser.add_argument("--output", required=True)
+    parser.add_argument("--controller", help="optional learned write gate; no keyword fallback when loaded")
+    parser.add_argument("--force-writer", action="store_true",
+                        help="diagnostic gate ablation via remember API; not automatic chat accuracy")
     args = parser.parse_args()
     worlds = load_holdout(args.fixture)
     paths = [args.server, args.gguf, args.pair, args.link, args.query, args.writer]
     writes, results = [], []
     with tempfile.TemporaryDirectory(prefix="bitnet-sealed-chat-") as directory:
-        process, base = start_server(*paths, directory, free_port())
+        process, base = start_server(*paths, directory, free_port(), controller=args.controller)
         try:
             for world in worlds:
                 for index, text in enumerate(world["writes"]):
-                    response = chat(base, world["id"], text)
-                    assert_no_kv(response)
+                    if args.force_writer:
+                        result = force_writer_diagnostic(base, world["id"], text)
+                    else:
+                        response = chat(base, world["id"], text)
+                        assert_no_kv(response)
+                        result = response.get("memory_auto")
                     writes.append({"world": world["id"], "index": index,
-                                   "result": response.get("memory_auto")})
+                                   "result": result})
                 exported = post(base, "/v1/memory/export", {"session_id": world["id"]})
                 print(json.dumps({"phase": "export", "world": world["id"],
                                   "events": exported["typed_events"]}), flush=True)
         finally:
             stop_server(process)
-        process, base = start_server(*paths, directory, free_port())
+        process, base = start_server(*paths, directory, free_port(), controller=args.controller)
         try:
             for world in worlds:
                 baseline = chat(base, world["id"], world["queries"][0]["text"])
                 assert_no_kv(baseline)
+                assert_query_did_not_write(baseline)
                 if baseline.get("memory_copy"):
                     raise AssertionError("fresh server recalled a session before import")
-                post(base, "/v1/memory/import", {"session_id": world["id"]})
+                imported = post(base, "/v1/memory/import", {"session_id": world["id"]})
                 for index, query in enumerate(world["queries"]):
                     response = chat(base, world["id"], query["text"])
                     assert_no_kv(response)
+                    assert_query_did_not_write(response)
                     streamed = stream_chat(base, world["id"], query["text"])
                     assert_no_kv(streamed)
+                    assert_query_did_not_write(streamed)
                     if (response.get("memory_copy") or {}) != (streamed.get("memory_copy") or {}):
                         raise AssertionError("SSE and JSON activation decisions disagree")
                     if response.get("memory_copy") and judge(query, response) != judge(query, streamed):
@@ -92,11 +132,16 @@ def main():
                                     "correct": judge(query, response),
                                     "answer": response["choices"][0]["message"]["content"],
                                     "activation": response.get("memory_copy")})
+                after = post(base, "/v1/memory/export", {"session_id": world["id"]})
+                if any(after[k] != imported[k] for k in ("typed_events", "episodic_records")):
+                    raise AssertionError("recall queries changed persistent memory counts")
                 print(json.dumps({"phase": "recall", "world": world["id"]}), flush=True)
         finally:
             stop_server(process)
     report = {
         "format": "MEMORY_CHAT_HOLDOUT_RESULT_V1", "evaluation_only": True,
+        "write_protocol": "forced_writer_diagnostic" if args.force_writer else "automatic_chat",
+        "automatic_chat_measurement": not args.force_writer,
         "fixture_path": str(Path(args.fixture).resolve()),
         "evaluation_role": json.loads(Path(args.fixture).read_text()).get("evaluation_role", "final"),
         "fixture_sha256": hashlib.sha256(Path(args.fixture).read_bytes()).hexdigest(),
@@ -108,7 +153,11 @@ def main():
         "null_metric": "activation_rejection_not_generated_abstention",
         "gold_injected": False, "kv_reuse": False, "lora": False, "rag": False,
         "restart_import": True, "stream_decision_parity": True,
+        "queries_read_only_verified": True,
     }
+    if args.controller:
+        report["artifacts"]["controller"] = {"path": args.controller,
+            "sha256": hashlib.sha256(Path(args.controller).read_bytes()).hexdigest()}
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")

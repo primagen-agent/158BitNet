@@ -40,3 +40,16 @@ class CTokenizer:
         self._proc.stdin.flush()
         return int(
             self._proc.stdout.readline().decode().split()[0])
+
+    def decode_pieces(self, token_ids: list[int]) -> list[bytes]:
+        """Exact runtime token bytes, including context-dependent boundaries."""
+        if not hasattr(self, "_pieces"):
+            output = subprocess.check_output(
+                [self.probe, self.model, "--dump-vocab"],
+                text=True, stderr=subprocess.DEVNULL,
+            )
+            self._pieces = {}
+            for line in output.splitlines():
+                token, _, encoded = line.partition(" ")
+                self._pieces[int(token)] = bytes.fromhex(encoded)
+        return [self._pieces[int(token)] for token in token_ids]

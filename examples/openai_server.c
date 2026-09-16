@@ -1352,6 +1352,9 @@ static memory_record_action_t request_memory_action(
         if (classified >= MEMORY_ACTION_IGNORE &&
             classified <= MEMORY_ACTION_DELETE)
             return (memory_record_action_t)classified;
+        /* A failed learned gate must not silently authorize a heuristic write. */
+        fprintf(stderr, "Memory action controller failed; automatic write skipped\n");
+        return MEMORY_ACTION_IGNORE;
     }
     return inferred_memory_action(text);
 }
@@ -2056,7 +2059,31 @@ typedef struct autonomous_memory_result {
     size_t event_index;
     int target_status;
     int deduplicated;
+    int predecessor_missing;
+    int operation_predicted;
+    int predicted_operation;
 } autonomous_memory_result_t;
+
+/* Linguistic change is not a database UPDATE: a newly observed current fact
+ * remains useful when no old version has ever been stored. Never invent a
+ * target or deactivate an unrelated event. Explicit updates stay strict. */
+static int compile_autonomous_operation(
+    metis_event_record_t *event, const metis_event_record_t *target,
+    int target_status, memory_record_action_t operation_hint) {
+    if (event == NULL || target_status < 0) return -1;
+    if (target_status == 0) {
+        if (operation_hint == MEMORY_ACTION_UPDATE) return -2;
+        event->operation = METIS_EVENT_ASSERT;
+        event->target_event_id = "";
+        return 0;
+    }
+    if (target == NULL) return -1;
+    event->operation = METIS_EVENT_SUPERSEDE;
+    event->target_event_id = target->event_id;
+    event->entity = target->entity;
+    event->predicate = target->predicate;
+    return 0;
+}
 
 static int remember_autonomous_event(
     server_state_t *state, cached_session_t *session,
@@ -2115,6 +2142,8 @@ static int remember_autonomous_event(
             &offsets, &source_offset) != 0)
         AUTO_FAIL(
             -1, "autonomous typed writer inference failed");
+    result->operation_predicted = 1;
+    result->predicted_operation = result->prediction.operation;
     if (operation_hint == MEMORY_ACTION_STORE)
         result->prediction.operation = 0;
     else if (operation_hint == MEMORY_ACTION_UPDATE)
@@ -2223,16 +2252,16 @@ static int remember_autonomous_event(
             state, session, text, &selected_event,
             &result->target_score, &result->exists_score,
             &result->candidate_count, 0);
-        if (result->target_status < 0)
+        int operation_status = compile_autonomous_operation(
+            &event, selected_event, result->target_status, operation_hint);
+        if (operation_status == -1)
             AUTO_FAIL(
                 -1, "neural predecessor selection failed");
-        if (result->target_status == 0)
+        if (operation_status == -2)
             AUTO_FAIL(
                 -2,
-                "autonomous update rejected all active candidates");
-        event.target_event_id = selected_event->event_id;
-        event.entity = selected_event->entity;
-        event.predicate = selected_event->predicate;
+                "explicit update rejected all active candidates");
+        result->predecessor_missing = result->target_status == 0;
     }
     if (metis_episodic_add_indexed(
             &session->episodic, text, NULL, priority,
@@ -2271,11 +2300,18 @@ static void add_autonomous_memory_json(
         root, "writer_fields_source", "neural_autonomous_writer");
     json_add_number(root, "autonomous_writer", 1.0);
     json_add_number(root, "deduplicated", result->deduplicated);
+    if (result->operation_predicted) {
+        json_add_string(root, "writer_predicted_operation",
+            result->predicted_operation ? "supersede" : "assert");
+        json_add_number(root, "writer_assert_logit", result->prediction.operation_logits[0]);
+        json_add_number(root, "writer_supersede_logit", result->prediction.operation_logits[1]);
+    }
     json_add_string(
         root, "target_resolution",
         result->target_status > 0 ? "neural_activation" :
+        result->predecessor_missing ? "no_predecessor_asserted" :
                                     "not_required");
-    if (result->target_status > 0) {
+    if (result->target_status > 0 || result->predecessor_missing) {
         json_add_number(
             root, "target_candidate_count",
             (double)result->candidate_count);
@@ -3008,7 +3044,7 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
                 auto_memory_stored =
                     auto_memory_status == 0;
                 if (auto_memory_stored && !request_has_memory_action(request))
-                    memory_action = auto_memory_result.prediction.operation == 0 ?
+                    memory_action = session->events.events[auto_memory_result.event_index].operation == METIS_EVENT_ASSERT ?
                         MEMORY_ACTION_STORE : MEMORY_ACTION_UPDATE;
                 typed_text_encoding_clear(
                     &auto_memory_result.encoding);

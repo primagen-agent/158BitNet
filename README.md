@@ -192,9 +192,15 @@ The deployed path consists of five stages:
    stored. This gate decides whether to invoke the writer; its heuristic
    write/update label does not override the writer's predicted operation.
    Only an explicit request `memory_action` overrides that prediction.
+   If a loaded action controller fails, automatic writes are skipped rather
+   than authorized by a heuristic fallback.
 2. **Autonomous writer**
    predicts `assert` or `supersede`, extracts entity, predicate, value, and
    optional valid-time spans, and produces neural address anchors.
+   A predicted change is not proof that an earlier version is stored. If no
+   predecessor is activated, automatic memory records a new assertion without
+   deactivating another event. An explicit `memory_action:"update"` still fails
+   when no predecessor is found; inference errors are never treated as absence.
 3. **Version linker**
    compares a new update with every active event, ranks possible predecessors,
    and may reject the complete set when no valid predecessor exists.
@@ -221,8 +227,7 @@ Each snapshot uses two immutable content-addressed data files and one manifest:
 replaces the session manifest under `--memory-state-dir`. A partial write
 cannot replace the previously committed snapshot. Import checks whole-file
 hashes, internal validation, and source/value consistency before changing
-live state. Legacy unversioned file pairs remain readable when no manifest
-exists. Use one server writer per state directory. Previous snapshot files
+live state. Use one server writer per state directory. Committed snapshot files
 are retained; automatic snapshot garbage collection is not implemented.
 
 Repeated identical inputs whose event is still active are idempotent. Source
@@ -305,6 +310,9 @@ the independent chat fixtures are never used for training or selection.
 The deployment is trained in stages:
 
 1. Capture frozen-backbone features using the exact C tokenizer.
+   Field labels are aligned to those tokens. If standalone field encoding has
+   different boundary tokens, alignment uses the original tokens' decoded bytes;
+   ambiguous matches or spans containing extra text are rejected.
 2. Fine-tune the writer's operation, anchors, and field boundaries. Select
    on development create/update accuracy and field localization.
 3. Freeze the writer and train contiguous field-span taggers with balanced
@@ -349,21 +357,16 @@ the GGUF geometry. The reported model uses compatible pretrained writer
 initialization. The pipeline builds `tok_probe` with CMake so runtime
 link dependencies, including OpenMP on Linux, are preserved.
 
-The writer run allows 800 steps; development selection retained step 100.
-The span-tagger run allows 600 steps and selects each field using development
-accuracy. The predecessor head allows 800 steps; step 100 was retained.
-The full-message operation head allows 1,000 steps; development selection
-retained step 100. Its development operation classification was 132/132,
-which is a component result and not end-to-end memory accuracy.
-These are small accuracy experiments, not a completed general-memory model.
+Training limits are 800 steps for the writer, 600 for the span taggers,
+800 for the predecessor head, and 1,000 for the full-message operation head.
+Early stopping and checkpoint selection use development metrics, not final
+test results. Component accuracy is not end-to-end memory accuracy.
 
 The final writer is `writer.bntwrite` in the context-operation run directory;
 the link artifact is `link/link.bntlink` in the natural-memory run directory.
-Writer binary version 2 appends the full-message operation tensors. The current
-runtime loader accepts both version 1 and version 2; older runtimes need to be
-updated before loading version 2. The corresponding `.pt` files
-are training checkpoints, not session memory. The original pair and query
-binaries remain required and unchanged.
+The writer binary includes the full-message operation tensors. The corresponding
+`.pt` files are training checkpoints, not session memory. The compatible pair
+and query binaries are also required for serving.
 
 Checkpoints record configurations and data fingerprints. Training and
 validation worlds must not overlap, feature caches must match their source
@@ -498,19 +501,22 @@ python3 tests/eval_memory_chat_holdout.py \
 ### Test results
 
 The current combination was selected on development data and then evaluated
-on a fresh 24-world, 90-question synthetic test (seed 2730916) on September 16, 2026.
+on a 24-world, 90-question synthetic test (seed 2730916) on September 16, 2026.
 The final split uses different entities and relations but shares the
 training template family. It was not used for training, calibration, or
 checkpoint selection.
+The table reports the documented artifact combination's C-runtime regression
+results. Reusing this fixture is not a new independent test.
 
-| Final C-runtime metric | Result |
+| C-runtime regression metric | Result |
 | --- | ---: |
 | Current facts, end-to-end exact recall | **53/66 = 80.30%** |
 | Unknown questions, activation rejection | **24/24 = 100%** |
 | Original chat messages submitted for writing | 132 |
-| Write requests accepted (not extraction accuracy) | 130/132 |
+| Write requests accepted (not extraction accuracy) | 132/132 |
 | Creates rejected as unresolved updates | 0/66 |
-| Updates rejected for missing activated predecessor | 2/66 |
+| Updates rejected for missing activated predecessor | 0/66 |
+| Predicted changes stored as assertions without a predecessor | 2 |
 | JSON/SSE activation and memory-answer parity | Passed |
 | Export, restart, import, zero KV reuse | Passed |
 
@@ -528,21 +534,35 @@ not be conflated. This synthetic result is not a LoCoMo score, and it does
 not establish unrestricted dialogue-memory generalization.
 
 Current limitations are explicit: accepted events can still have incorrect
-entity or value spans. Among 13 failed current-fact questions, 8 lacked the
-correct entity/value pair in the final active state; 5 had that pair present
+entity or value spans. Among 13 failed current-fact questions, 6 lacked the
+correct entity/value pair in the final active state; 7 had that pair present
 but still failed recall. This diagnostic is not itself a query-ranking metric.
 Unknown-question rejection is not uniformly solved: on the development set,
 the same deployed combination rejected 22/24 unknown questions, with two false
 activations. The final set's 24/24 result is not a guarantee of safe abstention.
 The active-only single-value reader does not implement historical or multi-fact
 recall. Retraction, polarity, and modality are not fully trained.
-The deployed query activator and pair encoder were retained unchanged;
-they have not been retrained on every state produced by the new writer.
+
+Natural dialogue remains unreliable: facts can be misclassified as changes,
+fields can be extracted incorrectly, and unrelated facts can be linked as
+versions of one property. The synthetic curriculum uses six create and six
+update templates shared across splits, so its scores do not measure unseen
+conversational expression. General memory accuracy on the full LoCoMo test set
+has not been established. LoCoMo is evaluation-only.
+
+The documented serving configuration uses the statement/question fallback,
+not an experimental learned write gate. It can miss facts embedded in questions
+and can mistake quoted or hypothetical content for facts. Research checkpoints
+are not part of the validated four-artifact serving configuration.
 
 The writer and seven-input predecessor head pass Python/C parity checks.
 The predecessor tests include 1, 2, and 17 candidates; the pair encoder's
 binary hash is verified unchanged. The local regression suites pass
-20/20 CTest tests and 74/74 Python unit tests. Runtime safety regressions
+20/20 CTest tests and 101/101 Python unit tests. The real-model HTTP cold-start
+regression passes six checks, including strict explicit updates, unrelated
+memory preservation, and no-KV recall after restart/import. Run it with
+`tests/test_openai_server_typed_cold_start.py` and the same six positional
+artifact arguments as the chat evaluator. Runtime safety regressions
 cover capacity-boundary updates, source deduplication, failed snapshot
 writes, malformed imports, and zero-KV streaming.
 

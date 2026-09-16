@@ -89,6 +89,7 @@ def stream_chat(base, session_id, text):
 def start_server(
     server, model, pair, link, query, writer,
     state_dir, port,
+    controller=None,
 ):
     process = subprocess.Popen(
         [
@@ -104,7 +105,7 @@ def start_server(
             "--typed-link-model", link,
             "--typed-query-model", query,
             "--typed-writer-model", writer,
-        ],
+        ] + (["--memory-controller", controller] if controller else []),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         text=True,

@@ -90,6 +90,58 @@ int main(void) {
 
     failures += test_bitnet_b158_prompt_system_folds_into_next_user();
     {
+        server_state_t state = {0};
+        metis_memory_controller_t controller = {0};
+        float projection = 0.0f;
+        cJSON *request = cJSON_CreateObject();
+        controller.action_projection = &projection;
+        state.memory_controller = &controller;
+        /* A missing backbone forces classification failure before any matmul. */
+        if (request == NULL) return 1;
+        if (request_memory_action(&state, request, "My name is Alex.") != MEMORY_ACTION_IGNORE ||
+            request_memory_action(&state, request, "Please forget my address.") != MEMORY_ACTION_IGNORE) {
+            fprintf(stderr, "failed learned gate fell back to a heuristic mutation\n");
+            ++failures;
+        }
+        if (!cJSON_AddItemToObject(request, "memory_action", cJSON_CreateString("store"))) {
+            cJSON_Delete(request);
+            return 1;
+        }
+        if (request_memory_action(&state, request, "My name is Alex.") != MEMORY_ACTION_STORE) {
+            fprintf(stderr, "explicit memory action no longer overrides the gate\n");
+            ++failures;
+        }
+        cJSON_Delete(request);
+    }
+    {
+        metis_event_record_t event = {0}, target = {0};
+        event.entity = "new-entity";
+        event.predicate = "new_property";
+        event.operation = METIS_EVENT_SUPERSEDE;
+        if (compile_autonomous_operation(&event, NULL, 0, MEMORY_ACTION_IGNORE) ||
+            event.operation != METIS_EVENT_ASSERT || strcmp(event.target_event_id, "") ||
+            strcmp(event.entity, "new-entity") || strcmp(event.predicate, "new_property")) {
+            fprintf(stderr, "a first observed change was not preserved as a new fact\n");
+            ++failures;
+        }
+        if (compile_autonomous_operation(&event, NULL, 0, MEMORY_ACTION_UPDATE) != -2 ||
+            compile_autonomous_operation(&event, NULL, -1, MEMORY_ACTION_IGNORE) != -1 ||
+            compile_autonomous_operation(&event, NULL, 1, MEMORY_ACTION_IGNORE) != -1) {
+            fprintf(stderr, "explicit update or inference failure was silently accepted\n");
+            ++failures;
+        }
+        target.event_id = "activated-old-version";
+        target.entity = "old-entity";
+        target.predicate = "old_property";
+        if (compile_autonomous_operation(&event, &target, 1, MEMORY_ACTION_IGNORE) ||
+            event.operation != METIS_EVENT_SUPERSEDE ||
+            strcmp(event.target_event_id, target.event_id) ||
+            strcmp(event.entity, target.entity) || strcmp(event.predicate, target.predicate)) {
+            fprintf(stderr, "activated predecessor was not linked\n");
+            ++failures;
+        }
+    }
+    {
         const char *word = "caf\xC3\xA9teria";
         size_t offsets[] = {0, 3};
         size_t start = 99, end = 99;

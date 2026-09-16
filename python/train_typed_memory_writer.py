@@ -64,6 +64,7 @@ def load_raw_worlds(path):
                     world_id))
             layout_view = int(
                 metadata.get("layout_view", 0))
+            domain = str(metadata.get("training_domain", "default"))
             events = metadata.get("typed_events") or []
             if not world_id or not events:
                 raise ValueError(
@@ -75,8 +76,9 @@ def load_raw_worlds(path):
                     events, encoded,
                     semantic_world_id,
                     layout_view,
+                    domain,
                 ))
-            if previous[1] != encoded:
+            if previous[1] != encoded or previous[4] != domain:
                 raise ValueError(
                     f"typed events changed within {world_id}")
     return {
@@ -84,6 +86,7 @@ def load_raw_worlds(path):
             "events": values[0],
             "semantic_world_id": values[2],
             "layout_view": values[3],
+            "domain": values[4],
         }
         for world_id, values in worlds.items()
     }
@@ -139,6 +142,7 @@ def load_writer_examples(
             episode = int(event["episode"])
             example = {
                 "world_id": world_id,
+                "domain": raw_world["domain"],
                 "semantic_world_id":
                     raw_world["semantic_world_id"],
                 "layout_view":
@@ -1141,7 +1145,7 @@ def compiled_attention_topk_version_accuracy(
 @torch.inference_mode()
 def evaluate(
     model, examples, device, batch_size,
-    version_threshold=0.0,
+    version_threshold=0.0, _domains=True,
 ):
     output = encode_all(
         model, examples, device, batch_size)
@@ -1312,6 +1316,11 @@ def evaluate(
             compiled_accuracy)
         metrics["compiled_token_valid_key_rate"] = (
             valid_key_rate)
+    domains = sorted({example.get("domain", "default") for example in examples})
+    if _domains and len(domains) > 1:
+        metrics["domains"] = {domain: evaluate(
+            model, [e for e in examples if e.get("domain", "default") == domain],
+            device, batch_size, version_threshold, _domains=False) for domain in domains}
     return metrics
 
 
@@ -1393,6 +1402,27 @@ def metric_key(metrics):
     )
 
 
+def writer_selection_key(metrics):
+    groups = list(metrics.get("domains", {}).values()) or [metrics]
+    names = ("create_accuracy", "update_accuracy", "entity_span_exact",
+             "value_span_exact", "predicate_attention_hit_accuracy")
+    return (min(group[name] for group in groups for name in names),
+            min(group["joint_span_exact"] for group in groups),
+            sum(group["operation_macro_accuracy"] for group in groups) / len(groups))
+
+
+def retention_passes(metrics, baseline, domain, tolerance):
+    if not domain:
+        return True
+    old = baseline.get("domains", {}).get(domain)
+    new = metrics.get("domains", {}).get(domain)
+    if old is None or new is None:
+        raise ValueError(f"missing retention domain: {domain}")
+    return all(new[key] + tolerance >= old[key] for key in (
+        "create_accuracy", "update_accuracy", "entity_span_exact",
+        "value_span_exact", "predicate_attention_hit_accuracy"))
+
+
 def train(
     model, train_examples, valid_examples,
     device, steps, batch_size,
@@ -1404,14 +1434,12 @@ def train(
     span_boundary_weight,
     span_segment_weight,
     writer_focus=False,
+    retain_domain="", retention_tolerance=0.02,
 ):
     def selection(metrics):
         if not writer_focus:
             return metric_key(metrics)
-        return (min(metrics["create_accuracy"], metrics["update_accuracy"],
-                    metrics["entity_span_exact"], metrics["value_span_exact"],
-                    metrics["predicate_attention_hit_accuracy"]),
-                metrics["joint_span_exact"], metrics["operation_macro_accuracy"])
+        return writer_selection_key(metrics)
     operation_counts = collections.Counter(
         example["operation"]
         for example in train_examples)
@@ -1427,13 +1455,21 @@ def train(
         model, train_examples, valid_examples,
         device, batch_size)
     best_state = clone_state_dict(model)
+    baseline = best
+    retention_passes(best, baseline, retain_domain, retention_tolerance)
     best_step = 0
     stale = 0
     rng = random.Random(seed)
     by_world = collections.defaultdict(list)
     for index, example in enumerate(train_examples):
         by_world[example["world_id"]].append(index)
-    worlds = list(by_world)
+    by_domain = collections.defaultdict(list)
+    domain_worlds = collections.defaultdict(list)
+    for index, example in enumerate(train_examples):
+        by_domain[example.get("domain", "default")].append(index)
+    for world, indices in by_world.items():
+        domain_worlds[train_examples[indices[0]].get("domain", "default")].append(world)
+    domains = sorted(by_domain)
     print(json.dumps({
         "phase": "typed_writer_baseline",
         **best,
@@ -1443,14 +1479,15 @@ def train(
             batch_size,
             int(round(
                 batch_size * same_world_fraction)))
-        world = worlds[rng.randrange(len(worlds))]
+        domain = domains[(step - 1) % len(domains)]
+        world = rng.choice(domain_worlds[domain])
         selected = [
             by_world[world][
                 rng.randrange(len(by_world[world]))]
             for _ in range(same_world_count)]
         selected.extend(
-            rng.randrange(len(train_examples))
-            for _ in range(
+            rng.choice(by_domain[domains[(step + slot) % len(domains)]])
+            for slot in range(
                 batch_size - same_world_count))
         rng.shuffle(selected)
         batch = collate_examples(
@@ -1475,9 +1512,11 @@ def train(
         metrics = evaluate_with_train_calibration(
             model, train_examples, valid_examples,
             device, batch_size)
+        retained = retention_passes(metrics, baseline, retain_domain, retention_tolerance)
         print(json.dumps({
             "phase": "typed_writer_valid",
             "step": step,
+            "retention_passed": retained,
             "loss": float(loss.detach()),
             "gradient_norm": float(gradient_norm),
             "loss_parts": {
@@ -1486,7 +1525,7 @@ def train(
             },
             **metrics,
         }, separators=(",", ":")), flush=True)
-        if selection(metrics) > selection(best):
+        if retained and selection(metrics) > selection(best):
             best = metrics
             best_state = clone_state_dict(model)
             best_step = step
@@ -1513,6 +1552,8 @@ def main():
     parser.add_argument("--lib")
     parser.add_argument("--hidden-layer-bands", default="0-5,6-11,12-17,18-23")
     parser.add_argument("--writer-focus", action="store_true")
+    parser.add_argument("--retain-domain", default="")
+    parser.add_argument("--retention-tolerance", type=float, default=0.02)
     parser.add_argument("--rank", type=int, default=128)
     parser.add_argument("--init-checkpoint")
     parser.add_argument("--steps", type=int, default=1500)
@@ -1559,6 +1600,8 @@ def main():
     args = parser.parse_args()
     random.seed(args.seed)
     torch.manual_seed(args.seed)
+    if not 0 <= args.retention_tolerance <= 1:
+        parser.error("--retention-tolerance must be within [0, 1]")
     if args.hard_negative_weight < 0.0:
         parser.error("--hard-negative-weight must be non-negative")
     if not 0.0 <= args.same_world_fraction <= 1.0:
@@ -1753,7 +1796,8 @@ def main():
         args.same_world_fraction,
         args.span_attention_weight,
         args.span_boundary_weight,
-        args.span_segment_weight, args.writer_focus)
+        args.span_segment_weight, args.writer_focus,
+        args.retain_domain, args.retention_tolerance)
     version_threshold, train_version_accuracy = (
         calibrate_version_threshold(
             model, train_examples,

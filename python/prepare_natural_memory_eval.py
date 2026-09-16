@@ -16,8 +16,9 @@ def main():
     for line in Path(args.jsonl).read_text().splitlines():
         row = json.loads(line)
         meta = row["metadata"]
-        expected_split = "natural-test-" if args.role == "final" else "natural-valid-"
-        if not meta["world_id"].startswith(expected_split):
+        split = "test" if args.role == "final" else "valid"
+        if not meta["world_id"].startswith("natural-" + split + "-") and not (
+                meta.get("split") == split and meta["world_id"].startswith("dialogue-" + split + "-")):
             raise ValueError("wrong data split for this evaluation role")
         item = worlds.setdefault(meta["world_id"], {
             "id": meta["world_id"], "writes": meta["raw_episodes"], "queries": [],
@@ -32,7 +33,7 @@ def main():
     output.write_text(json.dumps({"format": "MEMORY_CHAT_HOLDOUT_V1", "evaluation_only": True,
                                  "evaluation_role": args.role,
                                  "source_sha256": hashlib.sha256(Path(args.jsonl).read_bytes()).hexdigest(),
-                                 "generalization_axis": "disjoint_entities_and_relations_shared_surface_templates",
+                                 "generalization_axis": meta.get("generalization_axis", "disjoint_entities_and_relations_shared_surface_templates"),
                                  "worlds": list(worlds.values())}, indent=2) + "\n")
 
 

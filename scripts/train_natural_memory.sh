@@ -12,6 +12,10 @@ if [[ -n "$pair_checkpoint" && -z "$pair_binary" ]] || [[ -z "$pair_checkpoint" 
 fi
 mkdir -p "$run_dir"
 writer_init=()
+retention=()
+if [[ -n "${MEMORY_RETAIN_DOMAIN:-}" ]]; then
+  retention=(--retain-domain "$MEMORY_RETAIN_DOMAIN" --retention-tolerance 0.02)
+fi
 if [[ "$initial_writer" != "-" ]]; then
   writer_init=(--init-checkpoint "$initial_writer")
 fi
@@ -30,7 +34,7 @@ python3 python/train_typed_memory_writer.py \
   "$run_dir/train_features.pt" "$run_dir/data/train.jsonl" \
   "$run_dir/valid_features.pt" "$run_dir/data/valid.jsonl" "$run_dir/writer.pt" \
   --gguf "$model_path" --lib build/libggwshim.so --tok-probe build/tok_probe \
-  "${writer_init[@]}" --separate-address-localizer \
+  "${writer_init[@]}" "${retention[@]}" --separate-address-localizer \
   --predict-span-boundaries --use-token-embeddings --writer-focus \
   --span-boundary-weight 2 --span-attention-weight 2 --hard-negative-weight 0.25 \
   --steps 800 --batch 64 --eval-every 100 --patience 6 --learning-rate 0.0004 --device cuda
@@ -38,7 +42,7 @@ python3 python/train_typed_span_tagger.py "$run_dir/writer.pt" \
   "$run_dir/train_features.pt" "$run_dir/data/train.jsonl" \
   "$run_dir/valid_features.pt" "$run_dir/data/valid.jsonl" "$run_dir/tagger.pt" \
   --gguf "$model_path" --lib build/libggwshim.so --tok-probe build/tok_probe \
-  --steps 600 --batch 64 --max-span 16 --create-fraction 0.5 \
+  "${retention[@]}" --steps 600 --batch 64 --max-span 16 --create-fraction 0.5 \
   --learning-rate 0.0004 --eval-every 100 --patience 4 --device cuda
 # Reuse the supervised writer anchors. Fusion is disabled for this controlled
 # writer-only run; no coefficients are tuned on the independent final test.

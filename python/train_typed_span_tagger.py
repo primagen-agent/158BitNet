@@ -218,7 +218,7 @@ def load_writer(checkpoint_path, device):
 
 
 @torch.inference_mode()
-def evaluate(writer, tagger, examples, device, batch_size):
+def evaluate(writer, tagger, examples, device, batch_size, _domains=True):
     field_correct = {
         name: 0 for name in SLOT_NAMES
     }
@@ -297,12 +297,28 @@ def evaluate(writer, tagger, examples, device, batch_size):
                 operation_field_correct[operation][name]
                 / operation_count
             )
+    domains = sorted({e.get("domain", "default") for e in examples})
+    if _domains and len(domains) > 1:
+        metrics["domains"] = {domain: evaluate(writer, tagger,
+            [e for e in examples if e.get("domain", "default") == domain],
+            device, batch_size, _domains=False) for domain in domains}
     return metrics
 
 
 def stratified_sample_indices(
     examples, batch_size, create_fraction, rng,
 ):
+    domains = sorted({e.get("domain", "default") for e in examples})
+    if len(domains) > 1:
+        selected = []
+        for i, domain in enumerate(domains):
+            indices = [j for j, e in enumerate(examples) if e.get("domain", "default") == domain]
+            size = batch_size // len(domains) + int(i < batch_size % len(domains))
+            if size < 2:
+                raise ValueError("batch must fit both operations in every domain")
+            local = stratified_sample_indices([examples[j] for j in indices], size, create_fraction, rng)
+            selected.extend(indices[j] for j in local)
+        return selected
     create = [
         index for index, example in enumerate(examples)
         if int(example["operation"]) == 0
@@ -326,12 +342,21 @@ def stratified_sample_indices(
     ]
 
 
+def field_selection_key(metrics, extra_metrics, name):
+    groups = list(metrics.get("domains", {}).values()) or [metrics]
+    if extra_metrics is not None:
+        groups += list(extra_metrics.get("domains", {}).values()) or [extra_metrics]
+    values = [group[f"{name}_{operation}_span_exact"] for group in groups for operation in ("create", "update")]
+    return min(values), sum(values) / len(values)
+
+
 def train(
     writer, tagger, train_examples, valid_examples,
     extra_valid_examples,
     device, steps, batch_size, learning_rate,
     weight_decay, eval_every, patience, seed,
     create_fraction,
+    retain_domain="", retention_tolerance=0.02,
 ):
     optimizer = torch.optim.AdamW(
         tagger.parameters(),
@@ -350,23 +375,11 @@ def train(
         if extra_valid_examples is not None
         else None
     )
-    def field_key(metrics, extra_metrics, name):
-        values = [
-            metrics[f"{name}_create_span_exact"],
-            metrics[f"{name}_update_span_exact"],
-        ]
-        if extra_metrics is not None:
-            values.extend((
-                extra_metrics[
-                    f"{name}_create_span_exact"
-                ],
-                extra_metrics[
-                    f"{name}_update_span_exact"
-                ],
-            ))
-        return (min(values), sum(values) / len(values))
+    baseline = best_metrics
+    if retain_domain and retain_domain not in baseline.get("domains", {}):
+        raise ValueError(f"missing retention domain: {retain_domain}")
     best_field_scores = {
-        name: field_key(
+        name: field_selection_key(
             best_metrics, best_extra_metrics, name
         )
         for name in SLOT_NAMES
@@ -443,10 +456,13 @@ def train(
         }, separators=(",", ":")), flush=True)
         improved = False
         for name in SLOT_NAMES:
-            score = field_key(
+            score = field_selection_key(
                 metrics, extra_metrics, name
             )
-            if score > best_field_scores[name]:
+            retained = not retain_domain or all(
+                metrics["domains"][retain_domain][f"{name}_{op}_span_exact"] + retention_tolerance >=
+                baseline["domains"][retain_domain][f"{name}_{op}_span_exact"] for op in ("create", "update"))
+            if retained and score > best_field_scores[name]:
                 best_field_scores[name] = score
                 best_field_steps[name] = step
                 best_field_states[name] = clone_state_dict(
@@ -490,6 +506,8 @@ def main():
     parser.add_argument("--lib", required=True)
     parser.add_argument("--tok-probe", required=True)
     parser.add_argument("--init-checkpoint")
+    parser.add_argument("--retain-domain", default="")
+    parser.add_argument("--retention-tolerance", type=float, default=0.02)
     parser.add_argument("--extra-valid-features")
     parser.add_argument("--extra-valid-jsonl")
     parser.add_argument("--max-span", type=int, default=16)
@@ -509,6 +527,8 @@ def main():
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=20260922)
     args = parser.parse_args()
+    if not 0 <= args.retention_tolerance <= 1:
+        parser.error("--retention-tolerance must be within [0, 1]")
     if bool(args.extra_valid_features) != bool(
         args.extra_valid_jsonl
     ):
@@ -607,6 +627,7 @@ def main():
         args.learning_rate, args.weight_decay,
         args.eval_every, args.patience, args.seed,
         args.create_fraction,
+        args.retain_domain, args.retention_tolerance,
     )
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

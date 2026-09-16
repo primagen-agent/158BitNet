@@ -58,7 +58,38 @@ def token_span_variants(source_ids, surface, tokenizer):
         if span is not None:
             matches.append(span)
     unique = sorted(set(matches))
-    return unique[0] if len(unique) == 1 else None
+    if len(unique) == 1:
+        return unique[0]
+    # Standalone encoding can prepend a dummy space absent after punctuation.
+    # Align against the already encoded sentence, never approximate token ids.
+    if not hasattr(tokenizer, "decode_pieces") or not stripped:
+        return None
+    pieces = tokenizer.decode_pieces(source_ids)
+    if source_ids and int(source_ids[0]) == tokenizer.bos():
+        pieces[0] = b""
+    decoded = b"".join(pieces)
+    target = stripped.encode("utf-8")
+    spans = []
+    offset = 0
+    for index, piece in enumerate(pieces):
+        spans.append((offset, offset + len(piece), index))
+        offset += len(piece)
+    found = []
+    begin = decoded.find(target)
+    def ascii_word(byte):
+        return byte < 128 and (chr(byte).isalnum() or byte == ord("_"))
+    while begin >= 0:
+        end = begin + len(target)
+        left_ok = not (begin and ascii_word(target[0]) and ascii_word(decoded[begin - 1]))
+        right_ok = not (end < len(decoded) and ascii_word(target[-1]) and ascii_word(decoded[end]))
+        tokens = [index for start, stop, index in spans if stop > start and start < end and stop > begin]
+        if left_ok and right_ok and tokens:
+            first, last = tokens[0], tokens[-1]
+            # Do not supervise a span whose token boundaries include extra text.
+            if b"".join(pieces[first:last + 1]).strip() == target:
+                found.append((first, last))
+        begin = decoded.find(target, begin + 1)
+    return found[0] if len(found) == 1 else None
 
 
 def parse_hidden_layer_bands(spec, n_layers):
