@@ -112,495 +112,145 @@ curl -N http://127.0.0.1:8080/v1/chat/completions \
 
 ## Persistent memory
 
-The current memory system is an automatic typed-event memory for the exact
-BitCPM 0.5B backbone on which its learned artifacts were trained. Normal chat
-messages can create or update persistent memories, and later questions recall
-the current value through neural activation. Memory state is external to the
-backbone and survives service restarts through export and import.
+The bundled memory setup uses the exact BitCPM 0.5B GGUF whose SHA-256 is
+`44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95`.
+Provide that GGUF separately at `models/bitcpm4-0.5b-tq2_0.gguf`; it is not
+committed. The selected memory artifacts are in
+`models/memory/resident-0.5b/`, with file hashes in `manifest.json`.
+The resident path is experimental: its measured accuracy is below a useful
+general-purpose memory target.
 
-### Memory principles
+### Architecture
 
-The system follows these rules:
+A normal chat message follows this path:
 
-- **Separate behavior from data.** Learned artifacts define how to recognize,
-  write, link, and activate memories. Session-specific facts are stored as
-  mutable runtime data and are not baked into the model parameters.
-- **Store immutable events.** A correction creates a new event that supersedes
-  its predecessor. The old event remains available for audit but is removed
-  from the active candidate set.
-- **Activate before recall.** A question is compared neurally with active
-  events. Only the selected event can expose its compiled value span.
-- **Do not use RAG.** Stored text is never appended to the prompt, and recall
-  does not query a lexical or vector-search index.
-- **Do not rely on KV cache.** Memory tests use fresh query prefills and reject
-  non-zero `cached_tokens` or `reused_tokens`.
-- **Bind artifacts to one backbone.** Every learned memory artifact records the
-  matching GGUF identity. A model trained with
-  `bitcpm4-0.5b-tq2_0.gguf` cannot be loaded with another GGUF.
-- **Prefer accuracy before compression.** The current system uses full-layer
-  frozen-backbone features and does not enable SVD, NAS/NG, layer pruning,
-  LoRA, or a separate answer decoder.
+1. The server's statement/question gate decides whether to attempt a write.
+   This gate still uses rules unless a separate action controller is supplied.
+2. The trained writer reads a fresh prefill of all 24 backbone layers and
+   predicts the operation and entity, predicate, value, and optional time
+   spans. Invalid extraction fails the write.
+3. The server stores the source bytes and compiled spans as an immutable
+   event. In resident mode, every nonduplicate observation is retained; the reader
+   learns whether a question asks for current or historical facts. The
+   writer's operation prediction is reported, but resident mode records each
+   new observation as an assertion instead of using the old predecessor linker.
+4. A separate fresh prefill supplies final hidden states and input embeddings
+   to `resident.bnresid`. It writes token-level semantic and identity
+   addresses into the session's resident state.
 
-Memory writing and recall are complementary:
+At recall, the question receives its own fresh prefill. The resident model
+activates stored addresses using learned token attention, identity
+compatibility, version links, history scope, and a count head. It selects
+zero to four events. The server then copies the selected values from their
+validated source spans. Stored text is not searched by query or inserted
+into the generation prompt. A zero-event decision returns empty content.
 
-```text
-declarative chat message
-    |
-    v
-write/update decision
-    |
-    v
-neural operation and field extraction
-    |
-    v
-neural predecessor activation
-    |
-    v
-deterministic immutable-event compilation
-    |
-    v
-active typed-event memory
+The writer and resident reader are trained separately. The GGUF backbone is
+frozen; this configuration uses no LoRA, SVD, or NAS/NG compression.
+Memory evaluation checks that `cached_tokens` and `reused_tokens` are zero.
 
-fresh question
-    |
-    v
-query-to-active-event neural activation
-    |
-    +--> NULL: use ordinary generation
-    |
-    v
-one activated event
-    |
-    v
-compiled evidence pointer
-    |
-    v
-exact current value
-```
+### Files and model roles
 
-The deterministic compiler does not decide semantic similarity. It applies
-version invariants after the neural stages have selected the operation,
-fields, and predecessor: create a new event, supersede one exact active event,
-or leave the active set unchanged.
-
-### System architecture
-
-The deployed path consists of five stages:
-
-1. **Chat action gate**
-   classifies a message as `ignore`, `write`, `update`, or `delete`. A loaded
-   neural action controller takes priority. Without one, the server uses a
-   conservative statement/question fallback so ordinary questions are not
-   stored. This gate decides whether to invoke the writer; its heuristic
-   write/update label does not override the writer's predicted operation.
-   Only an explicit request `memory_action` overrides that prediction.
-   If a loaded action controller fails, automatic writes are skipped rather
-   than authorized by a heuristic fallback.
-2. **Autonomous writer**
-   predicts `assert` or `supersede`, extracts entity, predicate, value, and
-   optional valid-time spans, and produces neural address anchors.
-   A predicted change is not proof that an earlier version is stored. If no
-   predecessor is activated, automatic memory records a new assertion without
-   deactivating another event. An explicit `memory_action:"update"` still fails
-   when no predecessor is found; inference errors are never treated as absence.
-3. **Version linker**
-   compares a new update with every active event, ranks possible predecessors,
-   and may reject the complete set when no valid predecessor exists.
-4. **Immutable event store**
-   records source evidence, byte spans, typed fields, and explicit
-   supersede/retract links. Only current events participate in recall.
-5. **Query activator and local pointer**
-   selects one active event or NULL from a fresh question. After activation,
-   the pointer returns only the value bytes already compiled for that event.
-
-The HTTP server runs these stages directly in the normal
-`POST /v1/chat/completions` path. The same writer is also exposed through
-`POST /v1/memory/remember` for forced writes and diagnostics.
-
-Each snapshot uses two immutable content-addressed data files and one manifest:
-
-| File | Contents |
+| File | Resident-mode role |
 | --- | --- |
-| `.bnepisodic` | Immutable source records and evidence bytes |
-| `.bnevent` | Typed fields, active versions, and version links |
-| `.bnsnapshot` | Atomic manifest selecting the two complete files by SHA-256 |
+| `models/bitcpm4-0.5b-tq2_0.gguf` | Frozen 0.5B backbone; supply separately with the exact hash above |
+| `models/memory/resident-0.5b/writer.bntwrite` | Trained automatic operation and field extraction; used for writes |
+| `models/memory/resident-0.5b/resident.bnresid` | Trained token-address write, neural activation, version scope, and answer-count parameters |
+| `models/memory/resident-0.5b/pair.bntpair` | Loaded for feature geometry and compatibility; its pair scorer is bypassed |
+| `models/memory/resident-0.5b/link.bntlink` | Loaded for current server compatibility; its predecessor scorer is bypassed |
+| `models/memory/resident-0.5b/query.bntqact` | Loaded for current server compatibility; its query scorer is bypassed |
+| `models/memory/resident-0.5b/resident.pt` | Selected research checkpoint used to export `.bnresid`; not loaded by C |
 
-`POST /v1/memory/export` writes and flushes both new files, then atomically
-replaces the session manifest under `--memory-state-dir`. A partial write
-cannot replace the previously committed snapshot. Import checks whole-file
-hashes, internal validation, and source/value consistency before changing
-live state. Use one server writer per state directory. Committed snapshot files
-are retained; automatic snapshot garbage collection is not implemented.
+The current server requires all four typed artifacts together with
+`--episodic-memory`, even when `--resident-model` selects the new reader.
+It rejects a different GGUF or LoRA for this configuration. Do not substitute
+another 0.5B, 1B, or 3B GGUF merely because its architecture is similar.
 
-Repeated identical inputs whose event is still active are idempotent. Source
-deduplication retains the actual original record index. Failed event
-compilation rolls back newly appended evidence.
+Session facts are data, not model weights. `POST /v1/memory/export` saves a
+content-addressed `.bnepisodic` source file, `.bnevent` event file, and
+`.bnresident` address file under `--memory-state-dir`. A `.bnsnapshot`
+manifest commits their hashes atomically. Import verifies the files and
+restores the resident tensors without re-encoding source messages; a failed
+import leaves live memory unchanged. Keep one server writer per state
+directory.
 
-### Model structure
+### Start and use
 
-The learned memory system is split into four deployable artifacts:
-
-| Artifact | Current responsibility |
-| --- | --- |
-| `.bntwrite` | Autonomous operation prediction, four-field localization, neural anchors, and span fusion |
-| `.bntpair` | Shared token-level entity/predicate pair encoder |
-| `.bntlink` | Candidate ranking and set-level predecessor-existence decision |
-| `.bntqact` | Natural-query candidate scoring and candidate-set-aware NULL decision |
-
-The current 0.5B artifacts are:
-
-```text
-models/memory/resident-0.5b/writer.bntwrite
-models/memory/resident-0.5b/pair.bntpair
-models/memory/resident-0.5b/link.bntlink
-models/memory/resident-0.5b/query.bntqact
-```
-
-The writer, pair encoder, and query activator consume RMS-normalized hidden
-states captured from all 24 backbone layers. Layers are grouped into four
-bands (`0-5`, `6-11`, `12-17`, and `18-23`) with learned band fusion. Raw GGUF
-token-embedding rows are used where the training objective requires lexical
-identity. Learned address vectors are rank 128.
-
-The autonomous writer contains:
-
-- a full-message operation head for `assert` and `supersede`: mean and final
-  token features feed a `2048 -> 128 -> 2` MLP, independently of field extraction;
-- separate entity, predicate, value, and time localizers;
-- field-specific contiguous-span taggers;
-- predicate/value activation-key adapters;
-- deterministic UTF-8/Latin word completion, entity possessive normalization,
-  and a learned-anchor fallback when the entity span is malformed;
-- optional neural-anchor/span fusion, disabled in the deployed configuration.
-
-The pair and link models contain:
-
-- entity and predicate address projections;
-- token-level contextual and tied-embedding comparisons;
-- pairwise same-entity/same-predicate features;
-- a learned residual joint scorer;
-- a permutation-invariant existence head with both absolute and normalized scores.
-
-The query activator reuses the frozen pair encoder, then adds a
-query-specific candidate residual and a separate set-aware NULL head. This
-keeps write-time predecessor selection and read-time question activation as
-different learned tasks.
-
-All binary loaders validate the backbone SHA-256, tensor geometry, per-tensor
-CRC, and trailing data. The query artifact is also bound to the exact pair
-encoder used during its training.
-
-### Training method
-
-Training and serving use the exact same 0.5B GGUF identity. The backbone is
-frozen, with all 24 layers retained and no LoRA, SVD, NAS/NG, or KV reuse.
-
-The current writer curriculum is generated by
-`python/prepare_natural_memory_curriculum.py`: 192 training worlds
-(1,056 events), 24 development worlds (132 events), and 24 final-test worlds
-(132 events). Create and update examples are balanced. Most messages are
-ordinary text without source wrappers or dates; approximately 20% contain
-an explicit date. Missing time is supervised at the BOS position and
-compiled as unknown, never replaced with an invented date. The loader
-rejects overlong messages instead of silently truncating labeled fields.
-
-Entities and relations are disjoint across splits. Surface templates are
-shared, so this evaluation measures entity/relation generalization, not
-unseen-template or unrestricted conversational generalization. LoCoMo and
-the independent chat fixtures are never used for training or selection.
-
-The deployment is trained in stages:
-
-1. Capture frozen-backbone features using the exact C tokenizer.
-   Field labels are aligned to those tokens. If standalone field encoding has
-   different boundary tokens, alignment uses the original tokens' decoded bytes;
-   ambiguous matches or spans containing extra text are rejected.
-2. Fine-tune the writer's operation, anchors, and field boundaries. Select
-   on development create/update accuracy and field localization.
-3. Freeze the writer and train contiguous field-span taggers with balanced
-   create/update sampling. The deployed maximum field span is 16 tokens.
-   Anchor/span fusion is disabled for this configuration.
-   Then train the separate full-message operation head while keeping every
-   field parameter frozen. It averages the four hidden-state bands, pools
-   non-BOS tokens, and combines that mean with the final token's representation.
-   Both vectors are L2-normalized. This retains sentence-level change cues
-   that may be absent from the extracted value's causal representation.
-4. Keep the deployed pair encoder and joint candidate scorer frozen. Train
-   only the predecessor-existence head on natural-message candidate banks,
-   including missing predecessors and one-candidate positive/negative sets.
-   Its seven inputs preserve both normalized ranking information and the
-   absolute top two scores. Normalized scores alone cannot distinguish a
-   strong singleton match from a weak one.
-5. Verify that re-exporting the pair encoder produces the exact original
-   binary hash. This permits reuse of the existing query activator, which
-   remains bound to that encoder.
-6. Require Python/C operator parity, then choose the deployed combination
-   on development chat lifecycles. Only afterward run the frozen final
-   test through normal chat, export, process restart, import, and fresh recall.
-
-Run the reproducible pipeline on the logged-in GPU server after syncing the
-source. Use a new output directory for each run:
-
-```sh
-bash scripts/train_natural_memory.sh \
-  models/bitcpm4-0.5b-tq2_0.gguf \
-  build/memory_v257_05b_typed_writer_all_spans/writer.pt \
-  build/natural_memory \
-  build/memory_v251_05b_normalized_set_link_pair.pt \
-  models/memory/resident-0.5b/pair.bntpair
-
-bash scripts/train_context_memory.sh \
-  models/bitcpm4-0.5b-tq2_0.gguf \
-  build/natural_memory build/context_memory
-```
-
-Pass `-` as the second argument to initialize a fresh writer directly from
-the GGUF geometry. The reported model uses compatible pretrained writer
-initialization. The pipeline builds `tok_probe` with CMake so runtime
-link dependencies, including OpenMP on Linux, are preserved.
-
-Training limits are 800 steps for the writer, 600 for the span taggers,
-800 for the predecessor head, and 1,000 for the full-message operation head.
-Early stopping and checkpoint selection use development metrics, not final
-test results. Component accuracy is not end-to-end memory accuracy.
-
-The final writer is `writer.bntwrite` in the context-operation run directory;
-the link artifact is `link/link.bntlink` in the natural-memory run directory.
-The writer binary includes the full-message operation tensors. The corresponding
-`.pt` files are training checkpoints, not session memory. The compatible pair
-and query binaries are also required for serving.
-
-Checkpoints record configurations and data fingerprints. Training and
-validation worlds must not overlap, feature caches must match their source
-and backbone, and evaluation-only records are rejected. Final test outcomes
-must not be used to tune thresholds or select checkpoints.
-
-### Usage
-
-Start the complete automatic-memory server:
+Build as described above, provide the matching GGUF, then start the server:
 
 ```sh
 mkdir -p build/memory-states
 
-./build/openai_server \
-  models/bitcpm4-0.5b-tq2_0.gguf \
-  --host 127.0.0.1 \
-  --port 8080 \
-  --ctx 4096 \
-  --memory-state-dir build/memory-states \
-  --episodic-memory \
-  --typed-pair-model \
-    models/memory/resident-0.5b/pair.bntpair \
-  --typed-link-model \
-    models/memory/resident-0.5b/link.bntlink \
-  --typed-query-model \
-    models/memory/resident-0.5b/query.bntqact \
-  --typed-writer-model \
-    models/memory/resident-0.5b/writer.bntwrite
+./build/openai_server models/bitcpm4-0.5b-tq2_0.gguf \
+  --host 127.0.0.1 --port 8080 --ctx 4096 \
+  --memory-state-dir build/memory-states --episodic-memory \
+  --typed-writer-model models/memory/resident-0.5b/writer.bntwrite \
+  --typed-pair-model models/memory/resident-0.5b/pair.bntpair \
+  --typed-link-model models/memory/resident-0.5b/link.bntlink \
+  --typed-query-model models/memory/resident-0.5b/query.bntqact \
+  --resident-model models/memory/resident-0.5b/resident.bnresid
 ```
 
-The four learned artifacts and the GGUF must be the mutually compatible files
-used during training. Typed query/writer models require both the pair and link
-models. The typed writer path rejects LoRA.
-
-Normal chat automatically writes declarative facts:
+Use the same `session_id` for writes and questions. The ordinary chat route
+attempts automatic memory unless `"memory_auto": false` is sent:
 
 ```sh
 curl http://127.0.0.1:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{
-    "session_id": "demo",
-    "messages": [{
-      "role": "user",
-      "content": "Briar conference registration is a virtual access ticket."
-    }],
-    "max_tokens": 32
-  }'
-```
+  -d '{"session_id":"demo","messages":[{"role":"user","content":"Morgan\u0027s home city is Lima."}],"max_tokens":16}'
 
-The response contains `memory_auto` with the action decision, storage status,
-compiled event, extracted fields, and predecessor-resolution details. Set
-`"memory_auto": false` to disable implicit memory for one request.
-
-Updates use the same endpoint:
-
-```sh
 curl http://127.0.0.1:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{
-    "session_id": "demo",
-    "messages": [{
-      "role": "user",
-      "content": "Briar changed the conference registration to an in-person ticket."
-    }],
-    "max_tokens": 32
-  }'
+  -d '{"session_id":"demo","messages":[{"role":"user","content":"Which home city does Morgan have now?"}],"max_tokens":16}'
 ```
 
-Questions automatically invoke neural activation and do not require
-`memory_copy`:
+Inspect `memory_auto.stored` on the write response. A memory answer includes
+`memory_copy.mode = neural_resident_activation_then_compiled_pointer` and
+`memory_copy.selected_event_indices`. The answer is only as accurate as the
+writer's extracted span and the resident model's selected events. For a
+diagnostic forced write, send raw text with `POST /v1/memory/remember`.
 
-```sh
-curl http://127.0.0.1:8080/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "session_id": "demo",
-    "messages": [{
-      "role": "user",
-      "content": "What is Briar current conference registration?"
-    }],
-    "max_tokens": 32
-  }'
-```
-
-If the query activator returns NULL, the server falls back to ordinary
-generation. A successful memory result reports
-`neural_typed_query_activation_then_compiled_pointer`.
-
-Force a raw-text write for diagnostics:
-
-```sh
-curl http://127.0.0.1:8080/v1/memory/remember \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "session_id": "demo",
-    "memory_record": "Briar conference registration is an in-person ticket."
-  }'
-```
-
-Export and restore the session:
+Export the session, stop the server, restart it with the same model paths and
+state directory, then import before querying:
 
 ```sh
 curl http://127.0.0.1:8080/v1/memory/export \
   -H 'Content-Type: application/json' \
   -d '{"session_id":"demo"}'
 
+# Restart the server here with the command above.
+
 curl http://127.0.0.1:8080/v1/memory/import \
   -H 'Content-Type: application/json' \
   -d '{"session_id":"demo"}'
 ```
 
-Run the final raw-chat lifecycle evaluation after freezing the model selection:
+Resident mode supports at most 32 events per session and 128 input tokens
+including BOS per write or question. It can return at most four events.
+Deletion and the typed-event mutation/query endpoints are unsupported in
+this mode; delete requests are rejected.
 
-```sh
-python3 python/prepare_natural_memory_curriculum.py \
-  build/natural_memory/final_eval --test-only --seed 2730916 --valid-worlds 24
+### Training and export
 
-python3 python/prepare_natural_memory_eval.py \
-  build/natural_memory/final_eval/test.jsonl \
-  build/natural_memory/final_eval/final_chat.json --role final
+The resident curriculum is generated by
+`python/prepare_memory_set_curriculum.py --diverse-train` with 128 training
+worlds and 24 development worlds. The selected checkpoint uses a
+128-dimensional factorized resident baseline, then a trainable identity
+channel over frozen baseline parameters. Identity training uses synthetic
+entity-role labels; those labels are never passed to inference. Both stages
+use the exact C tokenizer and the same frozen 0.5B GGUF. The selected
+identity run uses seed `2810917`; it trained for 1,000 steps and selected
+checkpoint step `800` on development metrics.
+The baseline and identity trainers are
+`python/train_resident_memory_set.py` and
+`python/train_resident_identity.py`; the latter requires a matching
+baseline checkpoint and backbone feature cache. The automatic writer is
+trained separately on natural-message field labels with
+`scripts/train_natural_memory.sh` and `scripts/train_context_memory.sh`.
+LoCoMo and the sealed split are not training inputs.
 
-python3 tests/eval_memory_chat_holdout.py \
-  build/openai_server models/bitcpm4-0.5b-tq2_0.gguf \
-  models/memory/resident-0.5b/pair.bntpair \
-  models/memory/resident-0.5b/link.bntlink \
-  models/memory/resident-0.5b/query.bntqact \
-  models/memory/resident-0.5b/writer.bntwrite \
-  --fixture build/natural_memory/final_eval/final_chat.json \
-  --output build/natural_memory/final_results.json
-```
-
-### Test results
-
-The current combination was selected on development data and then evaluated
-on a 24-world, 90-question synthetic test (seed 2730916) on September 16, 2026.
-The final split uses different entities and relations but shares the
-training template family. It was not used for training, calibration, or
-checkpoint selection.
-The table reports the documented artifact combination's C-runtime regression
-results. Reusing this fixture is not a new independent test.
-
-| C-runtime regression metric | Result |
-| --- | ---: |
-| Current facts, end-to-end exact recall | **53/66 = 80.30%** |
-| Unknown questions, activation rejection | **24/24 = 100%** |
-| Original chat messages submitted for writing | 132 |
-| Write requests accepted (not extraction accuracy) | 132/132 |
-| Creates rejected as unresolved updates | 0/66 |
-| Updates rejected for missing activated predecessor | 0/66 |
-| Predicted changes stored as assertions without a predecessor | 2 |
-| JSON/SSE activation and memory-answer parity | Passed |
-| Export, restart, import, zero KV reuse | Passed |
-
-Every fact is written through normal `POST /v1/chat/completions`.
-Gold entities, predicates, value spans, and answers are never submitted.
-Sessions are exported, the server is restarted, and fresh queries are sent
-after import. Pre-import checks verify that the new process does not already
-have the session's memories. Successful answers must come from neural
-activation followed by the compiled pointer; ordinary generation cannot
-count as a memory success.
-
-The NULL metric measures activation rejection, not whether an ordinary
-generated reply correctly expresses uncertainty. The two metrics should
-not be conflated. This synthetic result is not a LoCoMo score, and it does
-not establish unrestricted dialogue-memory generalization.
-
-Current limitations are explicit: accepted events can still have incorrect
-entity or value spans. Among 13 failed current-fact questions, 6 lacked the
-correct entity/value pair in the final active state; 7 had that pair present
-but still failed recall. This diagnostic is not itself a query-ranking metric.
-Unknown-question rejection is not uniformly solved: on the development set,
-the same deployed combination rejected 22/24 unknown questions, with two false
-activations. The final set's 24/24 result is not a guarantee of safe abstention.
-The active-only single-value reader does not implement historical or multi-fact
-recall. Retraction, polarity, and modality are not fully trained.
-
-Natural dialogue remains unreliable: facts can be misclassified as changes,
-fields can be extracted incorrectly, and unrelated facts can be linked as
-versions of one property. The synthetic curriculum uses six create and six
-update templates shared across splits, so its scores do not measure unseen
-conversational expression. General memory accuracy on the full LoCoMo test set
-has not been established. LoCoMo is evaluation-only.
-
-The documented serving configuration uses the statement/question fallback,
-not an experimental learned write gate. It can miss facts embedded in questions
-and can mistake quoted or hypothetical content for facts. Research checkpoints
-are not part of the validated four-artifact serving configuration.
-
-The writer and seven-input predecessor head pass Python/C parity checks.
-The predecessor tests include 1, 2, and 17 candidates; the pair encoder's
-binary hash is verified unchanged. The local regression suites pass
-21/21 CTest tests and 131/131 Python unit tests. The real-model HTTP cold-start
-regression passes six checks, including strict explicit updates, unrelated
-memory preservation, and no-KV recall after restart/import. Run it with
-`tests/test_openai_server_typed_cold_start.py` and the same six positional
-artifact arguments as the chat evaluator. Runtime safety regressions
-cover capacity-boundary updates, source deduplication, failed snapshot
-writes, malformed imports, and zero-KV streaming.
-
-Evaluation reports under `build/` record each write and query, fixture and
-artifact SHA-256 hashes, and the source revision/dirty status. Final-test
-failures are diagnostic evidence, not additional training examples.
-Create a new sealed test if later development is tuned to this test's
-specific examples.
-
-### Experimental resident activation
-
-`--resident-model PATH.bnresid` enables a native C resident-memory reader in
-place of the typed query reader. It is opt-in and is **not a qualified
-high-accuracy deployment**. The resident checkpoint, C export and four
-typed artifacts are under `models/memory/resident-0.5b/`. `manifest.json`
-records the required GGUF hash and artifact hashes, capabilities, and
-development results. At runtime, the GGUF, writer, and resident models perform the
-backbone, extraction, and activation computations. The current loader also
-requires the pair, link, and query artifacts; in resident mode their learned
-pair/link/query scoring is bypassed.
-
-The writer extracts value spans from ordinary chat messages without supplied
-labels. A separate fresh 0.5B prefill produces final normalized hidden states
-and input embeddings. The resident model stores learned 128-dimensional
-semantic token addresses, full-width lexical identity vectors, and learned
-entity-role scores. Query-time neural attention, entity compatibility,
-version links, history scope, and a learned count head select zero to four
-events. Values are copied from those events' immutable source spans. No raw
-event is re-encoded at recall, and no retrieved text is added to a prompt.
-The existing rule-based write/ignore router is still a limitation, not a
-learned general-purpose memory gate.
-
-The model is trained on synthetic resident-event curricula: semantic
-activation, version links, scope and count first, then an identity channel
-with the baseline frozen. Neither LoCoMo nor the sealed test is training
-input. Export preserves the selected weights without additional training:
+The committed `.pt` checkpoint contains the selected baseline and identity
+weights. Re-export the C artifact without retraining:
 
 ```sh
 python3 python/export_resident_identity.py \
@@ -608,57 +258,45 @@ python3 python/export_resident_identity.py \
   build/resident-reexport.bnresid
 ```
 
-Add `--resident-model models/memory/resident-0.5b/resident.bnresid` to the
-automatic-memory server command above. Each message supports at most 128
-tokens including BOS; each session supports 32 events. All versions remain
-available to the learned history/current gate. Deletion and typed event
-mutation/query APIs are explicitly unsupported in this mode. Normal chat,
-autonomous remember, neural extract, export and import are supported.
-NULL activation returns empty content, not a generated guessed answer.
+### Tests and measured results
 
-The model loader verifies the exact backbone SHA-256, geometry and tensor
-CRCs. Resident snapshots use an atomic three-file manifest covering evidence,
-events and address tensors. Address state is bound to the exact resident
-model binary. Import restores tensors without source replay, rejects corrupt
-or incompatible state, and leaves live memory unchanged on failure.
-
-Local 0.5B C/HTTP development evaluation uses ordinary chat writes, export,
-process restart, import, then ordinary chat queries. No spans, target IDs,
-explicit memory actions, Python inference or KV reuse are supplied to the
-server. The fixed 24-world development set contains 192 writes and 288 queries:
-
-| Measurement | Result |
-| --- | --- |
-| Stored facts | 192/192 |
-| Exactly extracted values | 191/192 |
-| Current fact answers | 54/96 (56.25%) |
-| Multiple-fact answers | 57/96 (59.38%) |
-| History answers | 29/48 (60.42%) |
-| Correct NULL decisions | 22/48 (45.83%) |
-| Complete answer sets | 162/288 (56.25%) |
-
-This is not a LoCoMo score or an independent final-test score. Python/C
-operators agree on identical native inputs for all 288 query selections;
-the real-feature operator fixture has maximum absolute error below `2e-5`.
-The training-formula reference selects correct evidence on 174/288 queries,
-versus 164/288 with C backbone features. A writer error costs two further
-answers. Feature-domain alignment and generalization remain unresolved.
-
-Reproduce the end-to-end and operator tests:
+Run the C regression suite and the local HTTP development evaluation
+(requires the matching GGUF and a fresh output directory):
 
 ```sh
+ctest --test-dir build --output-on-failure
+
 python3 tests/eval_resident_http.py \
   models/bitcpm4-0.5b-tq2_0.gguf \
-  models/memory/resident-0.5b/resident.bnresid build/resident-http-run
-python3 tests/test_resident_identity_export.py \
-  models/memory/resident-0.5b/resident.pt \
-  models/bitcpm4-0.5b-tq2_0.gguf build/resident_identity_local_full
+  models/memory/resident-0.5b/resident.bnresid \
+  build/resident-http-run
 ```
 
-The separate legacy `test_openai_server_typed_chat_auto_memory.py` fixture
-fails its `conference_registration` predicate expectation with the documented
-writer, returning `registration`. This reproduces with the unchanged server
-source and is not a passing regression for this artifact combination.
+The HTTP evaluator sends ordinary chat messages to write facts. It exports
+sessions, restarts the process, imports state, and asks fresh questions. It
+checks zero session KV reuse, unchanged answers after restart, rejection of
+corrupt state, and absence of raw-event re-encoding on recall. It supplies
+no gold field spans or targets to the server. Results are written to
+`build/resident-http-run/summary.json`.
+
+| 0.5B C/HTTP development metric | Result |
+| --- | ---: |
+| Facts stored | 192/192 |
+| Values extracted exactly | 191/192 |
+| Current-fact answer sets | 54/96 (56.25%) |
+| Multiple-fact answer sets | 57/96 (59.38%) |
+| Historical answer sets | 29/48 (60.42%) |
+| Correct empty-answer decisions | 22/48 (45.83%) |
+| All answer sets | **162/288 (56.25%)** |
+
+The native C operator and Python agree on the same resident states and
+C backbone features for all 288 selected event sets. The Python formula
+with its training-side features selected correct evidence on 174/288
+questions; with C backbone features that fell to 164/288. The writer's
+value error reduced complete answers to 162/288. These are development
+diagnostics, not LoCoMo results or an independent final-test score.
+The resident model still has weak generalization and empty-answer
+accuracy. The local C regression suite passed 21/21 tests.
 
 ## CPU dispatch
 
@@ -707,7 +345,9 @@ python3 scripts/perf_summarize.py
 - `examples/openai_server.c` — OpenAI-compatible HTTP server
 - `examples/minimal_generate.c` — minimal command-line generation
 - `tools/gguf_inspect.c` — GGUF metadata and tensor inspection
-- `src/metis/typed_*_model.c` — learned writer, pair, link, and query runtime
+- `src/metis/typed_writer_model.c`, `src/metis/typed_pair_encoder.c`,
+  `src/metis/typed_link_model.c`, `src/metis/typed_query_activator.c` —
+  typed artifact loading and automatic writing
 - `src/metis/resident_identity.c`, `python/export_resident_identity.py` —
   experimental native resident activation and checkpoint export
 - `tests/eval_resident_http.py`, `tests/diagnose_resident_c.py`,
@@ -715,8 +355,8 @@ python3 scripts/perf_summarize.py
 - `src/metis/episodic_store.c`, `src/metis/event_store.c`,
   `src/metis/memory_snapshot.c` — evidence, event versions, and atomic snapshots
 - `scripts/train_natural_memory.sh`, `scripts/train_context_memory.sh` —
-  current staged memory-training and Python/C parity pipeline
-- `python/prepare_natural_memory_curriculum.py`,
-  `python/prepare_natural_memory_eval.py` — synthetic worlds and raw-chat fixtures
-- `tests/eval_memory_chat_holdout.py` — no-KV HTTP write/restart/recall evaluation
+  training stages for the automatic writer
+- `python/prepare_memory_set_curriculum.py`,
+  `python/train_resident_memory_set.py`, `python/train_resident_identity.py` —
+  resident curriculum, baseline, and identity training
 - `tests/` — correctness, API, lifecycle, and performance tests
