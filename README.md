@@ -23,8 +23,10 @@ SHA-256 identity, and can be used without LoRA or KV-cache reuse.
 - CRC validation and exact-backbone identity checks for memory artifacts
 - memory export/import across process restarts
 
-Models, training checkpoints, memory data, and build artifacts belong under
-`models/` or `build/` and must not be committed.
+The selected resident model bundle is tracked in this repository. Supply the
+matching 0.5B GGUF backbone separately at
+`models/bitcpm4-0.5b-tq2_0.gguf`. Session memory, generated training data,
+and build artifacts belong under `build/` and are not committed.
 
 ## Build
 
@@ -248,10 +250,10 @@ The learned memory system is split into four deployable artifacts:
 The current 0.5B artifacts are:
 
 ```text
-build/memory_v273_05b_context_writer.bntwrite
-build/memory_v251_05b_normalized_set_link_pair.bntpair
-build/memory_v272_05b_absolute_link/link.bntlink
-build/memory_v255_05b_typed_query_activator.bntqact
+models/memory/resident-0.5b/writer.bntwrite
+models/memory/resident-0.5b/pair.bntpair
+models/memory/resident-0.5b/link.bntlink
+models/memory/resident-0.5b/query.bntqact
 ```
 
 The writer, pair encoder, and query activator consume RMS-normalized hidden
@@ -345,7 +347,7 @@ bash scripts/train_natural_memory.sh \
   build/memory_v257_05b_typed_writer_all_spans/writer.pt \
   build/natural_memory \
   build/memory_v251_05b_normalized_set_link_pair.pt \
-  build/memory_v251_05b_normalized_set_link_pair.bntpair
+  models/memory/resident-0.5b/pair.bntpair
 
 bash scripts/train_context_memory.sh \
   models/bitcpm4-0.5b-tq2_0.gguf \
@@ -388,13 +390,13 @@ mkdir -p build/memory-states
   --memory-state-dir build/memory-states \
   --episodic-memory \
   --typed-pair-model \
-    build/memory_v251_05b_normalized_set_link_pair.bntpair \
+    models/memory/resident-0.5b/pair.bntpair \
   --typed-link-model \
-    build/memory_v272_05b_absolute_link/link.bntlink \
+    models/memory/resident-0.5b/link.bntlink \
   --typed-query-model \
-    build/memory_v255_05b_typed_query_activator.bntqact \
+    models/memory/resident-0.5b/query.bntqact \
   --typed-writer-model \
-    build/memory_v273_05b_context_writer.bntwrite
+    models/memory/resident-0.5b/writer.bntwrite
 ```
 
 The four learned artifacts and the GGUF must be the mutually compatible files
@@ -490,10 +492,10 @@ python3 python/prepare_natural_memory_eval.py \
 
 python3 tests/eval_memory_chat_holdout.py \
   build/openai_server models/bitcpm4-0.5b-tq2_0.gguf \
-  build/memory_v251_05b_normalized_set_link_pair.bntpair \
-  build/memory_v272_05b_absolute_link/link.bntlink \
-  build/memory_v255_05b_typed_query_activator.bntqact \
-  build/memory_v273_05b_context_writer.bntwrite \
+  models/memory/resident-0.5b/pair.bntpair \
+  models/memory/resident-0.5b/link.bntlink \
+  models/memory/resident-0.5b/query.bntqact \
+  models/memory/resident-0.5b/writer.bntwrite \
   --fixture build/natural_memory/final_eval/final_chat.json \
   --output build/natural_memory/final_results.json
 ```
@@ -558,7 +560,7 @@ are not part of the validated four-artifact serving configuration.
 The writer and seven-input predecessor head pass Python/C parity checks.
 The predecessor tests include 1, 2, and 17 candidates; the pair encoder's
 binary hash is verified unchanged. The local regression suites pass
-20/20 CTest tests and 101/101 Python unit tests. The real-model HTTP cold-start
+21/21 CTest tests and 131/131 Python unit tests. The real-model HTTP cold-start
 regression passes six checks, including strict explicit updates, unrelated
 memory preservation, and no-KV recall after restart/import. Run it with
 `tests/test_openai_server_typed_cold_start.py` and the same six positional
@@ -571,6 +573,92 @@ artifact SHA-256 hashes, and the source revision/dirty status. Final-test
 failures are diagnostic evidence, not additional training examples.
 Create a new sealed test if later development is tuned to this test's
 specific examples.
+
+### Experimental resident activation
+
+`--resident-model PATH.bnresid` enables a native C resident-memory reader in
+place of the typed query reader. It is opt-in and is **not a qualified
+high-accuracy deployment**. The resident checkpoint, C export and four
+typed artifacts are under `models/memory/resident-0.5b/`. `manifest.json`
+records the required GGUF hash and artifact hashes, capabilities, and
+development results. At runtime, the GGUF, writer, and resident models perform the
+backbone, extraction, and activation computations. The current loader also
+requires the pair, link, and query artifacts; in resident mode their learned
+pair/link/query scoring is bypassed.
+
+The writer extracts value spans from ordinary chat messages without supplied
+labels. A separate fresh 0.5B prefill produces final normalized hidden states
+and input embeddings. The resident model stores learned 128-dimensional
+semantic token addresses, full-width lexical identity vectors, and learned
+entity-role scores. Query-time neural attention, entity compatibility,
+version links, history scope, and a learned count head select zero to four
+events. Values are copied from those events' immutable source spans. No raw
+event is re-encoded at recall, and no retrieved text is added to a prompt.
+The existing rule-based write/ignore router is still a limitation, not a
+learned general-purpose memory gate.
+
+The model is trained on synthetic resident-event curricula: semantic
+activation, version links, scope and count first, then an identity channel
+with the baseline frozen. Neither LoCoMo nor the sealed test is training
+input. Export preserves the selected weights without additional training:
+
+```sh
+python3 python/export_resident_identity.py \
+  models/memory/resident-0.5b/resident.pt \
+  build/resident-reexport.bnresid
+```
+
+Add `--resident-model models/memory/resident-0.5b/resident.bnresid` to the
+automatic-memory server command above. Each message supports at most 128
+tokens including BOS; each session supports 32 events. All versions remain
+available to the learned history/current gate. Deletion and typed event
+mutation/query APIs are explicitly unsupported in this mode. Normal chat,
+autonomous remember, neural extract, export and import are supported.
+NULL activation returns empty content, not a generated guessed answer.
+
+The model loader verifies the exact backbone SHA-256, geometry and tensor
+CRCs. Resident snapshots use an atomic three-file manifest covering evidence,
+events and address tensors. Address state is bound to the exact resident
+model binary. Import restores tensors without source replay, rejects corrupt
+or incompatible state, and leaves live memory unchanged on failure.
+
+Local 0.5B C/HTTP development evaluation uses ordinary chat writes, export,
+process restart, import, then ordinary chat queries. No spans, target IDs,
+explicit memory actions, Python inference or KV reuse are supplied to the
+server. The fixed 24-world development set contains 192 writes and 288 queries:
+
+| Measurement | Result |
+| --- | --- |
+| Stored facts | 192/192 |
+| Exactly extracted values | 191/192 |
+| Current fact answers | 54/96 (56.25%) |
+| Multiple-fact answers | 57/96 (59.38%) |
+| History answers | 29/48 (60.42%) |
+| Correct NULL decisions | 22/48 (45.83%) |
+| Complete answer sets | 162/288 (56.25%) |
+
+This is not a LoCoMo score or an independent final-test score. Python/C
+operators agree on identical native inputs for all 288 query selections;
+the real-feature operator fixture has maximum absolute error below `2e-5`.
+The training-formula reference selects correct evidence on 174/288 queries,
+versus 164/288 with C backbone features. A writer error costs two further
+answers. Feature-domain alignment and generalization remain unresolved.
+
+Reproduce the end-to-end and operator tests:
+
+```sh
+python3 tests/eval_resident_http.py \
+  models/bitcpm4-0.5b-tq2_0.gguf \
+  models/memory/resident-0.5b/resident.bnresid build/resident-http-run
+python3 tests/test_resident_identity_export.py \
+  models/memory/resident-0.5b/resident.pt \
+  models/bitcpm4-0.5b-tq2_0.gguf build/resident_identity_local_full
+```
+
+The separate legacy `test_openai_server_typed_chat_auto_memory.py` fixture
+fails its `conference_registration` predicate expectation with the documented
+writer, returning `registration`. This reproduces with the unchanged server
+source and is not a passing regression for this artifact combination.
 
 ## CPU dispatch
 
@@ -620,6 +708,10 @@ python3 scripts/perf_summarize.py
 - `examples/minimal_generate.c` — minimal command-line generation
 - `tools/gguf_inspect.c` — GGUF metadata and tensor inspection
 - `src/metis/typed_*_model.c` — learned writer, pair, link, and query runtime
+- `src/metis/resident_identity.c`, `python/export_resident_identity.py` —
+  experimental native resident activation and checkpoint export
+- `tests/eval_resident_http.py`, `tests/diagnose_resident_c.py`,
+  `tools/resident_probe.c` — resident HTTP lifecycle and feature-domain diagnostics
 - `src/metis/episodic_store.c`, `src/metis/event_store.c`,
   `src/metis/memory_snapshot.c` — evidence, event versions, and atomic snapshots
 - `scripts/train_natural_memory.sh`, `scripts/train_context_memory.sh` —

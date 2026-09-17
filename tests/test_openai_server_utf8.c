@@ -168,5 +168,17 @@ int main(void) {
         }
     }
 
+    {
+        const char *queries[] = {"Give both entries for Morgan.",
+            "List the recorded preferences.", "Compare earlier and current cities.",
+            "Report the address.", "State the current name.", "I need the old and new values."};
+        for (size_t i=0;i<sizeof queries/sizeof queries[0];i++) {
+            if(!typed_auto_input_is_query(queries[i]) ||
+               typed_auto_fallback_action(queries[i])!=MEMORY_ACTION_IGNORE) {
+                fprintf(stderr,"imperative query was classified as a write\n");++failures;
+            }
+        }
+        if(typed_auto_input_is_query("Morgan's workplace is Kestrel Labs."))++failures;
+    }
     return failures == 0 ? 0 : 1;
 }

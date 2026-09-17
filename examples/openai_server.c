@@ -7,6 +7,7 @@
 #include "metis/typed_pair_encoder.h"
 #include "metis/typed_query_activator.h"
 #include "metis/typed_writer_model.h"
+#include "metis/resident_identity.h"
 
 #include "third_party/cJSON/cJSON.h"
 #include "third_party/mongoose/mongoose.h"
@@ -48,6 +49,7 @@ typedef struct server_config {
     const char *typed_link_path;
     const char *typed_query_path;
     const char *typed_writer_path;
+    const char *resident_path;
 } server_config_t;
 
 typedef struct cached_session {
@@ -61,6 +63,9 @@ typedef struct cached_session {
     size_t transcript_cap;
     metis_episodic_store_t episodic;
     metis_event_store_t events;
+    resident_state_t resident;
+    size_t resident_selected[4];
+    int resident_selected_count;
     time_t last_used;
     struct cached_session *next;
 } cached_session_t;
@@ -74,6 +79,7 @@ typedef struct server_state {
     metis_typed_link_model_t *typed_link;
     metis_typed_query_activator_t *typed_query;
     metis_typed_writer_model_t *typed_writer;
+    resident_model_t *resident;
 } server_state_t;
 
 typedef struct generation_result {
@@ -350,6 +356,7 @@ static void reset_session(cached_session_t *session) {
     if (session->transcript != NULL) session->transcript[0] = '\0';
     metis_episodic_clear(&session->episodic);
     metis_event_store_clear(&session->events);
+    resident_state_clear(&session->resident);
 }
 
 /* Clear transient conversation/KV state without touching attached memory.
@@ -380,6 +387,7 @@ static cached_session_t *create_session(server_state_t *state, const char *sessi
         bitnet_free_context(session->ctx);
         metis_episodic_free(&session->episodic);
         metis_event_store_clear(&session->events);
+        resident_state_clear(&session->resident);
         free(session->id);
         free(session);
         return NULL;
@@ -399,6 +407,7 @@ static void free_sessions(server_state_t *state) {
         free(session->transcript);
         metis_episodic_free(&session->episodic);
         metis_event_store_clear(&session->events);
+        resident_state_clear(&session->resident);
         free(session->id);
         free(session);
         session = next;
@@ -1273,7 +1282,8 @@ static int typed_auto_input_is_query(const char *text) {
         "what", "who", "when", "where", "why", "how",
         "which", "is", "are", "was", "were", "do", "does",
         "did", "can", "could", "would", "should", "will",
-        "tell me", "give me", "show me", "explain",
+        "tell me", "give", "show me", "explain",
+        "list", "report", "state", "compare", "i need",
         "summarize", "write", "generate", "translate",
         "help", "please",
     };
@@ -1519,6 +1529,53 @@ fail:
     return -1;
 }
 
+static int extract_resident_answer(
+    server_state_t *state, cached_session_t *session, const char *query,
+    char **answer, float *activation_score, float *exists_score,
+    float *span_score, size_t *record_index) {
+    float scores[RESIDENT_MAX_EVENTS], counts[5]; size_t tokens=0;
+    float *features=NULL; char *text=NULL; size_t bytes=1,offset=0;
+    if(session->resident.count!=session->events.count)return -1;
+    session->resident_selected_count=0;
+    features=resident_encode(state->model,query,&tokens);
+    if(!features)return -1;
+    int rc=resident_read(state->resident,&session->resident,features,tokens,scores,counts);
+    free(features);if(rc)return -1;
+    int n=resident_select(scores,counts,session->resident.count,session->resident_selected);
+    if(n<0)return -1;
+    for(int i=0;i<n;i++) {
+        const metis_event_record_t *e=&session->events.events[session->resident_selected[i]];
+        if(e->raw_record_index>=session->episodic.count)return -1;
+        const char *source=session->episodic.records[e->raw_record_index];
+        if(e->value_start>=e->value_end||e->value_end>strlen(source)||
+           strlen(e->value)!=e->value_end-e->value_start||
+           memcmp(source+e->value_start,e->value,e->value_end-e->value_start))return -1;
+        bytes+=strlen(e->value)+1;
+    }
+    text=calloc(bytes,1);if(!text)return -1;
+    for(int i=0;i<n;i++) {
+        const metis_event_record_t *e=&session->events.events[session->resident_selected[i]];
+        if(i)text[offset++]='\n';
+        size_t length=strlen(e->value);memcpy(text+offset,e->value,length);offset+=length;
+    }
+    session->resident_selected_count=n;*answer=text;
+    *activation_score=n?scores[session->resident_selected[0]]:0;
+    *exists_score=counts[n]-counts[0];*span_score=n?1:0;
+    *record_index=n?session->events.events[session->resident_selected[0]].raw_record_index:0;
+    return n?1:0;
+}
+
+static void resident_recall_metadata(cJSON *root, const cached_session_t *session) {
+    cJSON *ids=cJSON_CreateArray();
+    if(ids==NULL)return;
+    for(int i=0;i<session->resident_selected_count;i++)
+        cJSON_AddItemToArray(ids,cJSON_CreateNumber((double)session->resident_selected[i]));
+    cJSON_AddItemToObject(root,"selected_event_indices",ids);
+    json_add_number(root,"selected_count",session->resident_selected_count);
+    json_add_number(root,"resident_events",(double)session->resident.count);
+    json_add_number(root,"raw_events_encoded_during_recall",0);
+}
+
 static int extract_typed_value_answer(
     server_state_t *state, cached_session_t *session,
     const char *query, char **answer,
@@ -1536,6 +1593,9 @@ static int extract_typed_value_answer(
         span_score == NULL || record_index == NULL)
         return -1;
     *answer = NULL;
+    if (state->resident != NULL)
+        return extract_resident_answer(state, session, query, answer,
+            activation_score, exists_score, span_score, record_index);
     selected = select_typed_active_event(
         state, session, query, &event,
         activation_score, exists_score, &candidate_count, 1);
@@ -1596,6 +1656,8 @@ static void handle_memory_state(
     char event_path[1200];
     metis_episodic_store_t imported_episodic;
     metis_event_store_t imported_events;
+    resident_state_t imported_resident = {0};
+    char resident_path[1200];
     cJSON *root;
 
     metis_episodic_init(&imported_episodic);
@@ -1619,12 +1681,17 @@ static void handle_memory_state(
         return;
     }
     if (do_import) {
-        if (metis_memory_snapshot_paths(base_path,
-                episodic_path, sizeof episodic_path, event_path, sizeof event_path) != 0 ||
+        if (metis_memory_snapshot_paths_resident(base_path,
+                episodic_path, sizeof episodic_path, event_path, sizeof event_path,
+                state->resident == NULL ? NULL : resident_path, sizeof resident_path) != 0 ||
             metis_episodic_load(
                 &imported_episodic, episodic_path) != 0 ||
             metis_event_store_load(
-                &imported_events, event_path) != 0) {
+                &imported_events, event_path) != 0 ||
+            (state->resident != NULL &&
+             (resident_state_load(&imported_resident, state->resident, resident_path) != 0 ||
+              imported_resident.count != imported_events.count))) {
+            resident_state_clear(&imported_resident);
             metis_episodic_free(&imported_episodic);
             metis_event_store_clear(&imported_events);
             send_error(c, 500, "server_error",
@@ -1642,6 +1709,7 @@ static void handle_memory_state(
                         event->raw_record_index])) {
                 metis_episodic_free(&imported_episodic);
                 metis_event_store_clear(&imported_events);
+                resident_state_clear(&imported_resident);
                 send_error(c, 500, "server_error",
                            "typed event has invalid source evidence");
                 return;
@@ -1652,10 +1720,14 @@ static void handle_memory_state(
         metis_event_store_clear(&session->events);
         session->episodic = imported_episodic;
         session->events = imported_events;
+        resident_state_clear(&session->resident);
+        session->resident = imported_resident;
         metis_episodic_init(&imported_episodic);
         metis_event_store_init(&imported_events);
-    } else if (metis_memory_snapshot_save(base_path,
-                   &session->episodic, &session->events) != 0) {
+    } else if (metis_memory_snapshot_save_resident(base_path,
+                   &session->episodic, &session->events,
+                   state->resident == NULL ? NULL : &session->resident,
+                   state->resident) != 0) {
         send_error(c, 500, "server_error",
                    "failed to export typed memory state");
         return;
@@ -1673,6 +1745,11 @@ static void handle_memory_state(
         (double)metis_episodic_count(&session->episodic));
     json_add_number(
         root, "typed_events", (double)session->events.count);
+    if (state->resident != NULL) {
+        json_add_number(root,"resident_events",(double)session->resident.count);
+        json_add_number(root,"resident_state_restored",do_import);
+        json_add_number(root,"raw_events_reencoded",0);
+    }
     send_json(c, 200, root);
     cJSON_Delete(root);
 }
@@ -2103,6 +2180,7 @@ static int remember_autonomous_event(
     int time_known = 1;
     int status = -1;
     size_t source_count = session == NULL ? 0 : session->episodic.count;
+    resident_slot_t resident_pending = {0};
     memset(&event, 0, sizeof event);
     if (result != NULL) memset(result, 0, sizeof *result);
     if (error != NULL && error_size > 0) error[0] = '\0';
@@ -2120,6 +2198,10 @@ static int remember_autonomous_event(
         (request == NULL || cJSON_GetObjectItem(request, "event_id") == NULL)) {
         for (size_t index = 0; index < session->events.count; ++index) {
             const metis_event_record_t *previous = &session->events.events[index];
+            /* In resident mode every version is retained. Only an immediate
+             * replay is idempotent: A -> B -> A must append a new observation. */
+            if (state->resident != NULL && index + 1 != session->events.count)
+                continue;
             if (previous->active && previous->raw_record_index < source_count &&
                 strcmp(session->episodic.records[previous->raw_record_index], text) == 0) {
                 result->event_index = index;
@@ -2246,6 +2328,20 @@ static int remember_autonomous_event(
         field_start[METIS_TYPED_WRITER_VALUE];
     event.value_end =
         field_end[METIS_TYPED_WRITER_VALUE];
+    if (state->resident != NULL) {
+        size_t token_count=0;
+        if(session->resident.count!=session->events.count ||
+           session->resident.count>=RESIDENT_MAX_EVENTS)
+            AUTO_FAIL(-1,"resident memory capacity or state mismatch");
+        float *features=resident_encode(state->model,text,&token_count);
+        if(features==NULL)AUTO_FAIL(-1,"resident encoding failed or exceeds 128 tokens");
+        int write_status=resident_write(state->resident,features,token_count,&resident_pending);
+        free(features);
+        if(write_status!=0)AUTO_FAIL(-1,"resident address write failed");
+        /* All observed versions remain resident. The learned version gate,
+         * not the legacy predecessor linker, determines current vs history. */
+        event.operation=METIS_EVENT_ASSERT;
+    }
     if (event.operation == METIS_EVENT_SUPERSEDE) {
         const metis_event_record_t *selected_event = NULL;
         result->target_status = select_typed_active_event(
@@ -2272,8 +2368,13 @@ static int remember_autonomous_event(
         AUTO_FAIL(
             -1, "failed to apply autonomous typed event");
     result->event_index = session->events.count - 1u;
+    if(state->resident != NULL) {
+        session->resident.slots[session->resident.count++]=resident_pending;
+        memset(&resident_pending,0,sizeof resident_pending);
+    }
     status = 0;
 cleanup:
+    free(resident_pending.data);
     free(decoded);
     free(offsets);
     free(entity);
@@ -2366,6 +2467,12 @@ static void handle_memory_remember(
     }
     priority = json_get_float(
         request, "memory_priority", 0.0f, 0.0f, 1.0f);
+    if (state->resident != NULL &&
+        typed_auto_fallback_action(text) == MEMORY_ACTION_DELETE) {
+        send_error(c,400,"unsupported_memory_operation",
+            "experimental resident memory does not support deletion");
+        return;
+    }
     status = remember_autonomous_event(
         state, session, text, priority, request,
         MEMORY_ACTION_IGNORE,
@@ -2913,7 +3020,10 @@ static void handle_memory_extract(
     json_add_number(root, "kv_cache_touched", 0);
     json_add_string(
         root, "recall_mode",
-        "neural_typed_query_activation_then_compiled_pointer");
+        state->resident == NULL ?
+        "neural_typed_query_activation_then_compiled_pointer" :
+        "neural_resident_activation_then_compiled_pointer");
+    if (state->resident != NULL) resident_recall_metadata(root,session);
     if (extracted)
         json_add_number(root, "record_index", (double)record_index);
     send_json(c, 200, root);
@@ -2966,6 +3076,11 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     memory_record = json_get_string(
         request, "memory_record", user_content);
     memory_action = request_memory_action(state, request, user_content);
+    if (state->resident != NULL && memory_action == MEMORY_ACTION_DELETE) {
+        send_error(c,400,"unsupported_memory_operation",
+            "experimental resident memory does not support deletion");
+        return;
+    }
     memory_auto_requested = json_get_bool(
         request, "memory_auto",
         state->typed_writer != NULL ? 1 : 0);
@@ -2986,6 +3101,11 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
         if (typed_action != MEMORY_ACTION_IGNORE ||
             typed_auto_input_is_query(user_content))
             memory_action = typed_action;
+    }
+    if (state->resident != NULL && memory_action == MEMORY_ACTION_DELETE) {
+        send_error(c,400,"unsupported_memory_operation",
+            "experimental resident memory does not support deletion");
+        return;
     }
     memory_priority = json_get_float(
         request, "memory_priority", 0.0f, 0.0f, 1.0f);
@@ -3008,6 +3128,16 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
     if (prompt == NULL) {
         send_error(c, 400, "invalid_request_error", "messages must be a non-empty array");
         return;
+    }
+    if (state->resident != NULL && memory_auto_requested &&
+        memory_action == MEMORY_ACTION_IGNORE && episodic_session == NULL &&
+        session_id != NULL && session_id[0] != '\0') {
+        episodic_session = create_session(state, session_id);
+        if (episodic_session == NULL) {
+            free(prompt);
+            send_error(c,500,"server_error","failed to create resident memory session");
+            return;
+        }
     }
     if (memory_auto_requested &&
         (memory_action == MEMORY_ACTION_STORE ||
@@ -3057,16 +3187,23 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
         state->typed_link != NULL &&
         state->typed_query != NULL &&
         episodic_session != NULL &&
-        episodic_session->events.count > 0 &&
+        (episodic_session->events.count > 0 || state->resident != NULL) &&
         memory_action == MEMORY_ACTION_IGNORE &&
         (json_get_bool(request, "memory_copy", 0) ||
-         memory_auto_requested) &&
-        extract_typed_value_answer(
+         memory_auto_requested)) {
+        int extracted = extract_typed_value_answer(
             state, episodic_session, user_content,
             &pointer_answer, &pointer_confidence,
             &pointer_null_score, &pointer_span_score,
-            &pointer_record_index) > 0)
-        pointer_used = 1;
+            &pointer_record_index);
+        if (state->resident != NULL && extracted < 0) {
+            free(pointer_answer);free(prompt);
+            send_error(c,500,"resident_recall_failed","resident neural recall failed");
+            return;
+        }
+        pointer_used = extracted > 0 ||
+            (state->resident != NULL && extracted == 0);
+    }
     if (json_get_bool(request, "stream", 0) && !pointer_used) {
         handle_streaming_completion(
             c, state, prompt, max_tokens, session_id,
@@ -3176,7 +3313,11 @@ static void handle_chat_completions(struct mg_connection *c, server_state_t *sta
         if (copy != NULL) {
             json_add_string(
                 copy, "mode",
-                "neural_typed_query_activation_then_compiled_pointer");
+                state->resident == NULL ?
+                "neural_typed_query_activation_then_compiled_pointer" :
+                "neural_resident_activation_then_compiled_pointer");
+            if (state->resident != NULL)
+                resident_recall_metadata(copy,episodic_session);
             json_add_number(copy, "confidence", pointer_confidence);
             json_add_number(
                 copy, "span_score", pointer_span_score);
@@ -3310,7 +3451,10 @@ static void handle_post_json(struct mg_connection *c,
         send_error(c, 400, "invalid_request_error", "request body must be a JSON object");
         return;
     }
-    if (action == 2) {
+    if (state->resident != NULL && (action == 6 || action == 7 || action == 8)) {
+        send_error(c,400,"unsupported_memory_operation",
+            "resident mode supports autonomous writes and neural recall, not typed event APIs");
+    } else if (action == 2) {
         handle_memory_state(c, state, request, 0);
     } else if (action == 3) {
         handle_memory_state(c, state, request, 1);
@@ -3391,7 +3535,7 @@ static void print_usage(const char *argv0) {
             " [--typed-pair-model PATH]"
             " [--typed-link-model PATH]"
             " [--typed-query-model PATH]"
-            " [--typed-writer-model PATH]\n",
+            " [--typed-writer-model PATH] [--resident-model PATH]\n",
             argv0);
 }
 
@@ -3402,6 +3546,8 @@ static void free_memory_sidecars(server_state_t *state) {
     metis_typed_pair_encoder_free(state->typed_pair);
     metis_typed_writer_model_free(state->typed_writer);
     metis_memory_controller_free(state->memory_controller);
+    resident_model_free(state->resident);
+    state->resident = NULL;
     state->typed_link = NULL;
     state->typed_query = NULL;
     state->typed_pair = NULL;
@@ -3487,6 +3633,9 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[index], "--typed-query-model") == 0 &&
                    index + 1 < argc) {
             state.cfg.typed_query_path = argv[++index];
+        } else if (strcmp(argv[index], "--resident-model") == 0 &&
+                   index + 1 < argc) {
+            state.cfg.resident_path = argv[++index];
         } else if (strcmp(argv[index], "--typed-writer-model") == 0 &&
                    index + 1 < argc) {
             state.cfg.typed_writer_path = argv[++index];
@@ -3512,6 +3661,10 @@ int main(int argc, char **argv) {
         !state.cfg.episodic_memory) {
         fprintf(stderr,
                 "--memory-controller requires --episodic-memory\n");
+        return 1;
+    }
+    if(state.cfg.resident_path != NULL && !state.cfg.episodic_memory) {
+        fprintf(stderr,"--resident-model requires complete typed writer configuration\n");
         return 1;
     }
     {
@@ -3676,6 +3829,14 @@ int main(int argc, char **argv) {
                 state.typed_pair->band_count);
     }
 
+    if(state.cfg.resident_path != NULL) {
+        state.resident=resident_model_load(state.cfg.resident_path,model_path);
+        if(!state.resident) {
+            fprintf(stderr,"Invalid resident model or backbone binding\n");
+            free_memory_sidecars(&state);bitnet_free_model(state.model);return 1;
+        }
+        fprintf(stderr,"Experimental neural resident recall enabled (32 events, 128 tokens; no delete)\n");
+    }
     snprintf(listen_url, sizeof listen_url, "http://%s:%s",
              state.cfg.host, state.cfg.port);
     signal(SIGINT, handle_signal);

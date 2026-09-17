@@ -1,0 +1,89 @@
+{
+  "format": "BITNET_RESIDENT_MODEL_BUNDLE_V1",
+  "status": "experimental_not_accuracy_qualified",
+  "backbone": {
+    "filename": "bitcpm4-0.5b-tq2_0.gguf",
+    "sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "included": false
+  },
+  "resident_checkpoint": {
+    "seed": 2810917,
+    "selected_step": 800,
+    "purpose": "Frozen selected research checkpoint; embedded baseline and learned identity channel; no session facts."
+  },
+  "files": {
+    "link.bntlink": {
+      "bytes": 541324,
+      "sha256": "b0c9bd54f4695a2a9f50dcbb3107e6638709df9037b7421fe9ae46f4bbddf367"
+    },
+    "pair.bntpair": {
+      "bytes": 4220288,
+      "sha256": "db8e87a8f47fd6015ca43abdb73a4eb145dba743185a06ad70334c7769827c5b"
+    },
+    "query.bntqact": {
+      "bytes": 542892,
+      "sha256": "c2203afaf133be0753fbc4156d75b5e22747a8fa3ab8a56d7c8190bbddccc97c"
+    },
+    "resident.bnresid": {
+      "bytes": 1648972,
+      "sha256": "f6b59c4e0d6b420d902ab8d3fc12d4ff3ff154ea569aa2bae1eb3ea21d4d9bc8"
+    },
+    "resident.pt": {
+      "bytes": 1658574,
+      "sha256": "0a9c272f4d2ac2c21ebb24281191c06c61f0b3f5a3758e099c56b3ebe995c0c3"
+    },
+    "writer.bntwrite": {
+      "bytes": 5258068,
+      "sha256": "f19086d087ebe7c4fd6da0b96056c80bf3f452b55bc80d5fa5493587c85ccd84"
+    }
+  },
+  "evaluation": {
+    "split": "development",
+    "worlds": 24,
+    "protocol": "ordinary chat -> export -> process restart -> import -> ordinary chat",
+    "oracle_write_boundaries": false,
+    "kv_reuse": false,
+    "locomo_used": false,
+    "total": 288,
+    "correct": 162,
+    "groups": {
+      "current": {
+        "correct": 54,
+        "total": 96,
+        "accuracy": 0.5625
+      },
+      "multi": {
+        "correct": 57,
+        "total": 96,
+        "accuracy": 0.59375
+      },
+      "history": {
+        "correct": 29,
+        "total": 48,
+        "accuracy": 0.6041666666666666
+      },
+      "null": {
+        "correct": 22,
+        "total": 48,
+        "accuracy": 0.4583333333333333
+      }
+    },
+    "writes": {
+      "stored": 192,
+      "value_exact": 191,
+      "total": 192
+    }
+  },
+  "limits": {
+    "max_events": 32,
+    "max_tokens_including_bos": 128,
+    "max_selected_events": 4,
+    "deletion_supported": false
+  },
+  "notes": [
+    "Explicit user-authorized exception to the repository model-artifact exclusion.",
+    "The four typed artifacts support the existing writer configuration. Resident mode bypasses legacy query and predecessor selection.",
+    "Supply the exact 0.5B GGUF backbone separately. Session memory, datasets and feature caches are not included.",
+    "The checkpoint was trained with oracle write boundaries. The HTTP evaluation instead uses automatic writer spans."
+  ]
+}

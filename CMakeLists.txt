@@ -91,6 +91,7 @@ add_library(bitnet STATIC
     src/metis/typed_link_model.c
     src/metis/typed_pair_encoder.c
     src/metis/typed_query_activator.c
+    src/metis/resident_identity.c
     src/metis/typed_writer_model.c
     src/x86/kernel_registry.c
     src/x86/ops_x86.c
@@ -316,6 +317,17 @@ add_executable(test_memory_snapshot tests/test_memory_snapshot.c)
 target_include_directories(test_memory_snapshot PRIVATE src)
 target_link_libraries(test_memory_snapshot PRIVATE bitnet m)
 add_test(NAME test_memory_snapshot COMMAND test_memory_snapshot)
+
+add_executable(test_resident_identity_parity tests/test_resident_identity_parity.c)
+add_executable(resident_probe tools/resident_probe.c)
+target_include_directories(resident_probe PRIVATE src)
+target_link_libraries(resident_probe PRIVATE bitnet m)
+target_include_directories(test_resident_identity_parity PRIVATE src)
+target_link_libraries(test_resident_identity_parity PRIVATE bitnet m)
+add_executable(test_resident_state tests/test_resident_state.c)
+target_include_directories(test_resident_state PRIVATE src)
+target_link_libraries(test_resident_state PRIVATE bitnet m)
+add_test(NAME test_resident_state COMMAND test_resident_state)
 
 add_executable(
     test_typed_writer_parity

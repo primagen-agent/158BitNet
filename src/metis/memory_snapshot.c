@@ -79,13 +79,20 @@ static int content_path(char *out, size_t size, const char *base,
 
 int metis_memory_snapshot_paths(const char *base,
     char *episodes, size_t episodes_size, char *events, size_t events_size) {
-    char manifest[1200], body[141], hashes[2][65], actual[65];
+    return metis_memory_snapshot_paths_resident(base, episodes, episodes_size,
+        events, events_size, NULL, 0);
+}
+
+int metis_memory_snapshot_paths_resident(const char *base,
+    char *episodes, size_t episodes_size, char *events, size_t events_size,
+    char *resident, size_t resident_size) {
+    char manifest[1200], body[206], hashes[3][65], actual[65];
     FILE *file;
     if (base == NULL || episodes == NULL || events == NULL ||
         path_join(manifest, sizeof manifest, base, ".bnsnapshot") != 0) return -1;
     file = fopen(manifest, "rb");
     if (file == NULL) {
-        if (errno != ENOENT) return -1;
+        if (errno != ENOENT || resident != NULL) return -1;
         return path_join(episodes, episodes_size, base, ".bnepisodic") ||
                path_join(events, events_size, base, ".bnevent") ? -1 : 0;
     }
@@ -93,9 +100,11 @@ int metis_memory_snapshot_paths(const char *base,
     size_t count = fread(body, 1, sizeof body, file);
     int failed = ferror(file);
     fclose(file);
-    if (failed || count != 139 || memcmp(body, "BNMSNAP1\n", 9) != 0 ||
-        body[73] != '\n' || body[138] != '\n') return -1;
-    for (int h = 0; h < 2; ++h) {
+    int parts = resident == NULL ? 2 : 3;
+    if (failed || count != 9u + (size_t)parts * 65u ||
+        memcmp(body, resident == NULL ? "BNMSNAP1\n" : "BNMSNAP2\n", 9) != 0) return -1;
+    for (int h = 0; h < parts; ++h) {
+        if (body[9 + h * 65 + 64] != '\n') return -1;
         memcpy(hashes[h], body + 9 + h * 65, 64);
         hashes[h][64] = '\0';
         if (strspn(hashes[h], "0123456789abcdef") != 64) return -1;
@@ -104,16 +113,29 @@ int metis_memory_snapshot_paths(const char *base,
         content_path(events, events_size, base, hashes[1], ".bnevent") ||
         digest_hex(episodes, actual) || strcmp(actual, hashes[0]) ||
         digest_hex(events, actual) || strcmp(actual, hashes[1])) return -1;
+    if (resident != NULL &&
+        (content_path(resident, resident_size, base, hashes[2], ".bnresident") ||
+         digest_hex(resident, actual) || strcmp(actual, hashes[2]))) return -1;
     return 0;
 }
 
 int metis_memory_snapshot_save(const char *base,
     const metis_episodic_store_t *episodes, const metis_event_store_t *events) {
+    return metis_memory_snapshot_save_resident(base, episodes, events, NULL, NULL);
+}
+
+int metis_memory_snapshot_save_resident(const char *base,
+    const metis_episodic_store_t *episodes, const metis_event_store_t *events,
+    const resident_state_t *resident, const resident_model_t *model) {
     char ep_temp[1200], ev_temp[1200], manifest_temp[1200], manifest[1200];
     char ep_path[1200], ev_path[1200], ep_hash[65], ev_hash[65];
+    char rs_temp[1200], rs_path[1200], rs_hash[65];
     FILE *file = NULL;
     int status = -1;
     if (base == NULL || episodes == NULL || events == NULL ||
+        ((resident == NULL) != (model == NULL)) ||
+        (resident != NULL && resident->count != events->count) ||
+        path_join(rs_temp, sizeof rs_temp, base, ".pending.bnresident") ||
         path_join(ep_temp, sizeof ep_temp, base, ".pending.bnepisodic") ||
         path_join(ev_temp, sizeof ev_temp, base, ".pending.bnevent") ||
         path_join(manifest_temp, sizeof manifest_temp, base, ".pending.bnsnapshot") ||
@@ -126,12 +148,19 @@ int metis_memory_snapshot_save(const char *base,
         content_path(ev_path, sizeof ev_path, base, ev_hash, ".bnevent") ||
         replace_file(ep_temp, ep_path) || replace_file(ev_temp, ev_path) ||
         sync_parent(base)) goto cleanup;
+    if (resident != NULL &&
+        (resident_state_save(resident, model, rs_temp) || sync_file(rs_temp) ||
+         digest_hex(rs_temp, rs_hash) ||
+         content_path(rs_path, sizeof rs_path, base, rs_hash, ".bnresident") ||
+         replace_file(rs_temp, rs_path) || sync_parent(base))) goto cleanup;
     file = fopen(manifest_temp, "wb");
     if (file == NULL) goto cleanup;
-    int written = fprintf(file, "BNMSNAP1\n%s\n%s\n", ep_hash, ev_hash);
+    int written = resident == NULL ?
+        fprintf(file, "BNMSNAP1\n%s\n%s\n", ep_hash, ev_hash) :
+        fprintf(file, "BNMSNAP2\n%s\n%s\n%s\n", ep_hash, ev_hash, rs_hash);
     int closed = fclose(file);
     file = NULL;
-    if (written != 139 || closed != 0 || sync_file(manifest_temp) ||
+    if (written != (resident == NULL ? 139 : 204) || closed != 0 || sync_file(manifest_temp) ||
         replace_file(manifest_temp, manifest)) goto cleanup;
     /* A failure here leaves either the old or the complete new generation. */
     status = sync_parent(base);
@@ -140,5 +169,6 @@ cleanup:
     remove(ep_temp);
     remove(ev_temp);
     remove(manifest_temp);
+    if (resident != NULL) remove(rs_temp);
     return status;
 }
