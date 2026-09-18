@@ -1,0 +1,7 @@
+{
+  "output": "build/final_training_writer_generated",
+  "train_worlds": 192,
+  "valid_worlds": 24,
+  "seed": 2710916,
+  "test_only": false
+}

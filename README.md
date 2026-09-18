@@ -258,6 +258,31 @@ python3 python/export_resident_identity.py \
   build/resident-reexport.bnresid
 ```
 
+The final training package is `training/memory/resident-0.5b/`. It records
+the data, selected checkpoints, training entry points and hashes for the
+models loaded by resident serving:
+
+| Model | Training data | Training method and script |
+| --- | --- | --- |
+| `resident.bnresid` | `corpora/resident/{train,valid}.jsonl` and training-only `train_supervision.json` | Factorized resident baseline with `python/train_resident_memory_set.py`, followed by an identity channel over its frozen weights with `python/train_resident_identity.py`. Re-run with `retrain_resident_and_writer.sh`. |
+| `writer.bntwrite` | `corpora/writer/{train,valid}.jsonl` | Natural-message write, field-span and context-operation supervision with `scripts/train_natural_memory.sh` and `scripts/train_context_memory.sh`. Re-run with `retrain_resident_and_writer.sh`. |
+| `pair.bntpair` | Selected `pair.pt` and `pair_init.pt` are retained; the original raw pair corpus is not hash-bound in the checkpoint | Entity/predicate pairing and version-link supervision with `python/train_typed_pair_verifier.py`; loaded for compatibility, not used by resident recall. |
+| `link.bntlink` | Retained writer corpus, frozen `pair.pt` and regenerated backbone features | Predecessor-existence head with `python/train_natural_link_head.py`; loaded for compatibility, not used by resident recall. |
+| `query.bntqact` | Exact supervised `feature_data/query_{train,valid}.pt`; matching-ID raw examples in `corpora/query/` | Candidate/NULL activation head with `python/train_typed_query_activator.py`; retraining helper `retrain_query_from_features.py`. Loaded for compatibility, not used by resident recall. |
+
+The original query raw-source bytes are not asserted to match the regenerated
+matching-ID examples. The retained supervised feature rows are the exact
+query-head training inputs. The pair checkpoint likewise cannot prove its
+original raw-corpus identity; the package does not claim a bitwise full
+retraining of that legacy compatibility component. See the package
+`README.md` for commands, initializers, selection steps and provenance.
+Check every retained input and reproduce all five deployed binaries with:
+
+```sh
+python3 training/memory/resident-0.5b/verify.py \
+  models/bitcpm4-0.5b-tq2_0.gguf
+```
+
 ### Tests and measured results
 
 Run the C regression suite and the local HTTP development evaluation

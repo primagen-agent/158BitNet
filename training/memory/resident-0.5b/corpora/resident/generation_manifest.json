@@ -1,0 +1,28 @@
+{
+  "format": "RESIDENT_MEMORY_SET_CURRICULUM_V1",
+  "seed": 2810916,
+  "locomo_used": false,
+  "pointer_boundaries": "oracle_diagnostic_only",
+  "splits": {
+    "train": {
+      "worlds": 128,
+      "questions": 1536,
+      "sha256": "5ead2b1e64d46ada1cd0135cfbf2b27b72844dbf4620750bf98c4775c6552ee8",
+      "evaluation_only": false
+    },
+    "valid": {
+      "worlds": 24,
+      "questions": 288,
+      "sha256": "8b352c38ec96185892c55b311e2377f6e1accdea9a592e020f60f54b1c2ed29c",
+      "evaluation_only": false
+    },
+    "test": {
+      "worlds": 24,
+      "questions": 288,
+      "sha256": "24fedf583effcfaee91e563602fa6002b16c062dffdfa4d795ed667d94b08c76",
+      "evaluation_only": true
+    }
+  },
+  "diverse_train_language": true,
+  "training_supervision_sha256": "d712879c7b3f904865c8aa65ac17a6c1af253e3d0bd07cb47b2c52874992246d"
+}

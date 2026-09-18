@@ -1,0 +1,81 @@
+{
+  "format": "BITNET_FINAL_MEMORY_TRAINING_V1",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "generator": {
+    "resident": "python/prepare_memory_set_curriculum.py --diverse-train (seed 2810916, train worlds 128, validation worlds 24)",
+    "writer": "python/prepare_natural_memory_curriculum.py (seed 2710916, train worlds 192, validation worlds 24)",
+    "query": "python/prepare_repeated_dialogue_curriculum.py (16/4 worlds, 128 events, 12 queries, two training layout views) followed by python/prepare_typed_activation_curriculum.py"
+  },
+  "selected": {
+    "resident_baseline": {
+      "seed": 2810917,
+      "steps": 1000,
+      "step": 900,
+      "architecture": "factorized",
+      "width": 128
+    },
+    "resident_identity": {
+      "seed": 2810917,
+      "steps": 1000,
+      "step": 800,
+      "frozen_baseline": "checkpoints/baseline.pt"
+    },
+    "writer": {
+      "initializer": "checkpoints/writer_init.pt",
+      "selected_step": 100,
+      "operation_selected_step": 100
+    },
+    "pair": {
+      "initializer": "checkpoints/pair_init.pt",
+      "selected_step": 500,
+      "serving_role": "compatibility"
+    },
+    "link": {
+      "parent": "checkpoints/pair.pt",
+      "selected_step": 100,
+      "serving_role": "compatibility"
+    },
+    "query": {
+      "parent": "checkpoints/pair.pt",
+      "serving_role": "compatibility"
+    }
+  },
+  "corpora": {
+    "corpora/resident/generation_manifest.json": "2a19fc4c091dddacf7d0c234082f506ef4ea1839e7d4fa9c5af3ebc2f0fe7983",
+    "corpora/resident/train.jsonl": "5ead2b1e64d46ada1cd0135cfbf2b27b72844dbf4620750bf98c4775c6552ee8",
+    "corpora/resident/train_supervision.json": "d712879c7b3f904865c8aa65ac17a6c1af253e3d0bd07cb47b2c52874992246d",
+    "corpora/resident/valid.jsonl": "8b352c38ec96185892c55b311e2377f6e1accdea9a592e020f60f54b1c2ed29c",
+    "corpora/query/train.jsonl": "8cc92ab726cdb984a40b933bcd7f2b850e2814cc717a3bf5e8e35dec0a15fed7",
+    "corpora/query/valid.jsonl": "3864b29e982ff9487e6f434100e816c7ef7de7c6f4c34c2e779256fdfe40100a",
+    "corpora/writer/manifest.json": "f47c9c3371817e9938649e124ee3858aeef3533efcf2da2d449b9ebfdd422cd2",
+    "corpora/writer/train.jsonl": "b589c3d120d4fbea60602d282a296feec59e7fae5f81e954f1631ad31f726254",
+    "corpora/writer/valid.jsonl": "95836ed3cb8cef78a9c058dd40b4ddcaa3a9efe05c905bb58a406d3f5fde6de0"
+  },
+  "checkpoints": {
+    "checkpoints/baseline.pt": "70f31ab69a9aa59c5f65975c3a09e149056b34619030c00a50a471bb67f9d994",
+    "checkpoints/keys.pt": "539e66a1da81988717b4ec2b2f7b79665e465280df30d6e529e380225338dda8",
+    "checkpoints/link.pt": "d0ac2bfcf69c0f747ebb8b08ef381f53b9dd5cf65657ee161bd6f54973f3d645",
+    "checkpoints/operation.pt": "193bfa439a7b371c3444d0173219f772785628ebcb80213dd829b8876f2ccf23",
+    "checkpoints/pair.pt": "1f42c6ca27ec06f4cc11c0184259d987e85a6df8b3de12664f16428f63698c79",
+    "checkpoints/pair_init.pt": "3d4689e2eeca1425fb550617b2016cd1fc61cd9e1c366233605065d57fd80120",
+    "checkpoints/query.pt": "25313b9e613760dc35488c2750ac7ff1e50dccf7cc0a6488a3138b3668ef2729",
+    "checkpoints/tagger.pt": "0868f65a5e0ac228f00f66ffff274f4e3e8d83cce5667f5dc8382cc0c062f402",
+    "checkpoints/writer.pt": "188e6b00defad44940ef9d45d48485e0095a89fa81a8baed35834cf9c83e1601",
+    "checkpoints/writer_init.pt": "3c9d2d8d7c6bc189b494eb0d75059476c26a0c64604fafcb9f6288c95780f567"
+  },
+  "feature_data": {
+    "feature_data/query_train.pt": "ab9f669cc65bf54f9f309c0aca53f567f1a790167019691356b6e3995446f1ce",
+    "feature_data/query_valid.pt": "eb146715ad39654a02c6ce035099e3dd9db5e6f31b7a628930d050ccf3dd824e"
+  },
+  "separation": {
+    "locomo_training": false,
+    "sealed_test_committed": false,
+    "gguf_committed": false
+  },
+  "notes": [
+    "Runtime binaries are independently verified by re-exporting selected checkpoints and comparing SHA-256.",
+    "Pair, link and query scorer parameters are loaded for compatibility but bypassed by resident recall.",
+    "The archived query pair feature rows are the original head-training data. Query raw examples were regenerated with matching sample IDs; raw-source byte identity is not asserted.",
+    "Other frozen-backbone feature caches are generated on demand."
+  ]
+}
