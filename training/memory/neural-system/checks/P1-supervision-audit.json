@@ -1,0 +1,26 @@
+{
+  "format": "availability-supervision-audit-v1",
+  "template_version": "gguf-chatml-v2",
+  "cases": 768,
+  "pair_count": 672,
+  "max_prompt_tokens": 38,
+  "max_completion_tokens": 16,
+  "max_joint_tokens": 50,
+  "isolated_reply_tokenization_differs_count": 768,
+  "joint_prefix_and_reply_bytes_verified": true,
+  "teacher_forcing_for_training_only": true,
+  "corpus_manifest_sha256": "3436917c4e86487738ff5a312fd29a37dc1bb1ba41863d3dee095907fb0fb778",
+  "records_sha256": "9629ee73e9261c7b9fba0d3061c48d5a84da728da02e5909f739b7f9b3eb30a6",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "tokenizer_binary_sha256": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+  "source_sha256": {
+    "python/availability_supervision.py": "3e5cf4fbf64962bb909ee7e6ab06617799000b8998b5728c3358b3b9e0af5f6a",
+    "python/audit_availability_supervision.py": "fae9598607ad19077302b49ad11d215af823de949fa981c91f543ef646d09a05",
+    "python/neural_memory_generation.py": "f23ff36ce9260428369deedf62b1f711b1b2a562be3e1a0d6e46f13d62a93414",
+    "python/prepare_availability_curriculum.py": "9f4875a42ec7eac3bedf5f627068c7a363a97197b2a12f7400337f598da99820",
+    "python/c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8"
+  },
+  "model_inference_calls": 0,
+  "optimizer_steps": 0,
+  "training_approved": false
+}

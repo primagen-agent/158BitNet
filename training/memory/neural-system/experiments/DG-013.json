@@ -1,0 +1,24 @@
+{
+  "id": "DG-013",
+  "status": "complete_content_off_not_a_fix",
+  "executed_registration": "../reviews/DG-013/registration.json",
+  "result": "../reviews/DG-013/score.json",
+  "process": "../reviews/DG-013/PROCESS.md",
+  "optimizer_steps": 0,
+  "training_approved": false,
+  "deployment_approved": false,
+  "hypothesis": "Removing the continuous content increment may remove repetition, but need not fix binding or exact value recall.",
+  "intervention": "Only for the model-predicted supported route, mix the unchanged neural pointer distribution with ordinary C base logits instead of content-corrected logits. Do not change route, copy mass, weights, uncertainty branch, tokenizer or prompt.",
+  "selection": "All 16 CG-003 supported-route cases: aux 4, product 12. Determined by the frozen model predictions, never correctness or gold labels. Fresh neural prefill must reproduce original probabilities and route exactly. The other 32 cases are historical unchanged-path controls, not newly generated replies.",
+  "fresh_indices": {"joint_aux": [12,14,18,20], "joint_product": [0,1,2,6,7,8,12,13,14,18,19,20]},
+  "original_report_sha256": {"joint_aux": "f959ff00389385cb5edae2535ce6f1f56e7f95ecc14628523ff88fa09ed5d6d9", "joint_product": "742414f1903fa8b737175cdf25aa610af8bb7518af3662a67b74b30e0afbf240"},
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "checkpoint_sha256": {
+    "joint_aux": "fb4728d552c63d4ca6881b7141766240a1df3abf3c73e7b92a40d69475d3dc36",
+    "joint_product": "d40a254c82aa1602b5e1c2bfa63dc971f7079666539bf1fb9550e3a43f7cff8a"
+  },
+  "generation": {"greedy": true, "max_new_tokens": 64, "context_capacity": 128, "kv_history_reuse": false, "internal_prefill_kv_buffers": true},
+  "numerical_gate": "Each actual prefix: fresh ordinary C reference equals C base bitwise; zero-increment pointer composition matches the separate ablation operator at atol 1e-5, rtol 1e-4 with identical top1. Verify every raw file, prefix and predicted token afterwards.",
+  "evaluation": "Report all 16 fresh replies and unchanged-control provenance separately. Two blind reviewers for semantic claims, keep disagreements. Compare repetition, truncation and complete facts against CG-003; no deployment/model selection from this diagnostic.",
+  "stop": "No optimizer, no additional seeds, no alternative mixing weights, no gold route, no source text in prompt, no LoCoMo. Preserve all failures. A shorter or less repetitive reply alone is not successful recall."
+}

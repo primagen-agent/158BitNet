@@ -1,0 +1,609 @@
+{
+  "format": "dg017-zero-update-interface-v1",
+  "registration_sha256": "aa803b1516b15ca559e6bbb4abf0f86b86087c3b062a4967f171ad39b29c3ac8",
+  "source_sha256": {
+    "joint_span_reader.py": "738bf1dafb0013ca8d8627892886bc1ecd4cc5211c81c231c3c54897938f59fb",
+    "joint_span_supervision.py": "4be6b4aed1829759412f7dddbdea3e82d62e6ef64ca0622027387ad0a40e05de",
+    "check_joint_span_interface.py": "00fda07e5c1fa4c4ee9a42c85b57c8b93bd9ddb37b99429cba4a1d1282f78b6e"
+  },
+  "optimizer_steps": 0,
+  "new_C_generation": false,
+  "parameters_unchanged": true,
+  "initial_parameter_digest": "1a1e61a1cca512792fb7afef2d6f14899a0e43c47b987ea12cf006d87957d9d4",
+  "origin": "untrained_neural_head",
+  "autonomous_recall_accuracy_measured": false,
+  "rows": [
+    {
+      "id": "joint-cff41e673284fbf1c6d9",
+      "scenario": "correct",
+      "language": "en",
+      "span_candidates": 168,
+      "random_prediction": {
+        "route": 0,
+        "mode": "generate",
+        "fact": null,
+        "value": null,
+        "confidence": 0.0
+      },
+      "handle_is_null": true,
+      "handle_origin": "neural_prediction",
+      "route_probabilities": [
+        0.35233935713768005,
+        0.31906992197036743,
+        0.3285906910896301
+      ],
+      "annotation_error": "unrepresentable exact byte boundary: 'Aarhus'; no trimming or target deletion",
+      "gradient_gate": false,
+      "first_prefix_ids": [
+        1,
+        59320,
+        73441,
+        8251,
+        5,
+        40165,
+        24494,
+        1377,
+        15135,
+        3180,
+        72,
+        4498,
+        1573,
+        1896,
+        6080,
+        72,
+        73440,
+        5,
+        73441,
+        1836,
+        5,
+        23496,
+        2373,
+        56129,
+        3003,
+        4697,
+        2336,
+        74,
+        73440,
+        5,
+        73441,
+        43686,
+        5
+      ]
+    },
+    {
+      "id": "joint-3415d75b34a68cb08833",
+      "scenario": "role_swap",
+      "language": "en",
+      "span_candidates": 152,
+      "random_prediction": {
+        "route": 0,
+        "mode": "generate",
+        "fact": null,
+        "value": null,
+        "confidence": 0.0
+      },
+      "handle_is_null": true,
+      "handle_origin": "neural_prediction",
+      "route_probabilities": [
+        0.35237839818000793,
+        0.3190550208091736,
+        0.3285665810108185
+      ],
+      "annotation_error": null,
+      "gradient_gate": true,
+      "first_prefix_ids": [
+        1,
+        59320,
+        73441,
+        8251,
+        5,
+        40165,
+        24494,
+        1377,
+        15135,
+        3180,
+        72,
+        4498,
+        1573,
+        1896,
+        6080,
+        72,
+        73440,
+        5,
+        73441,
+        1836,
+        5,
+        23496,
+        2373,
+        56129,
+        3003,
+        4697,
+        2336,
+        74,
+        73440,
+        5,
+        73441,
+        43686,
+        5
+      ],
+      "losses": {
+        "route": 1.1130157709121704,
+        "fact": 0.0,
+        "value": 0.0,
+        "mode": 0.9927083253860474,
+        "total": 2.1057240962982178
+      },
+      "gradient_l1": {
+        "query.weight": 25.003372192382812,
+        "query.bias": 1.2660648822784424,
+        "source.weight": 17.839492797851562,
+        "source.bias": 0.8990128040313721,
+        "query_pool.weight": 0.0011927624000236392,
+        "span.weight": 3.0209531784057617,
+        "span.bias": 1.3078508377075195,
+        "fact.0.weight": 0.0009573155548423529,
+        "fact.0.bias": 2.004936021648973e-07,
+        "fact.2.weight": 4.901438660454005e-05,
+        "fact.2.bias": 7.09405867382884e-11,
+        "fact_value.weight": null,
+        "value.weight": null,
+        "value_query.weight": null,
+        "route.0.weight": 10.389287948608398,
+        "route.0.bias": 3.2426013946533203,
+        "route.2.weight": 3.4489052295684814,
+        "route.2.bias": 1.3428668975830078,
+        "mode.0.weight": 3220.05419921875,
+        "mode.0.bias": 0.9856953024864197,
+        "mode.2.weight": 68.840576171875,
+        "mode.2.bias": 1.2588565349578857
+      },
+      "conditional_span_heads_connected": false
+    },
+    {
+      "id": "joint-f417c9409407bcb8e962",
+      "scenario": "correct",
+      "language": "zh",
+      "span_candidates": 152,
+      "random_prediction": {
+        "route": 0,
+        "mode": "generate",
+        "fact": null,
+        "value": null,
+        "confidence": 0.0
+      },
+      "handle_is_null": true,
+      "handle_origin": "neural_prediction",
+      "route_probabilities": [
+        0.3522118330001831,
+        0.31993773579597473,
+        0.3278504014015198
+      ],
+      "annotation_error": null,
+      "gradient_gate": true,
+      "first_prefix_ids": [
+        1,
+        59320,
+        73441,
+        8251,
+        5,
+        40165,
+        24494,
+        1377,
+        15135,
+        3180,
+        72,
+        4498,
+        1573,
+        1896,
+        6080,
+        72,
+        73440,
+        5,
+        73441,
+        1836,
+        5,
+        43793,
+        3582,
+        59324,
+        2634,
+        33345,
+        9944,
+        68,
+        73440,
+        5,
+        73441,
+        43686,
+        5
+      ],
+      "losses": {
+        "route": 1.1396288871765137,
+        "fact": 5.023889541625977,
+        "value": 3.806565999984741,
+        "mode": 0.8885077238082886,
+        "total": 10.85859203338623
+      },
+      "gradient_l1": {
+        "query.weight": 20.835372924804688,
+        "query.bias": 1.0446563959121704,
+        "source.weight": 36.427215576171875,
+        "source.bias": 0.8259683847427368,
+        "query_pool.weight": 0.0006891859811730683,
+        "span.weight": 3.981444835662842,
+        "span.bias": 1.201911449432373,
+        "fact.0.weight": 2.8279600143432617,
+        "fact.0.bias": 0.00074281997513026,
+        "fact.2.weight": 0.1546170711517334,
+        "fact.2.bias": 8.940696716308594e-08,
+        "fact_value.weight": 0.05144473910331726,
+        "value.weight": 0.05945887416601181,
+        "value_query.weight": 0.014717846177518368,
+        "route.0.weight": 9.211410522460938,
+        "route.0.bias": 2.9356043338775635,
+        "route.2.weight": 3.502793312072754,
+        "route.2.bias": 1.3601245880126953,
+        "mode.0.weight": 3453.428466796875,
+        "mode.0.bias": 1.0401005744934082,
+        "mode.2.weight": 59.48279571533203,
+        "mode.2.bias": 1.177461862564087
+      },
+      "conditional_span_heads_connected": true
+    },
+    {
+      "id": "joint-00358fb1f7c2b30e2c7d",
+      "scenario": "role_swap",
+      "language": "zh",
+      "span_candidates": 152,
+      "random_prediction": {
+        "route": 0,
+        "mode": "generate",
+        "fact": null,
+        "value": null,
+        "confidence": 0.0
+      },
+      "handle_is_null": true,
+      "handle_origin": "neural_prediction",
+      "route_probabilities": [
+        0.3521932065486908,
+        0.31996166706085205,
+        0.32784515619277954
+      ],
+      "annotation_error": null,
+      "gradient_gate": true,
+      "first_prefix_ids": [
+        1,
+        59320,
+        73441,
+        8251,
+        5,
+        40165,
+        24494,
+        1377,
+        15135,
+        3180,
+        72,
+        4498,
+        1573,
+        1896,
+        6080,
+        72,
+        73440,
+        5,
+        73441,
+        1836,
+        5,
+        43793,
+        3582,
+        59324,
+        2634,
+        33345,
+        9944,
+        68,
+        73440,
+        5,
+        73441,
+        43686,
+        5
+      ],
+      "losses": {
+        "route": 1.1152138710021973,
+        "fact": 0.0,
+        "value": 0.0,
+        "mode": 0.8885671496391296,
+        "total": 2.0037810802459717
+      },
+      "gradient_l1": {
+        "query.weight": 25.13541030883789,
+        "query.bias": 1.2602837085723877,
+        "source.weight": 18.80364990234375,
+        "source.bias": 0.8572760820388794,
+        "query_pool.weight": 0.001260661520063877,
+        "span.weight": 2.840022325515747,
+        "span.bias": 1.2603017091751099,
+        "fact.0.weight": 0.0011863472172990441,
+        "fact.0.bias": 2.8935986051692453e-07,
+        "fact.2.weight": 6.488763756351545e-05,
+        "fact.2.bias": 4.2746250983327627e-10,
+        "fact_value.weight": null,
+        "value.weight": null,
+        "value_query.weight": null,
+        "route.0.weight": 10.161271095275879,
+        "route.0.bias": 3.246145009994507,
+        "route.2.weight": 3.467137575149536,
+        "route.2.bias": 1.3443095684051514,
+        "mode.0.weight": 3453.59716796875,
+        "mode.0.bias": 1.0401537418365479,
+        "mode.2.weight": 59.485469818115234,
+        "mode.2.bias": 1.1775108575820923
+      },
+      "conditional_span_heads_connected": false
+    }
+  ],
+  "prefix_lineage": [
+    {
+      "case": "ascii-riga",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "ascii-riga",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "ascii-riga",
+      "position": 2,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "ascii-quimper",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "ascii-quimper",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "ascii-quimper",
+      "position": 2,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "ascii-quimper",
+      "position": 3,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "chinese",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "chinese",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "chinese",
+      "position": 2,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "unicode",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "unicode",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "repeated",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "repeated",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "repeated",
+      "position": 2,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "repeated",
+      "position": 3,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "leading-space-value",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "leading-space-value",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "leading-space-value",
+      "position": 2,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "quoted-value",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "quoted-value",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "quoted-value",
+      "position": 2,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "quoted-value",
+      "position": 3,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "quoted-value",
+      "position": 4,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "prefix-space-merge",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "prefix-space-merge",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "prefix-space-merge",
+      "position": 2,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "prefix-space-merge",
+      "position": 3,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "prefix-letter-merge",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "prefix-letter-merge",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "noncanonical-prefix",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "noncanonical-prefix",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "multiline-value",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "multiline-value",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "multiline-value",
+      "position": 2,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "multiline-value",
+      "position": 3,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "multiline-value",
+      "position": 4,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "multiline-value",
+      "position": 5,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "multiline-value",
+      "position": 6,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "whitespace-value",
+      "position": 0,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "whitespace-value",
+      "position": 1,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "whitespace-value",
+      "position": 2,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "whitespace-value",
+      "position": 3,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    },
+    {
+      "case": "whitespace-value",
+      "position": 4,
+      "exact_prefix_accepted": true,
+      "different_prefix_rejected": true
+    }
+  ],
+  "full_native_gradient_gate": false,
+  "V2_complete": false
+}

@@ -1,0 +1,777 @@
+{
+  "format": "cg001-fixed-native-baseline-v1",
+  "step": 0,
+  "feature_package_digest": "8f5b2d2ae685a7995d45422e661a8f59811357186d0cff370211eb596d5f36a6",
+  "template_version": "gguf-chatml-v2",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "corpus_manifest_sha256": "3436917c4e86487738ff5a312fd29a37dc1bb1ba41863d3dee095907fb0fb778",
+  "cached_tokens": 0,
+  "reused_tokens": 0,
+  "internal_prefill_kv_buffers": true,
+  "oracle_answers_used": false,
+  "memory_enabled": false,
+  "predictions": [
+    {
+      "id": "case-d68ac9d7b2b39fe94695",
+      "input_sha256": "c742f30ae5263b2fa3fb20d251a888089115a6fe4d3310fac1298b16bca5b2b4",
+      "text": "Celia is currently living in New York City.",
+      "token_ids": [
+        59357,
+        39676,
+        1410,
+        4686,
+        5503,
+        1377,
+        2404,
+        4436,
+        4599,
+        72,
+        73440
+      ],
+      "raw_text_hex": "43656c69612069732063757272656e746c79206c6976696e6720696e204e657720596f726b20436974792e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-2841cfa9cf20f00891d1",
+      "input_sha256": "97ef94c56fa3e44d532e475b2b1d562bef9e0bf2ac95599fc093749abe3f5778",
+      "text": "Celia is currently living in New York City.",
+      "token_ids": [
+        59357,
+        39676,
+        1410,
+        4686,
+        5503,
+        1377,
+        2404,
+        4436,
+        4599,
+        72,
+        73440
+      ],
+      "raw_text_hex": "43656c69612069732063757272656e746c79206c6976696e6720696e204e657720596f726b20436974792e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-410cc79e7fc060c0b6a0",
+      "input_sha256": "a81bdafe73d68b00d3c64f5b8c02a678b3659837dcf98a2317f36503268fd316",
+      "text": "Celia is currently living in New York City.",
+      "token_ids": [
+        59357,
+        39676,
+        1410,
+        4686,
+        5503,
+        1377,
+        2404,
+        4436,
+        4599,
+        72,
+        73440
+      ],
+      "raw_text_hex": "43656c69612069732063757272656e746c79206c6976696e6720696e204e657720596f726b20436974792e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-c61340e0ba8151f9ee09",
+      "input_sha256": "4cb5c3f0c39cd77f6c5a7529f8018f890ec28f987158f5e320a4463bb8c5fd14",
+      "text": "Ok.",
+      "token_ids": [
+        22997,
+        72,
+        73440
+      ],
+      "raw_text_hex": "4f6b2e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-5e76236adb954331887e",
+      "input_sha256": "b72a4a28bf28637a1fd20af66375ac893fad01e6005d7bc31f0219bba25ad94d",
+      "text": "当然可以。Celia目前住在上海。",
+      "token_ids": [
+        5580,
+        1802,
+        66,
+        56222,
+        23262,
+        3602,
+        33345,
+        3354,
+        66,
+        73440
+      ],
+      "raw_text_hex": "e5bd93e784b6e58fafe4bba5e3808243656c6961e79baee5898de4bd8fe59ca8e4b88ae6b5b7e38082",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-0955f6c759b8d1cc160d",
+      "input_sha256": "7098c4528eba6ca2b8f80744c36fcf5f85ac824ec749f2fa16fe456c0b59088d",
+      "text": "当然可以。Celia目前住在上海。",
+      "token_ids": [
+        5580,
+        1802,
+        66,
+        56222,
+        23262,
+        3602,
+        33345,
+        3354,
+        66,
+        73440
+      ],
+      "raw_text_hex": "e5bd93e784b6e58fafe4bba5e3808243656c6961e79baee5898de4bd8fe59ca8e4b88ae6b5b7e38082",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-6cc67c267bdfa8a934a1",
+      "input_sha256": "578c5de3fe91aa82000fec554c4f524998aaef53941f69754a9f33b663d109a4",
+      "text": "当然可以。Celia目前住在上海。",
+      "token_ids": [
+        5580,
+        1802,
+        66,
+        56222,
+        23262,
+        3602,
+        33345,
+        3354,
+        66,
+        73440
+      ],
+      "raw_text_hex": "e5bd93e784b6e58fafe4bba5e3808243656c6961e79baee5898de4bd8fe59ca8e4b88ae6b5b7e38082",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-d39632cf838459875bff",
+      "input_sha256": "9a3b983ce7c49786b42c7cc2a8225cb8519e48307509ce3a44506da35ead8c22",
+      "text": "好的，3与31的和是34。",
+      "token_ids": [
+        2987,
+        65,
+        59362,
+        59487,
+        59362,
+        59345,
+        21667,
+        59390,
+        59362,
+        59370,
+        66,
+        73440
+      ],
+      "raw_text_hex": "e5a5bde79a84efbc8c33e4b88e3331e79a84e5928ce698af3334e38082",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-0afeea181bfe2cce15ae",
+      "input_sha256": "fd091736c6b877e23a52bd9a7e5b4d50a95b7eb3d0704271c0c9d4a224607074",
+      "text": "Adela is currently living in the United States.",
+      "token_ids": [
+        5250,
+        12941,
+        1410,
+        4686,
+        5503,
+        1377,
+        1358,
+        3532,
+        4025,
+        72,
+        73440
+      ],
+      "raw_text_hex": "4164656c612069732063757272656e746c79206c6976696e6720696e2074686520556e69746564205374617465732e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-8994b1d24f644a20010b",
+      "input_sha256": "fa455b2e0d546a9f31fb86870ed583c577ced4ebef008cdb3db9bf0a6a080fb8",
+      "text": "Adela is currently living in the United States.",
+      "token_ids": [
+        5250,
+        12941,
+        1410,
+        4686,
+        5503,
+        1377,
+        1358,
+        3532,
+        4025,
+        72,
+        73440
+      ],
+      "raw_text_hex": "4164656c612069732063757272656e746c79206c6976696e6720696e2074686520556e69746564205374617465732e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-087dc07d3baa42a10ac1",
+      "input_sha256": "8c6d30d77cf63ed5ef2569d0fb3d5c913c8e01d4090b2ad2407999054b463a12",
+      "text": "Adela is currently living in the United States.",
+      "token_ids": [
+        5250,
+        12941,
+        1410,
+        4686,
+        5503,
+        1377,
+        1358,
+        3532,
+        4025,
+        72,
+        73440
+      ],
+      "raw_text_hex": "4164656c612069732063757272656e746c79206c6976696e6720696e2074686520556e69746564205374617465732e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-e917740be7f368e54dc4",
+      "input_sha256": "99b62871105d113f906525849dc5dd283f86f311921c0024e3c4190b0326b4d4",
+      "text": "Ok.",
+      "token_ids": [
+        22997,
+        72,
+        73440
+      ],
+      "raw_text_hex": "4f6b2e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-d3cf42c1d8ad5b74a82c",
+      "input_sha256": "af911996ad8ec490624ae49c134ffe889341c0a9940e37892cce7fa8039408a8",
+      "text": "抱歉，我无法提供实时更新的信息。建议您访问相关网站或应用程序以获取最新的居住信息。",
+      "token_ids": [
+        38270,
+        65,
+        59422,
+        4585,
+        2516,
+        17621,
+        45953,
+        2427,
+        66,
+        3917,
+        60215,
+        10683,
+        3045,
+        4864,
+        59654,
+        28568,
+        59414,
+        9603,
+        27054,
+        10408,
+        2427,
+        66,
+        73440
+      ],
+      "raw_text_hex": "e68ab1e6ad89efbc8ce68891e697a0e6b395e68f90e4be9be5ae9ee697b6e69bb4e696b0e79a84e4bfa1e681afe38082e5bbbae8aeaee682a8e8aebfe997aee79bb8e585b3e7bd91e7ab99e68896e5ba94e794a8e7a88be5ba8fe4bba5e88eb7e58f96e69c80e696b0e79a84e5b185e4bd8fe4bfa1e681afe38082",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-ed876424f9d365d8bc64",
+      "input_sha256": "4204f230a2bd7843b18dfa2699465e96576144c536286a4126512718a59a3a5d",
+      "text": "抱歉，我无法提供实时更新的信息。建议您访问相关网站或应用程序以获取最新的居住信息。",
+      "token_ids": [
+        38270,
+        65,
+        59422,
+        4585,
+        2516,
+        17621,
+        45953,
+        2427,
+        66,
+        3917,
+        60215,
+        10683,
+        3045,
+        4864,
+        59654,
+        28568,
+        59414,
+        9603,
+        27054,
+        10408,
+        2427,
+        66,
+        73440
+      ],
+      "raw_text_hex": "e68ab1e6ad89efbc8ce68891e697a0e6b395e68f90e4be9be5ae9ee697b6e69bb4e696b0e79a84e4bfa1e681afe38082e5bbbae8aeaee682a8e8aebfe997aee79bb8e585b3e7bd91e7ab99e68896e5ba94e794a8e7a88be5ba8fe4bba5e88eb7e58f96e69c80e696b0e79a84e5b185e4bd8fe4bfa1e681afe38082",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-b9c87f9a2d4ab9867564",
+      "input_sha256": "2d0fd44af8cc8d5e4192e4a54d68119d8362b128c0fcf9543746d182f3c3bc60",
+      "text": "抱歉，我无法提供实时更新的信息。建议您访问相关网站或应用程序以获取最新的居住信息。",
+      "token_ids": [
+        38270,
+        65,
+        59422,
+        4585,
+        2516,
+        17621,
+        45953,
+        2427,
+        66,
+        3917,
+        60215,
+        10683,
+        3045,
+        4864,
+        59654,
+        28568,
+        59414,
+        9603,
+        27054,
+        10408,
+        2427,
+        66,
+        73440
+      ],
+      "raw_text_hex": "e68ab1e6ad89efbc8ce68891e697a0e6b395e68f90e4be9be5ae9ee697b6e69bb4e696b0e79a84e4bfa1e681afe38082e5bbbae8aeaee682a8e8aebfe997aee79bb8e585b3e7bd91e7ab99e68896e5ba94e794a8e7a88be5ba8fe4bba5e88eb7e58f96e69c80e696b0e79a84e5b185e4bd8fe4bfa1e681afe38082",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    },
+    {
+      "id": "case-50832826530d9fede5b3",
+      "input_sha256": "1af0e9d264e78c70ed21a079374e939c3c213d1133bd6790774a5508481fb667",
+      "text": "2 + 30 = 32",
+      "token_ids": [
+        59349,
+        59320,
+        62,
+        59320,
+        59362,
+        59344,
+        59320,
+        64,
+        59320,
+        59362,
+        59349,
+        73440
+      ],
+      "raw_text_hex": "32202b203330203d203332",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false
+    }
+  ],
+  "raw_steps": [
+    {
+      "step": 0,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-c61340e0ba8151f9ee09",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-e917740be7f368e54dc4",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "40c0f629bbaadc0c878f323d06154e4d85e38f00fe1a23ff3bd493d1f324e009",
+      "output_sha256": "37ae6093c0f9b44a13a440b18873a4847e833c25af3baa4d9832e77743e84e55",
+      "log_sha256": "1716b0a99d2dc1acd6ec1d106a41446d7aa6e3f33836a7d1f3b505e8156e0f9a"
+    },
+    {
+      "step": 1,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-c61340e0ba8151f9ee09",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-e917740be7f368e54dc4",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "b6a55286776c125947049be68a14e0093f7cd75ec7e15372ce7b0d28e4c878e3",
+      "output_sha256": "5205548711a40ae9899b2c858e76ae2a8c3e64dd2bc28ce9e3b20eed5925c38d",
+      "log_sha256": "1716b0a99d2dc1acd6ec1d106a41446d7aa6e3f33836a7d1f3b505e8156e0f9a"
+    },
+    {
+      "step": 2,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-c61340e0ba8151f9ee09",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-e917740be7f368e54dc4",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "9c2289928bd9f8065a0ef530ac15ea559083149d5b8aa3312add5b32fc32f419",
+      "output_sha256": "e37acbe5ac88019b23161469c47bb007528a04762c891dc823fda1a4a41f3a8b",
+      "log_sha256": "1716b0a99d2dc1acd6ec1d106a41446d7aa6e3f33836a7d1f3b505e8156e0f9a"
+    },
+    {
+      "step": 3,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "76b3c918ec3ab8cb937074a740557c1bdcb5e57bb7e1118ed8fc3345d86d69ce",
+      "output_sha256": "7df0bebd933b1235417480491a22368217b1d5e05cde2055c5e99702cd98905e",
+      "log_sha256": "c2650b161c2e02306a4f9647a547b35e54f94006826066dc277479e9bb1dbb93"
+    },
+    {
+      "step": 4,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "d3ef575963b655bf323d3c8566bc82d5123c888983ff79e08aab17fec75212d5",
+      "output_sha256": "78d77093b7d816a28720033d044f9af94df25663dae07ff9b53f2ae2f5058565",
+      "log_sha256": "c2650b161c2e02306a4f9647a547b35e54f94006826066dc277479e9bb1dbb93"
+    },
+    {
+      "step": 5,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "20ca133f809fd3f5c77cffd89ba104aacfa168fa3ed577cbae63d4c1fc9e6072",
+      "output_sha256": "155a2115500edf121a19be7d6ae565fe8538738549cfa6a46344ebd31c4848ed",
+      "log_sha256": "c2650b161c2e02306a4f9647a547b35e54f94006826066dc277479e9bb1dbb93"
+    },
+    {
+      "step": 6,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "d85481c85656211b307f9ea0f0e8068529c0d50f80baf8ad972d2f3209503c51",
+      "output_sha256": "fbb4f943a51816477a9b935ff9600d7115c17b957d337317fc12ab4ff4aa9c90",
+      "log_sha256": "c2650b161c2e02306a4f9647a547b35e54f94006826066dc277479e9bb1dbb93"
+    },
+    {
+      "step": 7,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "b521ff268bfb9ba4cfa92872d168b3953dcc5e41da23bd08850b3eee52fb3b7e",
+      "output_sha256": "dacf085d898893c1135b40f99968a2bd59cd0aa4c66a729621a8976cf6a2b2c2",
+      "log_sha256": "c2650b161c2e02306a4f9647a547b35e54f94006826066dc277479e9bb1dbb93"
+    },
+    {
+      "step": 8,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "aeaab4d7a1e056fbc5107424cc9c099cacf5f429abb9229e52999f93cfaf6fb5",
+      "output_sha256": "23911a37c5f5d58096ba121d8a7478ed8137a532d5f2caf616a6d8ec2abbb164",
+      "log_sha256": "c2650b161c2e02306a4f9647a547b35e54f94006826066dc277479e9bb1dbb93"
+    },
+    {
+      "step": 9,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-5e76236adb954331887e",
+        "case-0955f6c759b8d1cc160d",
+        "case-6cc67c267bdfa8a934a1",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "f7c98902d12df0d8eadab2aaa2144b754460193271772c3ca596110db27c04c9",
+      "output_sha256": "c8547e964d920452b96f087ce4b2179b54f3c79d3f6f9c39d1bf9bca81dd525f",
+      "log_sha256": "c2650b161c2e02306a4f9647a547b35e54f94006826066dc277479e9bb1dbb93"
+    },
+    {
+      "step": 10,
+      "active_case_ids": [
+        "case-d68ac9d7b2b39fe94695",
+        "case-2841cfa9cf20f00891d1",
+        "case-410cc79e7fc060c0b6a0",
+        "case-d39632cf838459875bff",
+        "case-0afeea181bfe2cce15ae",
+        "case-8994b1d24f644a20010b",
+        "case-087dc07d3baa42a10ac1",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "62d5fb4124507925499b9f00d5fd52da6e5c196804d11d8a89acade43655af2f",
+      "output_sha256": "1990993f88cb0d1421a1fc22ca8e42baef901d786d6e894c080948e1ad531e1c",
+      "log_sha256": "f84d7c7e5c9e0135ae38079b853fe6f6af8eac46276726491af5970a09133c98"
+    },
+    {
+      "step": 11,
+      "active_case_ids": [
+        "case-d39632cf838459875bff",
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564",
+        "case-50832826530d9fede5b3"
+      ],
+      "input_sha256": "9bf99324ef1c533eaa99d1dd28195b6adcf61e5a37849cfbc4b4a88238981070",
+      "output_sha256": "dfbf98aa99d64a5b17551147cc65b0ffb86f713f58daecf41edcdbafd5d6cc3c",
+      "log_sha256": "34979689d07df8d89452aec21e552d79d2d34c6bb7da58353c63c4de97286ecb"
+    },
+    {
+      "step": 12,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "293874e5479f8abc0ac5210cbae1b02df131de6d131f2a1009f119172918d3de",
+      "output_sha256": "b768fcb9e0c7a234bfaa92254097c1761ce9105db1f1a7cfbdf3904f6dec8a5a",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 13,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "7402f69f48a6b9bb0360aea63dd61b09d592b468541ff30f10d92deb75f944a5",
+      "output_sha256": "9965772d597ff02e36d6e573d31ed4425ac5c0ab222575bf3deee33d6b1054c0",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 14,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "ee61fa06dfe90addc4a4fd4f0c9e6c30b55273dde4b29eea02e348b5fc26df25",
+      "output_sha256": "17145964ec52d2e08bbd7d9576c528a08e9dd01dc0947040de346e4057f8dcab",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 15,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "cf1791a4131405458cac81cd9d0e38ea3725af68a50636e845331adeaa48478c",
+      "output_sha256": "6341f15c6911b64c19869315e0299d14db793adc9e44d9ed342470b8967cc254",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 16,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "d0b5917862111528b8046b6ea85504f2e17ca8bd611293c14be1799517ab1822",
+      "output_sha256": "c212b3a32f87fcbd1a1633ece6ed578d1f19893f0b4983d63d855abb5764c579",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 17,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "e81d54bd669c580605c4d81bca2552ee69f5892b9640d3f0a1ec254435f9b896",
+      "output_sha256": "c50dd40461233b317c25b66339a7aba3c8a301f9464d10434923b2527316d835",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 18,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "4b25f4b40cae626ce4cb79b164c4f89e8d9e724d8395076295780cf29bc88f87",
+      "output_sha256": "d740edf74d0ed7f2ca604437dfa6e425adb8f678f0aea7ac44722f3f45eb9c6e",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 19,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "9b8a0e788a8897139062c42641a96ebf72e93c8405ab8dacaa85062b3d531c7b",
+      "output_sha256": "de241e97b3938b7fd4223ff4d9f4b0da56894dfb120d96a6619b99140ad5445c",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 20,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "d63f2fa9d50011e81e03d8bd5463405fcb287568a5f5be0dfc54c1c44dda14d6",
+      "output_sha256": "8e1905c96431e45ef9a583aade30edbd95e3751da0c1c5c134570d486d0809b4",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 21,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "5f6e13432c70c976ec6aa8821d1b70bb3a8a2842d2b5311d717b588eb5616232",
+      "output_sha256": "9480f0ca8037ebee849fba6cfb42fa3692db026998e72f9180c1124e59698b56",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    },
+    {
+      "step": 22,
+      "active_case_ids": [
+        "case-d3cf42c1d8ad5b74a82c",
+        "case-ed876424f9d365d8bc64",
+        "case-b9c87f9a2d4ab9867564"
+      ],
+      "input_sha256": "1608adb197e18c018429279844ea31e48259223b7429c27a9ec407810801c215",
+      "output_sha256": "8528e5aca83a90a54315f584c454aa970732d7f5506024611a28521ebf43d5a7",
+      "log_sha256": "2e184c65c3b6635151634a8041d1527559a9c30c58cfbf8305bc7db1f848bad7"
+    }
+  ],
+  "optimizer_steps": 0,
+  "memory_accuracy_measured": false,
+  "probe_sha256": "2735729604b1a52d99d1a60f48234b96ce3683d63aeec6434879bbfe7753e302",
+  "tokenizer_sha256": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+  "source_sha256": {
+    "python/eval_availability_baseline.py": "fc4f3c8dbd77735c879af0c1c20953f22ff396c09284f5ce2449a589244200b6",
+    "python/native_prefix_bank.py": "ede73dacd36bb88320fce230adfb2b2c26a39088630bd6c681a9fc574ff886cf",
+    "python/neural_memory_generation.py": "f23ff36ce9260428369deedf62b1f711b1b2a562be3e1a0d6e46f13d62a93414",
+    "tools/memory_prefix_probe.c": "11d64deff09409a989178e86429ef1f0b80a94c4193d2c1e68d12fb3e5ae6af2"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "format": "dg013-content-off-audit-v1",
+  "arm": "joint_aux",
+  "passed": true,
+  "fresh_cases": 4,
+  "unchanged_cases_not_rerun": 20,
+  "positions": 100,
+  "cases": [
+    {
+      "id": "joint-1298dd37f224157a8f76",
+      "original_case_index": 12,
+      "positions": 64,
+      "max_error": 0.0,
+      "pointer_changes_base_top1": 6,
+      "activation_unchanged": true,
+      "content_increment_zero": true,
+      "passed": true
+    },
+    {
+      "id": "joint-48795bbfa39e0bbb7c18",
+      "original_case_index": 14,
+      "positions": 12,
+      "max_error": 0.0,
+      "pointer_changes_base_top1": 1,
+      "activation_unchanged": true,
+      "content_increment_zero": true,
+      "passed": true
+    },
+    {
+      "id": "joint-285dd32d6f509d59b087",
+      "original_case_index": 18,
+      "positions": 12,
+      "max_error": 0.0,
+      "pointer_changes_base_top1": 1,
+      "activation_unchanged": true,
+      "content_increment_zero": true,
+      "passed": true
+    },
+    {
+      "id": "joint-5d9f011142cadea7ca56",
+      "original_case_index": 20,
+      "positions": 12,
+      "max_error": 0.0,
+      "pointer_changes_base_top1": 4,
+      "activation_unchanged": true,
+      "content_increment_zero": true,
+      "passed": true
+    }
+  ],
+  "generation_sha256": "ec27d535664d38ce3255defe932265fb06f8748e27a60a9b7a1c8604930d34da",
+  "original_sha256": "f959ff00389385cb5edae2535ce6f1f56e7f95ecc14628523ff88fa09ed5d6d9",
+  "semantic_accuracy_measured": false,
+  "optimizer_steps": 0,
+  "source_sha256": "fe8c0eb700115966297204c2c3edc40a598d33fcee924bc511a3e572be1c0112"
+}

@@ -1,0 +1,11 @@
+{
+  "id":"DG-028",
+  "status":"registered_linear_probe_feasibility",
+  "optimizer_steps":0,
+  "deployment_approved":false,
+  "scope":"Zero-update separability probe: freeze the V3-002 trained reader, collect the exact route-head input vectors (concat of pooled query q and span-evidence) for all 892 training items, and fit an INDEPENDENT logistic probe (5-fold CV) to answer whether the insufficient class is linearly separable on the trained representation. Secondary: same method on the mode-head input at supported items' start-labeled idle frames. No certified memory-model weight changes; probe artifacts live outside the model.",
+  "gates":{"primary":"fresh linear probe 5-fold CV per-class recall for route r2 vs the trained head's actual r2 recall (96/528=0.18)","secondary":"probe vs actual for mode=start on supported idle frames (actual 0/268)","determinism":"fixed probe seed and folds; digests of the frozen reader verified before/after"},
+  "decision_rule":{"probe_r2_recall>=0.8":"information present -> structural readout fix (detached/freshly initialized route pathway) registration + budget request","probe_r2_recall<0.5":"information absent -> representation/reader structure change needed, registered separately","0.5-0.8":"partial separability reported as mixed; proposes combined fix"},
+  "limits":"Probe trained on training items only (the question is representational separability, not generalization); not a memory model, not deployable, no LoCoMo, no serving.",
+  "stop":"No gate relaxation; probe failures reported as-is; no budget consumed."
+}

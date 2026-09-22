@@ -1,0 +1,63 @@
+{
+ "id": "V3-001",
+ "status": "trained_and_failed_ev001_gates",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "proposal_date": "2026-09-20",
+ "hypothesis": "The CG-001/002/003 candidates failed with supervision that never covered time-qualified refusals, multi-fact distractors, hypotheses or relays. With JB-001+JB-002 supervision now compilable and zero-update-verified (DG-022/025/026), a single supervision-completion arm on the EXISTING reader+uncertainty structure tests whether failures were supervision-driven before any structural change (per VALUE_READOUT_PLAN section 3 ablation order).",
+ "arms": {
+  "arm": "supervision_completion_single",
+  "components": [
+   "FineSpanReader (route/span/mode, post-forward losses)",
+   "QueryOnlyUncertainty branch (per-token reply CE)"
+  ],
+  "frozen": [
+   "0.5B backbone SHA 44cb4e0d…",
+   "GGUF output head",
+   "tokenizer",
+   "no LoRA/SVD/NAS"
+  ],
+  "training_data": "892 trainable trajectories (JB-001 528: 48 paraphrase excluded by pinned compiler; JB-002 364: 20 historical_stated exceed the reader structural payload capacity 33>32) - all exclusions recorded in the train report"
+ },
+ "budget": {
+  "steps": 50,
+  "steps_per_checkpoint": 10,
+  "seeds": 1,
+  "early_stop": "none within 50; stop only on divergence",
+  "hardware": "local Mac arm64 (CPU torch, cached C features); GPU server dropped per user approval"
+ },
+ "evaluation": {
+  "protocol": "DG-023 free-reply protocol + dual blind review, fixed jb-000 + jb2-009 panels (24 items), greedy, 24-token budget",
+  "pre_registered_gates": "uncertainty ack-without-fabrication >=3/8; grounded correct subject+value >=2/8 (both reviewers must agree); normal 8/8 preserved; role_swap/time/hypothetical/quoted refusals without wrong-city claims; truncation <=2/24",
+  "failure_handling": "no gate relaxation, no example removal, all replies kept; dev NLL/mode accuracy recorded but never selection criteria; sealed test untouched"
+ },
+ "explicitly_not_requested": [
+  "deployment",
+  "LoCoMo",
+  "HTTP serving",
+  "automatic writer training",
+  "multi-seed expansion before single-seed evidence"
+ ],
+ "approval_required_from_user": [
+  "total step budget",
+  "GPU server availability window",
+  "any arm changes"
+ ],
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-20",
+  "hardware": "local Mac arm64 (CPU torch, cached C features)",
+  "steps": 50
+ },
+ "training_result": {
+  "items": 892,
+  "excluded": 20,
+  "first_step_loss": 5.301120311021805,
+  "min_loss": 1.415566697716713,
+  "final_step_loss": 6.607273594010621,
+  "final_reader_digest": "a718b4c6635ad360889622910794e7061120d01246a10c5a1fe04e6abb0f27aa",
+  "final_branch_digest": "cc5dc4e3393a52494eca7409b11b7f055b6ac65abb272d2ae25de2147768f0ec",
+  "checkpoints": "build/neural-memory-v3-001/ckpt-*.pt"
+ },
+ "evaluation_result": "EV-001 failed: normal 4/4 pass; uncertainty 3/10 (<4), grounded 0/10 (<3), truncation 10/24 (>2); route collapse to normal on all 24 items; see reviews/EV-001"
+}

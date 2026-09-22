@@ -1,0 +1,33 @@
+{
+ "id": "V3-002",
+ "status": "trained_and_failed_ev002_structural",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "proposal_date": "2026-09-20",
+ "hypothesis": "DG-027 attributed the EV-001 failure to loss-objective conflict (route CE rose 0.999->1.070 while other heads optimized) plus a mode-gate failure (mode never predicts start). Upweighting the route term and start-position mode supervision on the SAME structure/data/seeds isolates the loss-composition factor.",
+ "loss_changes": {
+  "route_weight": 4.0,
+  "route_source": "fine_loss components recomposed in the trainer: w_route*route + fact + value + boundary + mode (pinned fine_loss itself untouched)",
+  "start_mode_weight": 4.0,
+  "start_mode_source": "idle-position mode CE multiplied by 4.0 when the label is start(1), 1.0 otherwise",
+  "rationale": "step-50 decomposition route 1.08 vs total 3.96; w=4 brings route to ~half the objective"
+ },
+ "training": {
+  "init": "from scratch (seeds 1018/1021, identical to V3-001) for a clean single-factor comparison",
+  "steps_requested": 50,
+  "batch": 16,
+  "lr": 0.0001,
+  "data": "the same 892-item v3 feature package",
+  "hardware": "local Mac arm64, cached features, ~10 minutes"
+ },
+ "evaluation": "EV-002: identical panel/protocol/gates as EV-001 (24 items, dual blind review, same thresholds)",
+ "decision": "if gates still fail with route intact (r1>=, r2 collapse resolved) the next attribution is mode/span heads; if route collapses again the conflict is structural (detach route head) - recorded either way",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-20",
+  "via": "user reply 继续 in direct response to the 50-step approval request",
+  "hardware": "local Mac arm64 (CPU torch, cached C features)",
+  "steps": 50
+ },
+ "result": "route/mode outcome bit-identical to V3-001 despite weighted loss (weights differ, loss curves differ): confusion [[48,48,0],[0,268,0],[96,432,0]], mode start 0/268; replies byte-identical to EV-001; EV-002 gates failed identically. Per registered decision rule: conflict is STRUCTURAL; next step is a route-head structural fix (detach/dedicated pathway) registration."
+}

@@ -39,6 +39,9 @@ struct bitnet_tokenizer {
     int unk_token_id;
     int pad_token_id;
     int add_bos_token;
+    int add_space_prefix;
+    int *special_ids;
+    size_t special_count;
 };
 
 static uint64_t fnv1a_hash_bytes(const char *s, size_t len) {
@@ -348,6 +351,12 @@ int bitnet_tokenizer_load(bitnet_tokenizer_t **out, const char *gguf_path) {
     } else {
         tokenizer->model = BITNET_TOKENIZER_MODEL_LLAMA;
     }
+    tokenizer->add_space_prefix = tokenizer->model == BITNET_TOKENIZER_MODEL_LLAMA;
+    {
+        const gguf_metadata_t *prefix = gguf_find_metadata(&file, "tokenizer.ggml.add_space_prefix");
+        if (prefix != NULL && prefix->type == GGUF_TYPE_BOOL)
+            tokenizer->add_space_prefix = prefix->value.boolean;
+    }
 
     /* Steal tokens string array */
     tokens_mutable = (gguf_metadata_t *)tokens_meta;
@@ -374,6 +383,17 @@ int bitnet_tokenizer_load(bitnet_tokenizer_t **out, const char *gguf_path) {
         types_mutable = (gguf_metadata_t *)types_meta;
         tokenizer->token_types = types_mutable->array_ints;
         types_mutable->array_ints = NULL;
+    }
+    tokenizer->special_ids = (int *)malloc(vocab_size * sizeof(int));
+    if (tokenizer->special_ids == NULL) {
+        bitnet_tokenizer_free(tokenizer);
+        gguf_close(&file);
+        return -1;
+    }
+    for (size_t id = 0; id < vocab_size; ++id) {
+        int type = tokenizer->token_types != NULL ? tokenizer->token_types[id] : 1;
+        if (type == 2 || type == 3 || type == 4)
+            tokenizer->special_ids[tokenizer->special_count++] = (int)id;
     }
 
     bos_entry = gguf_find_metadata(&file, "tokenizer.ggml.bos_token_id");
@@ -428,6 +448,7 @@ void bitnet_tokenizer_free(bitnet_tokenizer_t *tokenizer) {
     free(tokenizer->token_types);
     free(tokenizer->token_index);
     free(tokenizer->merge_table);
+    free(tokenizer->special_ids);
     free(tokenizer);
 }
 
@@ -656,163 +677,143 @@ static int gpt2_encode(bitnet_tokenizer_t *tokenizer, const char *text,
     return out_count;
 }
 
-/* BPE encode: start with character-level tokens, then iteratively merge
- * the highest-scoring adjacent pair until no more merges are possible.
- *
- * This follows the SentencePiece BPE algorithm used by llama.cpp. */
-int bitnet_tokenizer_encode(bitnet_tokenizer_t *tokenizer, const char *text, int *tokens, int max_tokens) {
-    int n = 0;
-    const unsigned char *pos = NULL;
-    int *piece_ids = NULL;
-    int n_pieces = 0;
-    int i = 0;
-    char *spaced = NULL;
+typedef struct sp_symbol {
+    size_t offset, length;
+    int prev, next;
+} sp_symbol_t;
 
-    if (tokenizer == NULL || text == NULL || tokens == NULL || max_tokens <= 0) {
-        return -1;
+typedef struct sp_merge {
+    int left, right;
+    size_t length;
+    float score;
+} sp_merge_t;
+
+static int sp_before(sp_merge_t a, sp_merge_t b) {
+    return a.score > b.score || (a.score == b.score && a.left < b.left);
+}
+
+static void sp_offer(const bitnet_tokenizer_t *t, const char *text,
+                     const sp_symbol_t *symbols, int left, int right,
+                     sp_merge_t *heap, size_t *count) {
+    if (left < 0 || right < 0) return;
+    size_t length = symbols[left].length + symbols[right].length;
+    int id = find_token_id(t, text + symbols[left].offset, length);
+    if (id < 0) return;
+    sp_merge_t item = {left, right, length, t->scores != NULL ? t->scores[id] : 0.0f};
+    size_t pos = (*count)++;
+    while (pos > 0 && sp_before(item, heap[(pos - 1) / 2])) {
+        heap[pos] = heap[(pos - 1) / 2];
+        pos = (pos - 1) / 2;
     }
+    heap[pos] = item;
+}
 
-    if (tokenizer->model == BITNET_TOKENIZER_MODEL_GPT2) {
-        return gpt2_encode(tokenizer, text, tokens, max_tokens);
+static sp_merge_t sp_pop(sp_merge_t *heap, size_t *count) {
+    sp_merge_t first = heap[0], last = heap[--*count];
+    size_t pos = 0;
+    while (pos * 2 + 1 < *count) {
+        size_t child = pos * 2 + 1;
+        if (child + 1 < *count && sp_before(heap[child + 1], heap[child])) ++child;
+        if (!sp_before(heap[child], last)) break;
+        heap[pos] = heap[child]; pos = child;
     }
+    if (*count) heap[pos] = last;
+    return first;
+}
 
-    /* Step 1: Convert input text to initial piece tokens.
-     * For SentencePiece/llama tokenizer:
-     * - A space is prepended to the text (SentencePiece convention: treat
-     *   the beginning of text as if it follows a space)
-     * - Spaces are converted to ▁ (U+2581, 0xE2 0x96 0x81 in UTF-8)
-     * - Each character/byte is matched to a token
-     * - Unmatched bytes use <0xHH> byte fallback tokens */
-    {
-        size_t text_len = strlen(text);
-        /* +1 for prepended space */
-        piece_ids = (int *)calloc((text_len + 1) * 4 + 1, sizeof(int));
-        if (piece_ids == NULL) return -1;
+/* A fragment is split into UTF-8 symbols BEFORE score-priority merges.
+ * Greedy longest-prefix matching is not SentencePiece BPE. */
+static int sp_fragment(const bitnet_tokenizer_t *t, const char *source, size_t length,
+                       int *out, int capacity) {
+    if (!length) return 0;
+    if (length > (SIZE_MAX - 4) / 3) return -1;
+    size_t limit = 3 * length + 4, used = 0, ns = 0, nh = 0;
+    char *text = (char *)malloc(limit);
+    sp_symbol_t *symbols = NULL;
+    sp_merge_t *heap = NULL;
+    int result = -1;
+    if (text == NULL) return -1;
+    if (t->add_space_prefix) { memcpy(text, "\xe2\x96\x81", 3); used = 3; }
+    for (size_t i = 0; i < length; ++i) {
+        if (source[i] == ' ') { memcpy(text + used, "\xe2\x96\x81", 3); used += 3; }
+        else text[used++] = source[i];
     }
-
-    /* Prepend a space to the text (SentencePiece convention) */
-    {
-        size_t text_len = strlen(text);
-        spaced = (char *)calloc(text_len + 2, 1);
-        if (spaced == NULL) { free(piece_ids); return -1; }
-        spaced[0] = ' ';
-        memcpy(spaced + 1, text, text_len);
+    text[used] = 0;
+    if (used > INT_MAX || used > SIZE_MAX / (3 * sizeof(*heap))) goto done;
+    symbols = (sp_symbol_t *)calloc(used, sizeof(*symbols));
+    heap = (sp_merge_t *)malloc(3 * used * sizeof(*heap));
+    if (symbols == NULL || heap == NULL) goto done;
+    for (size_t pos = 0; pos < used;) {
+        unsigned char c = (unsigned char)text[pos];
+        size_t size = c < 0xc0 ? 1 : c < 0xe0 ? 2 : c < 0xf0 ? 3 : 4;
+        if (size > used - pos) size = used - pos;
+        symbols[ns] = (sp_symbol_t){pos, size, (int)ns - 1, (int)ns + 1};
+        ++ns; pos += size;
     }
-
-    pos = (const unsigned char *)spaced;
-    n_pieces = 0;
-
-    while (*pos != '\0') {
-        int found = 0;
-
-        /* Try to match the longest token starting at current position.
-         * SentencePiece uses ▁ (LOWER ONE EIGHTH BLOCK U+2581) as space prefix.
-         * We need to handle the space→▁ conversion. */
-        {
-            /* Build a temporary buffer with ▁ substitution for matching */
-            const unsigned char *start = pos;
-            size_t remaining = strlen((const char *)pos);
-
-            /* Try longest match first */
-            size_t try_len = remaining;
-            for (try_len = remaining; try_len >= 1; --try_len) {
-                /* Build candidate string with space→▁ substitution */
-                char candidate[256];
-                size_t candidate_len = 0;
-                size_t j = 0;
-
-                if (try_len > sizeof(candidate) - 1) continue;
-
-                for (j = 0; j < try_len; ++j) {
-                    if (start[j] == ' ') {
-                        /* Space becomes ▁ (3 bytes UTF-8) */
-                        if (candidate_len + 3 > sizeof(candidate) - 1) break;
-                        candidate[candidate_len++] = (char)0xE2;
-                        candidate[candidate_len++] = (char)0x96;
-                        candidate[candidate_len++] = (char)0x81;
-                    } else {
-                        if (candidate_len + 1 > sizeof(candidate) - 1) break;
-                        candidate[candidate_len++] = (char)start[j];
-                    }
-                }
-
-                if (j < try_len) continue; /* candidate buffer overflow */
-
-                {
-                    int id = find_token_id(tokenizer, candidate, candidate_len);
-                    if (id >= 0) {
-                        piece_ids[n_pieces++] = id;
-                        pos += try_len;
-                        found = 1;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!found) {
-            /* Byte fallback: try <0xHH> token for this byte */
-            int bf_id = byte_fallback_token(tokenizer, *pos);
-            if (bf_id >= 0) {
-                piece_ids[n_pieces++] = bf_id;
-                ++pos;
-            } else if (tokenizer->unk_token_id >= 0) {
-                piece_ids[n_pieces++] = tokenizer->unk_token_id;
-                ++pos;
-            } else {
-                /* Skip unrecognized byte */
-                ++pos;
+    symbols[ns - 1].next = -1;
+    for (size_t i = 1; i < ns; ++i) sp_offer(t, text, symbols, (int)i - 1, (int)i, heap, &nh);
+    while (nh) {
+        sp_merge_t item = sp_pop(heap, &nh);
+        sp_symbol_t *left = &symbols[item.left], *right = &symbols[item.right];
+        if (!left->length || !right->length || left->next != item.right ||
+            left->length + right->length != item.length) continue;
+        left->length += right->length; right->length = 0;
+        left->next = right->next;
+        if (right->next >= 0) symbols[right->next].prev = item.left;
+        sp_offer(t, text, symbols, left->prev, item.left, heap, &nh);
+        sp_offer(t, text, symbols, item.left, left->next, heap, &nh);
+    }
+    result = 0;
+    for (int i = 0; i >= 0; i = symbols[i].next) {
+        const char *piece = text + symbols[i].offset;
+        int id = find_token_id(t, piece, symbols[i].length);
+        if (id >= 0) {
+            if (result == capacity) { result = -1; goto done; }
+            out[result++] = id;
+        } else {
+            for (size_t b = 0; b < symbols[i].length; ++b) {
+                id = byte_fallback_token(t, (unsigned char)piece[b]);
+                if (id < 0) id = t->unk_token_id;
+                if (id < 0 || result == capacity) { result = -1; goto done; }
+                out[result++] = id;
             }
         }
     }
+done:
+    free(heap); free(symbols); free(text);
+    return result;
+}
 
-    /* Step 2: BPE merge loop.
-     * Repeatedly find the adjacent pair with the highest merge score
-     * and merge them into a single token. */
-    if (tokenizer->scores != NULL && tokenizer->merge_table != NULL) {
-        while (n_pieces > 1) {
-            /* Find the best merge: the adjacent pair whose merge exists in the
-             * vocab with the highest score. O(1) lookup via the prebuilt pair
-             * table instead of per-pair string concat + rehash. */
-            int best_score_idx = -1;
-            float best_score = 0.0f;
-            int best_merged_id = -1;
-
-            for (i = 0; i < n_pieces - 1; ++i) {
-                int merged_id = -1;
-                if (merge_table_find(tokenizer, piece_ids[i], piece_ids[i + 1], NULL, &merged_id) &&
-                    merged_id >= 0) {
-                    float score = tokenizer->scores[merged_id];
-                    if (best_score_idx < 0 || score > best_score) {
-                        best_score_idx = i;
-                        best_score = score;
-                        best_merged_id = merged_id;
-                    }
-                }
-            }
-
-            if (best_score_idx < 0) {
-                break; /* No more merges possible */
-            }
-
-            /* Apply the merge: replace pieces[best_score_idx] and pieces[best_score_idx+1]
-             * with the merged token */
-            piece_ids[best_score_idx] = best_merged_id;
-            for (i = best_score_idx + 1; i < n_pieces - 1; ++i) {
-                piece_ids[i] = piece_ids[i + 1];
-            }
-            --n_pieces;
+static int sp_special_at(const bitnet_tokenizer_t *t, const char *text,
+                         size_t remaining, size_t *length) {
+    int best = -1; *length = 0;
+    for (size_t i = 0; i < t->special_count; ++i) {
+        int id = t->special_ids[i]; const char *piece = t->tokens[id];
+        if (piece[0] != text[0]) continue;
+        size_t n = strlen(piece);
+        if (n > *length && n <= remaining && memcmp(piece, text, n) == 0) {
+            best = id; *length = n;
         }
     }
+    return best;
+}
 
-    /* Step 3: Copy results to output */
-    for (i = 0; i < n_pieces && n < max_tokens; ++i) {
-        tokens[n++] = piece_ids[i];
+int bitnet_tokenizer_encode(bitnet_tokenizer_t *t, const char *text, int *out, int capacity) {
+    if (t == NULL || text == NULL || out == NULL || capacity <= 0) return -1;
+    if (t->model == BITNET_TOKENIZER_MODEL_GPT2) return gpt2_encode(t, text, out, capacity);
+    size_t length = strlen(text), start = 0, pos = 0;
+    int count = 0;
+    while (pos < length) {
+        size_t special_length;
+        int id = sp_special_at(t, text + pos, length - pos, &special_length);
+        if (id < 0) { ++pos; continue; }
+        int n = sp_fragment(t, text + start, pos - start, out + count, capacity - count);
+        if (n < 0 || count + n >= capacity) return -1;
+        count += n; out[count++] = id;
+        pos += special_length; start = pos;
     }
-
-    free(piece_ids);
-    free(spaced);
-    return n;
+    int n = sp_fragment(t, text + start, length - start, out + count, capacity - count);
+    return n < 0 ? -1 : count + n;
 }
 
 int bitnet_tokenizer_decode(bitnet_tokenizer_t *tokenizer, int token, char *out, int out_size) {

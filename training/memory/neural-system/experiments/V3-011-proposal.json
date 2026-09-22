@@ -1,0 +1,20 @@
+{
+ "id": "V3-011",
+ "status": "trained_incremental_gains",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "hypothesis": "EV-006 value-path failures (half-values, wrong-span copies, START overtrigger) stem from the same teacher-prefix-only training that broke mode: the span/value/END heads never saw canonical-segmentation prefixes. Extending the V3-010 canonical augmentation to the FULL fine_loss (fact/value/boundary) and adding post-END generate anchors should fix selection and termination the same way mode was fixed.",
+ "changes": {
+  "canon_loss": "full fine_loss at canonical prefixes (route+fact+value+boundary) with value/fact terms weighted 2x",
+  "canon_anchors": "4 generate anchors per canonical item including the post-END position (overtrigger suppression)",
+  "teacher_items": "unchanged"
+ },
+ "base": "V3-010 ckpt-410 frozen trunk + readouts",
+ "evaluation": "EV-007 same panel/gates with fresh dual review",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-20",
+  "via": "user reply 继续执行V3-011"
+ },
+ "result": "EV-007 generation-level: overtrigger 0 (was 2), truncation 3/24 (was 6), normal arithmetic 4/4 restored (zh regression fixed), mode canonical 268/268 + teacher 268/268 preserved; value copies still garbled (Toanskii/Ianskina fragments) and zh uncertainty replies contaminated with value fragments (请稍等一下reda) - value-selection quality remains the open item; semantic gates pending dual review"
+}

@@ -1,0 +1,596 @@
+{
+  "experiment": {
+    "id": "DG-012",
+    "status": "registered_joint_binding_native_generation_diagnostic",
+    "seed": 1011,
+    "max_new_tokens": 24,
+    "context_capacity": 128,
+    "panel": "Estelle/Fabian/Graz, EN and ZH. Same question and same source character inventory: correct Estelle-home plus Fabian-likes versus crossed Fabian-home plus Estelle-likes. Both independent presence labels true; only joint subject-relation binding differs. Four active and two disabled-correct-source runs.",
+    "source_selection": "one supplied compound episode, not automatic writer/event activation",
+    "generation": "Only initial natural prompt then actual greedy predictions. Fresh ordinary C reference and fresh C continuous probe at every position. No prefix bank, no gold answer prefix, no cross-step KV reuse. Reader/copy mixture remains Python.",
+    "qualification": "At initial prefix of each active case, separately check both continuous specialists and supported copy mixture against Torch head projection at atol 1e-5 rtol 1e-4 and identical top1. These are branch-only numerical checks, not oracle-routed generation. Actual generation always follows predicted fixed initial route.",
+    "reporting": "Retain all replies, truncations, initial routes, copies actually used, branch-only qualifications and paired input checks. Untrained reader/factor heads plus existing CG-002 content/uncertainty specialists. No success claim from the new initialization or from rejecting both sides.",
+    "optimizer_steps": 0,
+    "training_approved": false,
+    "deployment_approved": false
+  },
+  "results": [
+    {
+      "runtime": {
+        "id": "en-correct",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle currently lives in Graz. Fabian likes the architecture of Graz."
+          }
+        ]
+      },
+      "annotation": {
+        "subject_present": true,
+        "relation_present": true,
+        "joint_current_actual": true
+      },
+      "language": "en",
+      "enabled": true,
+      "text": "I do not have enough information to say where Estelle lives now.",
+      "generated_token_ids": [
+        59355,
+        1675,
+        1573,
+        1580,
+        4708,
+        2434,
+        1385,
+        3255,
+        2132,
+        12471,
+        15263,
+        7344,
+        2336,
+        72,
+        73440
+      ],
+      "visible_token_ids": [
+        59355,
+        1675,
+        1573,
+        1580,
+        4708,
+        2434,
+        1385,
+        3255,
+        2132,
+        12471,
+        15263,
+        7344,
+        2336,
+        72
+      ],
+      "raw_text_hex": "4920646f206e6f74206861766520656e6f75676820696e666f726d6174696f6e20746f2073617920776865726520457374656c6c65206c69766573206e6f772e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false,
+      "memory_enabled": true,
+      "forward_calls": 15,
+      "backend_cache_policy_verified": true,
+      "backend_evidence": "case-00/backend.json",
+      "predicted_route": 2,
+      "state_probabilities": [
+        0.30277886986732483,
+        0.0836513340473175,
+        0.6135697960853577
+      ],
+      "steps_with_copy": 0,
+      "branch_only_qualifications": 1,
+      "max_torch_composition_error": 0.0000133514404296875,
+      "all_steps_equal_base": false,
+      "raw_backend_sha256": "e6057a15b07b43d78db525e7ddc4c03df3a1c3b06d46acbc3f748430994541d1"
+    },
+    {
+      "runtime": {
+        "id": "en-crossed",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Fabian currently lives in Graz. Estelle likes the architecture of Graz."
+          }
+        ]
+      },
+      "annotation": {
+        "subject_present": true,
+        "relation_present": true,
+        "joint_current_actual": false
+      },
+      "language": "en",
+      "enabled": true,
+      "text": "I do not have enough information to say where Estelle lives now.",
+      "generated_token_ids": [
+        59355,
+        1675,
+        1573,
+        1580,
+        4708,
+        2434,
+        1385,
+        3255,
+        2132,
+        12471,
+        15263,
+        7344,
+        2336,
+        72,
+        73440
+      ],
+      "visible_token_ids": [
+        59355,
+        1675,
+        1573,
+        1580,
+        4708,
+        2434,
+        1385,
+        3255,
+        2132,
+        12471,
+        15263,
+        7344,
+        2336,
+        72
+      ],
+      "raw_text_hex": "4920646f206e6f74206861766520656e6f75676820696e666f726d6174696f6e20746f2073617920776865726520457374656c6c65206c69766573206e6f772e",
+      "utf8_complete": true,
+      "finish_reason": "stop_token",
+      "truncated": false,
+      "memory_enabled": true,
+      "forward_calls": 15,
+      "backend_cache_policy_verified": true,
+      "backend_evidence": "case-01/backend.json",
+      "predicted_route": 2,
+      "state_probabilities": [
+        0.3005267083644867,
+        0.08432689309120178,
+        0.6151463985443115
+      ],
+      "steps_with_copy": 0,
+      "branch_only_qualifications": 1,
+      "max_torch_composition_error": 0.0000133514404296875,
+      "all_steps_equal_base": false,
+      "raw_backend_sha256": "62494cdfc19a8a7b13730a3ad5c038589e0d65d1dd91981291f197f2756fe5c6"
+    },
+    {
+      "runtime": {
+        "id": "zh-correct",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在哪里？"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在Graz。Fabian喜欢Graz的建筑。"
+          }
+        ]
+      },
+      "annotation": {
+        "subject_present": true,
+        "relation_present": true,
+        "joint_current_actual": true
+      },
+      "language": "zh",
+      "enabled": true,
+      "text": "现有信息不足以确定现有信息不足以确定现有信息不足以确定现有信息不足以确定现有信息不足以确定现有信息不足以确定",
+      "generated_token_ids": [
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029
+      ],
+      "visible_token_ids": [
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029
+      ],
+      "raw_text_hex": "e78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9a",
+      "utf8_complete": true,
+      "finish_reason": "max_new_tokens",
+      "truncated": true,
+      "memory_enabled": true,
+      "forward_calls": 24,
+      "backend_cache_policy_verified": true,
+      "backend_evidence": "case-02/backend.json",
+      "predicted_route": 2,
+      "state_probabilities": [
+        0.30050504207611084,
+        0.09328705817461014,
+        0.6062079071998596
+      ],
+      "steps_with_copy": 0,
+      "branch_only_qualifications": 1,
+      "max_torch_composition_error": 0.00000762939453125,
+      "all_steps_equal_base": false,
+      "raw_backend_sha256": "1696b1608d1fe870a730016be69be125cc3a11a6f761b7f1b81cdf4cb26b6f6e"
+    },
+    {
+      "runtime": {
+        "id": "zh-crossed",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在哪里？"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Fabian现在住在Graz。Estelle喜欢Graz的建筑。"
+          }
+        ]
+      },
+      "annotation": {
+        "subject_present": true,
+        "relation_present": true,
+        "joint_current_actual": false
+      },
+      "language": "zh",
+      "enabled": true,
+      "text": "现有信息不足以确定现有信息不足以确定现有信息不足以确定现有信息不足以确定现有信息不足以确定现有信息不足以确定",
+      "generated_token_ids": [
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029
+      ],
+      "visible_token_ids": [
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029,
+        13228,
+        2427,
+        42667,
+        5029
+      ],
+      "raw_text_hex": "e78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9ae78eb0e69c89e4bfa1e681afe4b88de8b6b3e4bba5e7a1aee5ae9a",
+      "utf8_complete": true,
+      "finish_reason": "max_new_tokens",
+      "truncated": true,
+      "memory_enabled": true,
+      "forward_calls": 24,
+      "backend_cache_policy_verified": true,
+      "backend_evidence": "case-03/backend.json",
+      "predicted_route": 2,
+      "state_probabilities": [
+        0.2979605793952942,
+        0.0937109887599945,
+        0.6083284020423889
+      ],
+      "steps_with_copy": 0,
+      "branch_only_qualifications": 1,
+      "max_torch_composition_error": 0.00000762939453125,
+      "all_steps_equal_base": false,
+      "raw_backend_sha256": "46cf674fe8e3a296602b2fcb249b45dff67b245712cd8f5ecc1d9a36807393b2"
+    },
+    {
+      "runtime": {
+        "id": "en-correct",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle currently lives in Graz. Fabian likes the architecture of Graz."
+          }
+        ]
+      },
+      "annotation": {
+        "subject_present": true,
+        "relation_present": true,
+        "joint_current_actual": true
+      },
+      "language": "en",
+      "enabled": false,
+      "text": "I'm sorry, but as an AI language model, I don't have real-time data or the ability",
+      "generated_token_ids": [
+        59355,
+        59361,
+        59335,
+        16094,
+        59342,
+        1696,
+        1467,
+        1458,
+        17251,
+        4446,
+        2158,
+        59342,
+        1417,
+        2424,
+        59361,
+        59323,
+        1580,
+        2902,
+        63,
+        2693,
+        2018,
+        1508,
+        1358,
+        5537
+      ],
+      "visible_token_ids": [
+        59355,
+        59361,
+        59335,
+        16094,
+        59342,
+        1696,
+        1467,
+        1458,
+        17251,
+        4446,
+        2158,
+        59342,
+        1417,
+        2424,
+        59361,
+        59323,
+        1580,
+        2902,
+        63,
+        2693,
+        2018,
+        1508,
+        1358,
+        5537
+      ],
+      "raw_text_hex": "49276d20736f7272792c2062757420617320616e204149206c616e6775616765206d6f64656c2c204920646f6e27742068617665207265616c2d74696d652064617461206f7220746865206162696c697479",
+      "utf8_complete": true,
+      "finish_reason": "max_new_tokens",
+      "truncated": true,
+      "memory_enabled": false,
+      "forward_calls": 24,
+      "backend_cache_policy_verified": true,
+      "backend_evidence": "case-04/backend.json",
+      "predicted_route": 2,
+      "state_probabilities": [
+        0.30277886986732483,
+        0.0836513340473175,
+        0.6135697960853577
+      ],
+      "steps_with_copy": 0,
+      "branch_only_qualifications": 0,
+      "max_torch_composition_error": 0,
+      "all_steps_equal_base": true,
+      "raw_backend_sha256": "9da8ff8e66f53fcf22b5ef9112c4412feb9faa00d6652ef4a560d28242bab155"
+    },
+    {
+      "runtime": {
+        "id": "zh-correct",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在哪里？"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在Graz。Fabian喜欢Graz的建筑。"
+          }
+        ]
+      },
+      "annotation": {
+        "subject_present": true,
+        "relation_present": true,
+        "joint_current_actual": true
+      },
+      "language": "zh",
+      "enabled": false,
+      "text": "Assistant: 抱歉，我无法提供实时更新的信息。建议您通过搜索引擎或相关社交媒体平台来获取",
+      "generated_token_ids": [
+        6427,
+        8583,
+        59358,
+        59320,
+        38270,
+        65,
+        59422,
+        4585,
+        2516,
+        17621,
+        45953,
+        2427,
+        66,
+        3917,
+        60215,
+        2465,
+        28314,
+        59654,
+        3045,
+        16317,
+        5961,
+        3274,
+        59455,
+        9603
+      ],
+      "visible_token_ids": [
+        6427,
+        8583,
+        59358,
+        59320,
+        38270,
+        65,
+        59422,
+        4585,
+        2516,
+        17621,
+        45953,
+        2427,
+        66,
+        3917,
+        60215,
+        2465,
+        28314,
+        59654,
+        3045,
+        16317,
+        5961,
+        3274,
+        59455,
+        9603
+      ],
+      "raw_text_hex": "417373697374616e743a20e68ab1e6ad89efbc8ce68891e697a0e6b395e68f90e4be9be5ae9ee697b6e69bb4e696b0e79a84e4bfa1e681afe38082e5bbbae8aeaee682a8e9809ae8bf87e6909ce7b4a2e5bc95e6938ee68896e79bb8e585b3e7a4bee4baa4e5aa92e4bd93e5b9b3e58fb0e69da5e88eb7e58f96",
+      "utf8_complete": true,
+      "finish_reason": "max_new_tokens",
+      "truncated": true,
+      "memory_enabled": false,
+      "forward_calls": 24,
+      "backend_cache_policy_verified": true,
+      "backend_evidence": "case-05/backend.json",
+      "predicted_route": 2,
+      "state_probabilities": [
+        0.30050504207611084,
+        0.09328705817461014,
+        0.6062079071998596
+      ],
+      "steps_with_copy": 0,
+      "branch_only_qualifications": 0,
+      "max_torch_composition_error": 0,
+      "all_steps_equal_base": true,
+      "raw_backend_sha256": "e570c976f8cdf5e92c6325c5e38798ca3a3797b3fc0f72571dce1cbe5c27b779"
+    }
+  ],
+  "optimizer_steps": 0,
+  "parameters_unchanged": true,
+  "prefix_bank_used": false,
+  "gold_answer_prefix_used": false,
+  "training_approved": false,
+  "deployment_approved": false,
+  "semantic_review_complete": false,
+  "memory_accuracy_measured": false,
+  "neural_fusion_implementation": "python",
+  "cross_step_kv_reuse": false,
+  "internal_prefill_kv_buffers": true,
+  "source_sha256": {
+    "diagnose_joint_native_generation.py": "4e268be2dbecdfb57ea75e25aaa2ef7422db76f1ab129efc3165c62307ba117a",
+    "native_token_generation.py": "a582f83f56cfd1c4b635d6d6bd670b9ccd165e039f6948d76b0f869e9fa882e0",
+    "token_memory_composition.py": "a5229c4d3aa1cc3ef369d0bffc9227368d2c8bf25d08a41a6efc70ca4ee2a27b",
+    "memory_token_read.py": "f27efc6b37914fb3aeada7c2d032c3d112425652aa4cf9dde50b3ab8d025de23",
+    "native_token_payload.py": "518f396c0e734d25b2f38bee8f6622e122aaa4364deeab797dc47eb702133973"
+  },
+  "artifact_sha256": {
+    "experiment": "b5b85034ae4a0cc1c2ffd6b7ce60d3917f4ab4ea53328cb89050937a6b0eba85",
+    "checkpoint": "eb6b9a551c616d08a2aa0e8d183a63233c87a3c10e296f290a7b48b99dea716d",
+    "gguf": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "probe": "4ce9aa3f21ef95f589fb996f2a43c30a917e038f3fc4e1285bd60769691288ce",
+    "reference_probe": "4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152",
+    "encoder_probe": "dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0",
+    "tok_probe": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc"
+  }
+}

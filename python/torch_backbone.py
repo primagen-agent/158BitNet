@@ -1,5 +1,8 @@
-"""torch_backbone.py -- minimal llama decoder in torch bf16 matching the
-158BitNet C runtime math exactly (Phase-A trainer, no NGMA).
+"""torch_backbone.py -- frozen GGUF decoder reference for memory research.
+
+Dense dequantized Torch projections are not bit-identical to C's dynamically
+quantized activation kernels. Same GGUF identity alone does not establish
+feature parity; use the feature-domain diagnostic before deployment.
 
 Math contract (src/bitnet.c bitnet_eval):
 - RMSNorm: y = x * inv_rms(x) * w with eps from
@@ -108,7 +111,7 @@ def _deinterleave_rope_rows(weight: torch.Tensor, head_dim: int) -> torch.Tensor
 
 
 class TorchBackbone(nn.Module):
-    """Full 3B backbone in bf16 on GPU. Forward returns last-position logits
+    """GGUF-shaped backbone in the requested dtype/device. Returns last-position logits
     (or all-position logits with logits_all=True) plus the hooks needed by
     the memory fusion."""
 
@@ -178,18 +181,23 @@ class TorchBackbone(nn.Module):
                 logits_all: bool = False,
                 return_hidden: bool = False,
                 return_hidden_layer: int | None = None,
-                return_hidden_layers: tuple[int, ...] | None = None):
+                return_hidden_layers: tuple[int, ...] | None = None,
+                memory_fusion=None):
         """Run the frozen backbone without KV reuse.
 
         Returns normalized hidden states [T, hidden] when
         return_hidden=True; otherwise logits [T, vocab] if logits_all else
-        [vocab]."""
+        [vocab]. An optional callable(layer, hidden) adds a memory residual
+        after self-attention. Frozen weights still propagate gradients from
+        later layers into that callable; do not wrap training in no_grad().
+        Memory encoding calls omit the callable and never reuse a KV cache.
+        """
         cfg = self.cfg
         T = tokens.shape[0]
         device = self.device
         h = self.token_embd[tokens] * cfg.embedding_scale  # [T, D] bf16
         positions = torch.arange(start_pos, start_pos + T, device=device)
-        cos, sin = rope_tables(cfg, positions, device, torch.bfloat16)
+        cos, sin = rope_tables(cfg, positions, device, self.dtype)
         cos = cos.to(self.dtype)
         sin = sin.to(self.dtype)
 
@@ -249,6 +257,9 @@ class TorchBackbone(nn.Module):
             down = self.linear(attn, L["o"])                 # [T, D] bf16
 
             h = resid + down * cfg.residual_scale
+
+            if memory_fusion is not None:
+                h = memory_fusion(bi, h)
 
             resid2 = h
             hn2 = rms_norm(h, L["ffn_norm"], cfg.rms_eps)

@@ -1,0 +1,33 @@
+{
+ "id": "V3-008",
+ "status": "phase2_partial_breakthrough",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "proposal_date": "2026-09-20",
+ "hypothesis": "DG-028/029 proved both blockers are readout failures with separable inputs: route r2 becomes 0.875-recall separable when 3 structural scalars (has_source, span count, allowed fraction) join the route input; mode start is 0.996 separable on its existing input. Extending the route input with those scalars and training the mode head on a detached input should unlock routing without touching the backbone or data.",
+ "changes": {
+  "implementation": "new subclass module (pinned FineSpanReader untouched; its construction path and digests stay identical)",
+  "route_input": "concat(q, evidence, structural[3]) with standardized scalars",
+  "mode_training": "stop-gradient on the mode head input during loss backward (readout-only learning); everything else identical"
+ },
+ "training": {
+  "init": "from scratch, seeds 1018/1021",
+  "steps_requested": 400,
+  "batch": 16,
+  "lr": 0.0001,
+  "data": "same 892-item v3 feature package",
+  "hardware": "local Mac arm64, ~10 minutes"
+ },
+ "evaluation": "EV-005: identical panel/protocol/gates with fresh dual review",
+ "decision": "route fixed but mode still gating -> mode-only follow-up; both fixed but semantic gates fail -> attribution to span/copy stages; route still collapsed -> deeper representation issue, stop and report",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-20",
+  "via": "user reply 继续",
+  "steps": "phase-2 only"
+ },
+ "loss_note": "unweighted losses identical to V3-001 (single-factor control: only the two structural changes differ from V3-001)",
+ "note": "run under the V3-trainer supervision defect (route-2 items received no reader static loss); structural changes untested as a result; superseded by V3-004",
+ "fix": "two-phase: reuse V3-007 trunk (200 steps, supervision-complete); freeze ALL trunk params, train only route/mode readouts + uncertainty branch to convergence (Adam 1e-3, up to 400 steps) - the exact frozen-representation setting where the probe reached 0.875",
+ "result": "frozen-trunk readout training (400 steps, Adam 1e-3): route confusion [[0,0,96],[0,76,192],[0,78,450]] - r2 recall 450/528=0.852, matching the DG-029 probe prediction (0.875) for the first time; r1 0.28, r0 0.0 still miscalibrated; mode start still 0/268 (now the primary residual anomaly)"
+}

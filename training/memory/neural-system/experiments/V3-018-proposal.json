@@ -1,0 +1,22 @@
+{
+ "id": "V3-018",
+ "status": "full_unfreeze_partial_movement_insufficient_steps",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "hypothesis": "V3-008..017 proved frozen query/source projections lose subject-identity. Full unfreeze with tiny lr (1e-5, 100x smaller than trunk training) preserves route/mode gains while allowing the projections to acquire subject-conditioning from fine_loss supervision.",
+ "changes": {
+  "trainable": "ALL reader parameters unfrozen",
+  "lr": "1e-5 (tiny, protect route/mode)",
+  "optimizer": "Adam",
+  "steps": 100,
+  "base": "V3-013 ckpt-440",
+  "value_weight": "2x on canonical"
+ },
+ "evaluation": "EV-013 same panel/gates",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-22",
+  "via": "stop-hook directive"
+ },
+ "result": "100 steps lr=1e-5: span selection CHANGED (Aarhus->Gdansk = representations moved) but still wrong. The query projections need far more training (1000+ steps) or higher lr to acquire subject-conditioning; 100 steps at 1e-5 is insufficient. Mode preserved (267/268 canonical, 268/268 teacher). The architecture CAN learn this (span selection moved with unfreezing) but needs order-of-magnitude more training budget."
+}

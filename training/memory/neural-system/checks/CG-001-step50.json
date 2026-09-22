@@ -1,0 +1,215 @@
+{
+  "experiment": "CG-001",
+  "status": {
+    "optimizer_steps": 50,
+    "status": "awaiting_fixed_panel_C_generation_and_review",
+    "automatic_continuation": false,
+    "memory_accuracy_measured": false,
+    "deployment_approved": false
+  },
+  "checkpoints": {
+    "0": {
+      "path": "/home/ubuntu/158bitnet-locomo/build/cg001-stage-4f0a5ccd/run-first50/step-000000.pt",
+      "bytes": 46194099,
+      "sha256": "ed3601e2d4144b13e99825434387446c47450392e732399f66c7485ba1c3c375"
+    },
+    "50": {
+      "path": "/home/ubuntu/158bitnet-locomo/build/cg001-stage-4f0a5ccd/run-first50/step-000050.pt",
+      "bytes": 138546037,
+      "sha256": "a8976841239f18520842e75551dfbc8681c27f6d25e0784fed03c1efcb5585d9"
+    }
+  },
+  "metrics": {
+    "0": {
+      "nll": 2.6277751326560974,
+      "state_correct": 90,
+      "confusion": [
+        [
+          50,
+          3,
+          11
+        ],
+        [
+          42,
+          0,
+          22
+        ],
+        [
+          86,
+          2,
+          40
+        ]
+      ]
+    },
+    "50": {
+      "nll": 1.718063344946131,
+      "state_correct": 173,
+      "confusion": [
+        [
+          8,
+          16,
+          40
+        ],
+        [
+          0,
+          61,
+          3
+        ],
+        [
+          0,
+          24,
+          104
+        ]
+      ]
+    }
+  },
+  "state_order": [
+    "no_memory_needed",
+    "supported",
+    "insufficient"
+  ],
+  "scenario_state_accuracy": {
+    "0": {
+      "original": {
+        "correct": 0,
+        "total": 16
+      },
+      "swapped_values": {
+        "correct": 0,
+        "total": 16
+      },
+      "paraphrase": {
+        "correct": 0,
+        "total": 16
+      },
+      "update_current": {
+        "correct": 0,
+        "total": 16
+      },
+      "empty": {
+        "correct": 0,
+        "total": 16
+      },
+      "wrong_subject": {
+        "correct": 7,
+        "total": 16
+      },
+      "wrong_relation": {
+        "correct": 7,
+        "total": 16
+      },
+      "conflict": {
+        "correct": 3,
+        "total": 16
+      },
+      "hypothetical": {
+        "correct": 7,
+        "total": 16
+      },
+      "negated": {
+        "correct": 4,
+        "total": 16
+      },
+      "quoted": {
+        "correct": 7,
+        "total": 16
+      },
+      "historical_only": {
+        "correct": 5,
+        "total": 16
+      },
+      "ordinary_empty": {
+        "correct": 16,
+        "total": 16
+      },
+      "ordinary_original": {
+        "correct": 10,
+        "total": 16
+      },
+      "ordinary_wrong_subject": {
+        "correct": 9,
+        "total": 16
+      },
+      "ordinary_conflict": {
+        "correct": 15,
+        "total": 16
+      }
+    },
+    "50": {
+      "original": {
+        "correct": 15,
+        "total": 16
+      },
+      "swapped_values": {
+        "correct": 14,
+        "total": 16
+      },
+      "paraphrase": {
+        "correct": 16,
+        "total": 16
+      },
+      "update_current": {
+        "correct": 16,
+        "total": 16
+      },
+      "empty": {
+        "correct": 16,
+        "total": 16
+      },
+      "wrong_subject": {
+        "correct": 2,
+        "total": 16
+      },
+      "wrong_relation": {
+        "correct": 16,
+        "total": 16
+      },
+      "conflict": {
+        "correct": 8,
+        "total": 16
+      },
+      "hypothetical": {
+        "correct": 16,
+        "total": 16
+      },
+      "negated": {
+        "correct": 14,
+        "total": 16
+      },
+      "quoted": {
+        "correct": 16,
+        "total": 16
+      },
+      "historical_only": {
+        "correct": 16,
+        "total": 16
+      },
+      "ordinary_empty": {
+        "correct": 8,
+        "total": 16
+      },
+      "ordinary_original": {
+        "correct": 0,
+        "total": 16
+      },
+      "ordinary_wrong_subject": {
+        "correct": 0,
+        "total": 16
+      },
+      "ordinary_conflict": {
+        "correct": 0,
+        "total": 16
+      }
+    }
+  },
+  "full_report": "build/neural-memory-cg001-run-report.json",
+  "full_report_sha256": "a5a38b4923d46a67fd93a24f3d0a6645deabf5edfbc2fbbdd8d64786e8c7987f",
+  "feature_package_digest": "8f5b2d2ae685a7995d45422e661a8f59811357186d0cff370211eb596d5f36a6",
+  "baseline_sha256": "cb6b2f6292352797b9e33ca4326a6836d9fed8eb8b37ed1423227bf4d36491ef",
+  "gpu_stage": "/home/ubuntu/158bitnet-locomo/build/cg001-stage-4f0a5ccd",
+  "software_tests": {
+    "python": 143,
+    "c": 21
+  },
+  "conclusion": "Completed exactly 50 optimizer steps and stopped. No memory accuracy measured. No-memory task classification and wrong-subject rejection degraded; actual C generation/review is required before any more optimization."
+}

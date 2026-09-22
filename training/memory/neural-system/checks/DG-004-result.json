@@ -1,0 +1,411 @@
+{
+  "experiment_id": "DG-004",
+  "cases": [
+    {
+      "id": "english",
+      "conditions": {
+        "reference": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": false,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "english/reference/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": true,
+          "every_residual_nonzero": false
+        },
+        "disabled": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": false,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "english/disabled/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": true,
+          "every_residual_nonzero": false
+        },
+        "empty": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": true,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "english/empty/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": true,
+          "every_residual_nonzero": false
+        },
+        "zero_gain": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": true,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "english/zero_gain/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": true,
+          "every_residual_nonzero": false
+        },
+        "active_untrained": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": true,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "english/active_untrained/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": false,
+          "every_residual_nonzero": true
+        }
+      },
+      "disabled_empty_zero_identical": true,
+      "backend_gate_passed": true
+    },
+    {
+      "id": "chinese",
+      "conditions": {
+        "reference": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": false,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "chinese/reference/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": true,
+          "every_residual_nonzero": false
+        },
+        "disabled": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": false,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "chinese/disabled/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": true,
+          "every_residual_nonzero": false
+        },
+        "empty": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": true,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "chinese/empty/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": true,
+          "every_residual_nonzero": false
+        },
+        "zero_gain": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": true,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "chinese/zero_gain/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": true,
+          "every_residual_nonzero": false
+        },
+        "active_untrained": {
+          "generation": {
+            "text": "<tool>\n\n",
+            "generated_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5,
+              73440
+            ],
+            "visible_token_ids": [
+              59396,
+              12605,
+              59388,
+              5,
+              5
+            ],
+            "raw_text_hex": "3c746f6f6c3e0a0a",
+            "utf8_complete": true,
+            "finish_reason": "stop_token",
+            "truncated": false,
+            "memory_enabled": true,
+            "forward_calls": 6,
+            "backend_cache_policy_verified": true,
+            "backend_evidence": "chinese/active_untrained/backend.json",
+            "internal_prefill_kv_buffers": true
+          },
+          "steps": 6,
+          "every_base_reference_checked": true,
+          "every_output_equals_base": false,
+          "every_residual_nonzero": true
+        }
+      },
+      "disabled_empty_zero_identical": true,
+      "backend_gate_passed": true
+    }
+  ],
+  "byte_replays": {
+    "mode": "scripted_logits_real_token_bytes_not_model_generation",
+    "stops": [
+      {
+        "text": " 你",
+        "generated_token_ids": [
+          29951,
+          73440
+        ],
+        "visible_token_ids": [
+          29951
+        ],
+        "raw_text_hex": "20e4bda0",
+        "utf8_complete": true,
+        "finish_reason": "stop_token",
+        "truncated": false,
+        "memory_enabled": true,
+        "forward_calls": 2,
+        "backend_cache_policy_verified": false
+      }
+    ],
+    "partial_utf8": {
+      "text": "�",
+      "generated_token_ids": [
+        1317
+      ],
+      "visible_token_ids": [
+        1317
+      ],
+      "raw_text_hex": "e4",
+      "utf8_complete": false,
+      "finish_reason": "max_new_tokens",
+      "truncated": true,
+      "memory_enabled": true,
+      "forward_calls": 1,
+      "backend_cache_policy_verified": false
+    },
+    "passed": true
+  },
+  "backend_gate_passed": true,
+  "native_generation_forward_calls": 156,
+  "source_encoder_calls": 4,
+  "internal_prefill_kv_buffers": true,
+  "cross_step_kv_reuse": false,
+  "optimizer_steps": 0,
+  "training_approved": false,
+  "memory_accuracy_measured": false,
+  "artifact_sha256": {
+    "models/bitcpm4-0.5b-tq2_0.gguf": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "build/memory_continuous_probe": "4ce9aa3f21ef95f589fb996f2a43c30a917e038f3fc4e1285bd60769691288ce",
+    "build/memory_gradient_reference": "4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152",
+    "build/memory_feature_probe": "dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0",
+    "build/tok_probe": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+    "training/memory/neural-system/experiments/DG-004.json": "09dda37448960d2d3639887ef1a4e87f2cfd3deaf069e82675c72e84c807381d"
+  },
+  "full_report": "build/neural-memory-dg004-stop-token/summary.json",
+  "full_report_sha256": "a8af0a1af05586e6977ddd3b1f36a72820237abcca6c9f3c71f6ca3d78e640be",
+  "software_tests": {
+    "python_passed": 111,
+    "c_passed": 21
+  },
+  "note": "Bound to the source hashes in the original report. Subsequent template versioning does not retroactively qualify v2 continuous fusion."
+}

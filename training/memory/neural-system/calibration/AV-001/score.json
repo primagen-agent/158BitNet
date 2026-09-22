@@ -1,0 +1,359 @@
+{
+  "format": "availability-model-review-calibration-v1",
+  "total": 16,
+  "reviews_complete": 16,
+  "agreement_count": 16,
+  "matching_authored_case_count": 16,
+  "cases": [
+    {
+      "id": "388c6272756b2af6952c23a66559f30f66d2dd40bbc0a85a6140b71c0044039f",
+      "expected": "pass",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "status": "pass",
+          "reasons": []
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "0d9ff300ed29551d68c2fed3f499d56a5c44c561972427095f12386f8ac33b76",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "d579620e14b174f131ff7bcc8b96bb960e08f6665a0be00032f390b59f799c42",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "7e4ce019264f25027f4c62d523fb1260dce636638ff4f5d8e4b195e6404a0b4a",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "f603fd1a0b7006a248fd7bd2cde72256f0ee3c19e5ad0c7fb76447f30b5d534c",
+      "expected": "pass",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "status": "pass",
+          "reasons": []
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "79859b1937aa8136ad5928b90a43463bf91b51a35accd9f5f9af2ae732b9f548",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "1d7375cebbbdd10547f58f8655e52d03a089ad86e47a78bf83a560d881bcab17",
+      "expected": "pass",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "status": "pass",
+          "reasons": []
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "1bc709064630190502336129fed8864514d862bf624a4ee34f531c573b9c375c",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "not_natural_reply",
+            "unsolicited_memory_narration"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "not_natural_reply",
+            "unsolicited_memory_narration"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "2388e7397cc2a4e95a88aa022f401b42b00b826ea805125f46ef29d90e37b1c9",
+      "expected": "pass",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "status": "pass",
+          "reasons": []
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "c8474299030f7b86deaa1fba8833a727206e9ee65e9f89848d1920252f4a1942",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "bddb1088473aa4ddca983c38a7476faabe2f4a92915ce49c4c5911155a413a69",
+      "expected": "pass",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "status": "pass",
+          "reasons": []
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "9e2275a784fe4e25231d2fe8a4f31150b72b9577373bd31e1f00906a684f366d",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "2c3b2c7384ff0800a0b324c338680ecc5c36f945f828eedfa85547459227ceec",
+      "expected": "pass",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "status": "pass",
+          "reasons": []
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "a14dcbcc87564b80a3ab1e1c34415b16f8f707fa0d663826fde63327986f1b9f",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "fc315b1de01d509f3bfb7a7ef25388fd644e3b1516b27e2b41f56cdda218d45f",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "not_natural_reply",
+            "unsolicited_memory_narration"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "not_natural_reply",
+            "unsolicited_memory_narration"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    },
+    {
+      "id": "b0e71cadc94a27a7ca7167542b4f2cf255b00747e66dbdf321f33d4937eb0971",
+      "expected": "fail",
+      "reviews_complete": true,
+      "reviewers_agree": true,
+      "outcomes": [
+        {
+          "status": "fail",
+          "reasons": [
+            "not_natural_reply",
+            "unsolicited_memory_narration"
+          ]
+        },
+        {
+          "status": "fail",
+          "reasons": [
+            "not_natural_reply",
+            "unsolicited_memory_narration"
+          ]
+        }
+      ],
+      "matches_authored_case": true
+    }
+  ],
+  "calibration_kind": "isolated_model_review_of_authored_fixtures_not_human_validation",
+  "reviewer_ids": [
+    "reviewer-a",
+    "reviewer-b"
+  ],
+  "cross_model_independence_claimed": false,
+  "promotion_eligible": false,
+  "memory_accuracy_measured": false,
+  "training_approved": false,
+  "provenance": {
+    "fixtures_sha256": "9073c9067f8925e960ae5b4a68899c0767d76387432fb11abc54c21f15d95ceb",
+    "reviews_sha256": {
+      "build/neural-memory-review-calibration/reviewer-a.jsonl": "35f381301c97579f00ba81adbb0e3eea916b2a89af592e5d08de029653173af7",
+      "build/neural-memory-review-calibration/reviewer-b.jsonl": "3b7cfd8e8bdccf84a8e46c399f17b052718a933c48501a020e70b3ccca5d0c49"
+    }
+  }
+}

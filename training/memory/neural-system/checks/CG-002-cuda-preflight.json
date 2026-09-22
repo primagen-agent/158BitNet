@@ -1,0 +1,72 @@
+{
+  "device": "cuda",
+  "torch_version": "2.13.0+cu130",
+  "cuda_device": "NVIDIA GeForce RTX 5070",
+  "passed": true,
+  "cases": [
+    {
+      "id": "case-ae1c108ad2ad41e44f8d",
+      "state": 0,
+      "source_present": false,
+      "branch_parity": true,
+      "state_parity": true,
+      "predicted_route_parity": true,
+      "finite_gradients": true,
+      "required_gradients_live": true,
+      "head_gradient_absent": true,
+      "max_logit_error": 9.5367431640625e-7
+    },
+    {
+      "id": "case-308f3b523b2579718608",
+      "state": 1,
+      "source_present": true,
+      "branch_parity": true,
+      "state_parity": true,
+      "predicted_route_parity": true,
+      "finite_gradients": true,
+      "required_gradients_live": true,
+      "head_gradient_absent": true,
+      "max_logit_error": 9.5367431640625e-7
+    },
+    {
+      "id": "case-cbfa921e9faf1d444293",
+      "state": 2,
+      "source_present": false,
+      "branch_parity": true,
+      "state_parity": true,
+      "predicted_route_parity": true,
+      "finite_gradients": true,
+      "required_gradients_live": true,
+      "head_gradient_absent": true,
+      "max_logit_error": 0.0000019073486328125
+    },
+    {
+      "id": "case-3621ff9437b0c42ff005",
+      "state": 0,
+      "source_present": true,
+      "branch_parity": true,
+      "state_parity": true,
+      "predicted_route_parity": true,
+      "finite_gradients": true,
+      "required_gradients_live": true,
+      "head_gradient_absent": true,
+      "max_logit_error": 9.5367431640625e-7
+    }
+  ],
+  "source_sha256": {
+    "python/availability_controls.py": "e8b609703c0a7e19ec70bf25f9fb843dfc4e31b58cd1a32946210b9637955d73",
+    "python/availability_supervision.py": "3e5cf4fbf64962bb909ee7e6ab06617799000b8998b5728c3358b3b9e0af5f6a",
+    "python/continuous_memory.py": "748c5daa140d71a01f9513dc4e5e925d8cff3101462bfc7317dca03243b73f34",
+    "python/memory_availability.py": "4eb37b084a0420a4052aaf924bd648003517e14093782c79effa4a9f83a83633",
+    "python/memory_fusion.py": "c06698021d04e923a8e6b4fb08b7dd9289a21fc703479a930600ba9fe770f637",
+    "python/memory_role_separated.py": "2c212e3fe421aa5ae4888a51de8350484ec78b79847bdc0a86b4e500fa968764",
+    "python/native_memory_encoder.py": "5e8d8cee8ff5002d7b8ded73c3053b7fb48475d2c4ed1dfeabbdbae9dbdf90c5",
+    "python/native_prefix_bank.py": "ede73dacd36bb88320fce230adfb2b2c26a39088630bd6c681a9fc574ff886cf",
+    "python/neural_memory_generation.py": "f23ff36ce9260428369deedf62b1f711b1b2a562be3e1a0d6e46f13d62a93414",
+    "python/qualify_role_separated_native.py": "04a99ad598cdb58ae47d58726254b8d0735ae38f32be90f332d82d443eed1d4d",
+    "python/train_availability_memory.py": "7c52b48736cb98a7c71444f3d7e86e87cfb92e639dd0c46843cc74079f4a1782",
+    "python/train_role_separated_memory.py": "43c4440f73cc9abebe8f7d10839e0db3881cf4c5d4735ab1268105d42d51f226"
+  },
+  "feature_package_digest": "8f5b2d2ae685a7995d45422e661a8f59811357186d0cff370211eb596d5f36a6",
+  "optimizer_steps": 0
+}

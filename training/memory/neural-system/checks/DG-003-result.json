@@ -1,0 +1,450 @@
+{
+  "experiment": {
+    "id": "DG-003",
+    "status": "registered_architecture_numeric_control_not_training",
+    "phase": "P1-continuous-08",
+    "scope": "One next-token distribution, supplied single memory episode, continuous neural output residual versus original layer-internal injection. No serving replacement or capability claim.",
+    "formula": "logits = native_base_logits + frozen_GGUF_output_weight @ neural_memory_delta / logit_scale; never requantize neural_memory_delta to int8",
+    "architectural_changes": [
+      "Query features are native final output-normalized hidden states",
+      "Memory correction is added to output logits, not injected into the backbone layer",
+      "The memory path is continuous FP32 and uses ordinary autograd, not STE or a surrogate suffix"
+    ],
+    "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "cases_from": "DG-001",
+    "seed": 3180922,
+    "initial_fusion_gain": 0.1,
+    "gain_perturbations": [
+      0.001,
+      0.01,
+      0.05,
+      0.1
+    ],
+    "gain_derivative_tolerance": {
+      "atol": 0.002,
+      "rtol": 0.05
+    },
+    "projection_gradient_steps": [
+      0.01,
+      0.03,
+      0.1,
+      0.3
+    ],
+    "projection_direction": "Unit-Frobenius gradient of the trainable fusion.output.weight only; perturb and restore, no optimizer step",
+    "forward_tolerance": {
+      "atol": 1e-05,
+      "rtol": 0.0001
+    },
+    "gates": [
+      "Disabled and zero correction preserve ordinary C base logits byte-for-byte",
+      "Every tested C correction and combined logit vector matches Torch within preregistered forward tolerance",
+      "Every gain finite difference matches ordinary autograd within derivative tolerance and sign",
+      "Each case has native NLL descent/opposed increase beyond 1e-6 at at least 3/4 projection steps",
+      "Each case has at least one descent candidate with strictly better target rank and lower native NLL; retain every failed/flat candidate"
+    ],
+    "constraints": {
+      "optimizer_steps": 0,
+      "backbone_frozen": true,
+      "output_projection_frozen": true,
+      "kv_reuse": false,
+      "lora": false,
+      "svd": false,
+      "nas_ng": false,
+      "locomo": false
+    },
+    "limitations": "This is an architecture variant and multi-factor intervention, not proof of the original all-layer design. Random untrained fusion and three known diagnostics cannot establish memory learning/generalization.",
+    "failure_action": "Retain results, do not lower thresholds or start training. Success permits only further preconditions/capability experiments, not promotion."
+  },
+  "parent_experiment_sha256": "9309227aaeaf5ff93233301b832c631d5cbe4a4a259edb80490ab9756160ac08",
+  "cases": [
+    {
+      "id": "home_en",
+      "target_id": 10259,
+      "zero_disabled_exact": true,
+      "base_nll": 22.96016816663285,
+      "base_target_rank": 5394,
+      "gain_gradient": 0.04905516654253006,
+      "projection_gradient_norm": 0.33878329396247864,
+      "gain_checks": [
+        {
+          "step": 0.001,
+          "minus": 22.960119650797637,
+          "plus": 22.960218594657846,
+          "finite_difference": 0.04947193010451656,
+          "passed": true
+        },
+        {
+          "step": 0.01,
+          "minus": 22.9596768156863,
+          "plus": 22.960659313347435,
+          "finite_difference": 0.049124883056705926,
+          "passed": true
+        },
+        {
+          "step": 0.05,
+          "minus": 22.957705771973945,
+          "plus": 22.962607260042777,
+          "finite_difference": 0.049014880688318385,
+          "passed": true
+        },
+        {
+          "step": 0.1,
+          "minus": 22.95523203874586,
+          "plus": 22.96501059188538,
+          "finite_difference": 0.04889276569761236,
+          "passed": true
+        }
+      ],
+      "projection_steps": [
+        {
+          "step": 0.01,
+          "descent": {
+            "nll": 22.956780106138723,
+            "target_rank": 5386,
+            "top1": 59396
+          },
+          "opposed": {
+            "nll": 22.96355633691893,
+            "target_rank": 5401,
+            "top1": 59396
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        },
+        {
+          "step": 0.03,
+          "descent": {
+            "nll": 22.950004313114984,
+            "target_rank": 5371,
+            "top1": 59396
+          },
+          "opposed": {
+            "nll": 22.97033491769049,
+            "target_rank": 5417,
+            "top1": 59396
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        },
+        {
+          "step": 0.1,
+          "descent": {
+            "nll": 22.926290588292932,
+            "target_rank": 5323,
+            "top1": 59396
+          },
+          "opposed": {
+            "nll": 22.994056695221264,
+            "target_rank": 5455,
+            "top1": 59396
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        },
+        {
+          "step": 0.3,
+          "descent": {
+            "nll": 22.85856861680538,
+            "target_rank": 5204,
+            "top1": 59396
+          },
+          "opposed": {
+            "nll": 23.061866280433453,
+            "target_rank": 5582,
+            "top1": 59396
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        }
+      ],
+      "all_forward_checks_passed": true,
+      "all_gain_checks_passed": true,
+      "direction_gate_passed": true,
+      "rank_gate_passed": true,
+      "forward_parity_summary": {
+        "comparison_groups": 17,
+        "max_correction_abs_error": 4.842877388000488e-08,
+        "max_logits_abs_error": 9.5367431640625e-07,
+        "failed_groups": []
+      }
+    },
+    {
+      "id": "home_zh",
+      "target_id": 10924,
+      "zero_disabled_exact": true,
+      "base_nll": 26.90231697111625,
+      "base_target_rank": 29270,
+      "gain_gradient": -0.07758408039808273,
+      "projection_gradient_norm": 0.30488502979278564,
+      "gain_checks": [
+        {
+          "step": 0.001,
+          "minus": 26.902394249512945,
+          "plus": 26.902239187847044,
+          "finite_difference": -0.07753083295014562,
+          "passed": true
+        },
+        {
+          "step": 0.01,
+          "minus": 26.903093159560857,
+          "plus": 26.901541759894727,
+          "finite_difference": -0.07756998330652465,
+          "passed": true
+        },
+        {
+          "step": 0.05,
+          "minus": 26.9062129869794,
+          "plus": 26.898459912515303,
+          "finite_difference": -0.0775307446409812,
+          "passed": true
+        },
+        {
+          "step": 0.1,
+          "minus": 26.91012833805559,
+          "plus": 26.894661984121026,
+          "finite_difference": -0.07733176967281707,
+          "passed": true
+        }
+      ],
+      "projection_steps": [
+        {
+          "step": 0.01,
+          "descent": {
+            "nll": 26.89926711941751,
+            "target_rank": 29253,
+            "top1": 59396
+          },
+          "opposed": {
+            "nll": 26.905365951802793,
+            "target_rank": 29284,
+            "top1": 59396
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        },
+        {
+          "step": 0.03,
+          "descent": {
+            "nll": 26.893169655112786,
+            "target_rank": 29228,
+            "top1": 59396
+          },
+          "opposed": {
+            "nll": 26.911465704503705,
+            "target_rank": 29318,
+            "top1": 59396
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        },
+        {
+          "step": 0.1,
+          "descent": {
+            "nll": 26.87182830079503,
+            "target_rank": 29135,
+            "top1": 59396
+          },
+          "opposed": {
+            "nll": 26.932816219950727,
+            "target_rank": 29416,
+            "top1": 59396
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        },
+        {
+          "step": 0.3,
+          "descent": {
+            "nll": 26.810886266070376,
+            "target_rank": 28831,
+            "top1": 59396
+          },
+          "opposed": {
+            "nll": 26.993848812345266,
+            "target_rank": 29727,
+            "top1": 59396
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        }
+      ],
+      "all_forward_checks_passed": true,
+      "all_gain_checks_passed": true,
+      "direction_gate_passed": true,
+      "rank_gate_passed": true,
+      "forward_parity_summary": {
+        "comparison_groups": 17,
+        "max_correction_abs_error": 5.21540641784668e-08,
+        "max_logits_abs_error": 1.9073486328125e-06,
+        "failed_groups": []
+      }
+    },
+    {
+      "id": "drink_en",
+      "target_id": 14336,
+      "zero_disabled_exact": true,
+      "base_nll": 29.16537988666552,
+      "base_target_rank": 54231,
+      "gain_gradient": 0.01995844580233097,
+      "projection_gradient_norm": 0.3169846832752228,
+      "gain_checks": [
+        {
+          "step": 0.001,
+          "minus": 29.16535945216411,
+          "plus": 29.16539936902415,
+          "finite_difference": 0.019958430019784146,
+          "passed": true
+        },
+        {
+          "step": 0.01,
+          "minus": 29.165179348655833,
+          "plus": 29.16557851895056,
+          "finite_difference": 0.019958514736373445,
+          "passed": true
+        },
+        {
+          "step": 0.05,
+          "minus": 29.16437772811911,
+          "plus": 29.16637262705987,
+          "finite_difference": 0.01994898940761658,
+          "passed": true
+        },
+        {
+          "step": 0.1,
+          "minus": 29.163370276659688,
+          "plus": 29.167349168241483,
+          "finite_difference": 0.019894457908975482,
+          "passed": true
+        }
+      ],
+      "projection_steps": [
+        {
+          "step": 0.01,
+          "descent": {
+            "nll": 29.162209980447486,
+            "target_rank": 54215,
+            "top1": 5
+          },
+          "opposed": {
+            "nll": 29.16855036136319,
+            "target_rank": 54237,
+            "top1": 5
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        },
+        {
+          "step": 0.03,
+          "descent": {
+            "nll": 29.155868688986356,
+            "target_rank": 54196,
+            "top1": 5
+          },
+          "opposed": {
+            "nll": 29.17489046978539,
+            "target_rank": 54258,
+            "top1": 5
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        },
+        {
+          "step": 0.1,
+          "descent": {
+            "nll": 29.133677739112738,
+            "target_rank": 54119,
+            "top1": 5
+          },
+          "opposed": {
+            "nll": 29.197085366247297,
+            "target_rank": 54342,
+            "top1": 5
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        },
+        {
+          "step": 0.3,
+          "descent": {
+            "nll": 29.07028516976511,
+            "target_rank": 53880,
+            "top1": 5
+          },
+          "opposed": {
+            "nll": 29.260507972113455,
+            "target_rank": 54585,
+            "top1": 5
+          },
+          "direction_passed": true,
+          "rank_improved": true
+        }
+      ],
+      "all_forward_checks_passed": true,
+      "all_gain_checks_passed": true,
+      "direction_gate_passed": true,
+      "rank_gate_passed": true,
+      "forward_parity_summary": {
+        "comparison_groups": 17,
+        "max_correction_abs_error": 5.960464477539063e-08,
+        "max_logits_abs_error": 1.9073486328125e-06,
+        "failed_groups": []
+      }
+    }
+  ],
+  "frozen_output_tensor": "token_embd.weight",
+  "logit_scale": 4.0,
+  "numeric_gate_passed": true,
+  "memory_accuracy_measured": false,
+  "optimizer_steps": 0,
+  "training_approved": false,
+  "encoder_identity": {
+    "encoder_id": "f7653ec60c43b2cefa710bd4273513050cedc9dc0b34243c6e622bb7be1fbc01",
+    "binding": {
+      "policy": {
+        "format": "native-reader-f32-v1",
+        "wire_format": "BNEN0001",
+        "hidden": 1024,
+        "layers": 24,
+        "dtype": "float32",
+        "bos": "encoded_then_drop_feature_row",
+        "normalization": "c_ordered_f32_l2_eps1e-12",
+        "message_frame": "json-role-speaker-text-v1",
+        "threads": 4,
+        "metal": false,
+        "context_capacity": 512,
+        "maximum_tokens_with_bos": 511,
+        "cross_input_kv_reuse": false,
+        "internal_prefill_kv_buffers": true
+      },
+      "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+      "binary_sha256": "dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0",
+      "message_frame_source_sha256": "3aa68b33252ad35f22ff150f905fe02fa1905ca55a0645d1229bc845a4feb0b5",
+      "system": "Darwin",
+      "machine": "arm64",
+      "os_release": "25.2.0",
+      "dispatch": "arm_neon"
+    }
+  },
+  "source_sha256": {
+    "python/continuous_memory.py": "748c5daa140d71a01f9513dc4e5e925d8cff3101462bfc7317dca03243b73f34",
+    "python/diagnose_continuous_memory.py": "c90f8ddd29d3e3332eb102953d10ea321726c03fc0e164de19bf60c2988d1de4",
+    "python/memory_fusion.py": "c06698021d04e923a8e6b4fb08b7dd9289a21fc703479a930600ba9fe770f637",
+    "tools/memory_continuous_probe.c": "dca871c9ad15b4607adbb62fd2499562627e8f446a4a60482986680f3fbaea1b",
+    "src/bitnet.c": "d434728fd1db00db0e3ba4429f59bf2acdedba328256e1f74af02b928582be63",
+    "src/ops.c": "98137f23d07fcf926f6a52d08771e85d5cb7c73358e1319cb3d154975d05f65e",
+    "src/quant_q6k.c": "8dbf948df7a44ed8200bae060adf308c23e1cbf18ae63e6208544f869f78679a",
+    "CMakeLists.txt": "fc68edb74878f68a2faafb88a67c884dcd51fba82249dd341cf481685c9bc058"
+  },
+  "artifact_sha256": {
+    "build/memory_continuous_probe": "9773b288a6d2be577c3833788c5ea7edfc2c8d2299a764a13a48b3dff558b819",
+    "build/memory_gradient_reference": "4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152",
+    "build/libggwshim.so": "79c37c2f3b3dffd175d80507ed1acc965f5767456e1a84efddd3a51df1b86a67",
+    "build/tok_probe": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+    "training/memory/neural-system/experiments/DG-003.json": "6ecd59bbe6d238c98bc897e22c81e60231f30c8c81493b6a27cceef61973d440"
+  },
+  "full_report_path": "build/neural-memory-dg003-tied-head/summary.json",
+  "full_report_sha256": "c066a33bb04c8b35cfd127ec54959816786f7e00cdbea3ad9a05d4faa0ba87d4",
+  "status": "numeric_gate_passed_not_memory_capability",
+  "raw_artifact_count": 184,
+  "raw_hash_manifest_sha256": "2be7bca68f04605960f4a436172953996ed90ebbe0201f9a56842e2a226c2caf"
+}

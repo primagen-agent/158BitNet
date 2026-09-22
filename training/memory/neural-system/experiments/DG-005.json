@@ -1,0 +1,19 @@
+{
+  "id": "DG-005",
+  "status": "registered_baseline_prompt_diagnostic_not_training",
+  "phase": "P1-native-generation-10",
+  "reason": "DG-004 ordinary C English baseline generated a tool marker before any memory correction. The research suffix adds an empty think block absent from this GGUF chat_template.",
+  "hypothesis": "The extra no-think suffix contributes to malformed ordinary generation. Compare only that suffix; keep GGUF, system text, tokenizer, greedy decoding and no-memory state fixed.",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "variants": ["research_no_think", "gguf_declared"],
+  "max_new_tokens": 24,
+  "cases": [
+    {"id": "english", "query": "Where does Nora live?"},
+    {"id": "chinese", "query": "小安现在住在哪里？"},
+    {"id": "ordinary_arithmetic", "query": "What is two plus two?"}
+  ],
+  "constraints": {"memory_branch": false, "optimizer_steps": 0, "kv_reuse": false, "internal_prefill_kv_buffers": true, "locomo": false},
+  "reporting": "Retain complete raw replies, finish reason, token IDs and hashes for both variants. No memory accuracy claim or automatic semantic pass. Do not tune the system text or add answer hints.",
+  "failure_action": "If declared-template baseline still fails, investigate backbone/runtime/tokenizer before memory training; do not attribute all failures to memory design.",
+  "migration_rule": "Any future prompt change requires an explicit new protocol identity and rerunning affected input/numeric checks. Do not rewrite DG-001 to DG-004 records."
+}

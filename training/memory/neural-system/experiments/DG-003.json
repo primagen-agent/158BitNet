@@ -1,0 +1,27 @@
+{
+  "id": "DG-003",
+  "status": "registered_architecture_numeric_control_not_training",
+  "phase": "P1-continuous-08",
+  "scope": "One next-token distribution, supplied single memory episode, continuous neural output residual versus original layer-internal injection. No serving replacement or capability claim.",
+  "formula": "logits = native_base_logits + frozen_GGUF_output_weight @ neural_memory_delta / logit_scale; never requantize neural_memory_delta to int8",
+  "architectural_changes": ["Query features are native final output-normalized hidden states", "Memory correction is added to output logits, not injected into the backbone layer", "The memory path is continuous FP32 and uses ordinary autograd, not STE or a surrogate suffix"],
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "cases_from": "DG-001",
+  "seed": 3180922,
+  "initial_fusion_gain": 0.1,
+  "gain_perturbations": [0.001, 0.01, 0.05, 0.1],
+  "gain_derivative_tolerance": {"atol": 0.002, "rtol": 0.05},
+  "projection_gradient_steps": [0.01, 0.03, 0.1, 0.3],
+  "projection_direction": "Unit-Frobenius gradient of the trainable fusion.output.weight only; perturb and restore, no optimizer step",
+  "forward_tolerance": {"atol": 0.00001, "rtol": 0.0001},
+  "gates": [
+    "Disabled and zero correction preserve ordinary C base logits byte-for-byte",
+    "Every tested C correction and combined logit vector matches Torch within preregistered forward tolerance",
+    "Every gain finite difference matches ordinary autograd within derivative tolerance and sign",
+    "Each case has native NLL descent/opposed increase beyond 1e-6 at at least 3/4 projection steps",
+    "Each case has at least one descent candidate with strictly better target rank and lower native NLL; retain every failed/flat candidate"
+  ],
+  "constraints": {"optimizer_steps": 0, "backbone_frozen": true, "output_projection_frozen": true, "kv_reuse": false, "lora": false, "svd": false, "nas_ng": false, "locomo": false},
+  "limitations": "This is an architecture variant and multi-factor intervention, not proof of the original all-layer design. Random untrained fusion and three known diagnostics cannot establish memory learning/generalization.",
+  "failure_action": "Retain results, do not lower thresholds or start training. Success permits only further preconditions/capability experiments, not promotion."
+}

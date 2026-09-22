@@ -1,0 +1,22 @@
+{
+  "id": "DG-010",
+  "status": "registered_zero_step_token_read_interface",
+  "scope": "Untrained interface prototype only, not a third trained candidate. Neural two-slot query/source alignment, predicted initial route and per-step token-position readout. No claimed subject/relation semantics before training.",
+  "inputs": "Fresh C encoding of natural query and supplied source separately; exact 0.5B identity. No gold spans, query strings, labels or source text in neural forward or generation prompt.",
+  "payload_policy": "Only whole C token pieces wholly inside the JSON text field, whose unescaped bytes exactly match natural text, may copy. Escaped text fails closed for copy. Control tokens and framing excluded; boundary-overlapping tokens excluded. No retokenization or normalization claims.",
+  "native_panel": "First lexicographically sorted training world, both languages, original/swapped_values/wrong_subject. Six supplied-source records; two unique query texts and six source texts. Fresh extraction, no feature-bank fallback. Empty source and disabled branch separately checked.",
+  "seed": 1010,
+  "checks": [
+    "Exact C token IDs and byte reconstruction; query bytes unchanged across source interventions; no gold fields in adapter",
+    "Only neural attention selects payload positions; changing payload IDs without changing features cannot affect matching or position weights (synthetic unit check only)",
+    "Empty/all-ineligible/disabled bypass exactly preserves base logits; wrong-route copy suppressed, without claiming untrained wrong-subject detection",
+    "Duplicate token positions sum probability mass, special tokens excluded, normalized mixture, finite gradients to matching/position/gate",
+    "Reply-local state bound to module/input identity and tensor versions; mutations and cross-module reuse rejected",
+    "Retain all untrained route predictions; no threshold/seed/weight search and no semantic success gate"
+  ],
+  "optimizer_steps": 0,
+  "new_free_generated_answers": 0,
+  "training_approved": false,
+  "deployment_approved": false,
+  "constraints": {"kv_reuse": false, "lora": false, "svd": false, "nas_ng": false, "locomo": false, "rag": false}
+}

@@ -1,0 +1,269 @@
+{
+  "rows": [
+    {
+      "packet_id": "dd93f9f2dd56e6c012c7a20a810a260ed0c46ea31ad0aa0bc474ea733e12bc12",
+      "record_id": "joint-3415d75b34a68cb08833",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "2c0e5094faa2405750349971b4a031d7023d5ae09e5cc64deca8dd2b6bdc6d86",
+      "record_id": "joint-00358fb1f7c2b30e2c7d",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "9a9767319c20f0761de9b194f88e703da355f17ed2fb41da908ca4cb0b5945bd",
+      "record_id": "joint-52b4b20ec52ee431532e",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "1398b821a1eaa83657fc2a347687d8b78aaecc57cc5bcb9ba67055c3e572a26f",
+      "record_id": "joint-4ff45be3a97c231edc81",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "25de14bcf80a4cc493677606a46e0306b0f29c5e654b64aa13d16f76106fc25e",
+      "record_id": "joint-c42056354c0b69813970",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "d3d756af683b7b61114aafac83451b09d50f9777e766c6361066376f59e57bef",
+      "record_id": "joint-5620a2bfcfca17ae14ce",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "2d228bfe33e3a65867cff5a99de7cdafa8a741b7acaf444a832b2f05d8be578d",
+      "record_id": "joint-aaefd8e262566e4a2353",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "c52d2ac6e240e442ab2affc2d451ca6d5a06732dc809584a2568a02c2e80033e",
+      "record_id": "joint-f2c8b739dffa4af42202",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "bdcc4a6b2ba20fb21d2f833b1ada3da26765eb7f2500c92fe3e38192c310ba14",
+      "record_id": "joint-cff41e673284fbf1c6d9",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "5f377978a7e208d31e15fc9e9ee9079f0fb94fbe35942dee262007553e156947",
+      "record_id": "joint-f417c9409407bcb8e962",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "ecad6fdc897ad4926f78d0c695429644d028032ca560c7896553b05d491ef256",
+      "record_id": "joint-a327d6559d03d72cb623",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "9b4e3298234cf274b00b015128475ba85d42ddb903f78b550395dbd230c46c19",
+      "record_id": "joint-d52d5721c8e37ed4372f",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    }
+  ],
+  "counts": {
+    "0": {
+      "denominator": 4,
+      "a_pass": 4,
+      "b_pass": 4,
+      "agreement": 4
+    },
+    "1": {
+      "denominator": 4,
+      "a_pass": 0,
+      "b_pass": 0,
+      "agreement": 4
+    },
+    "2": {
+      "denominator": 4,
+      "a_pass": 0,
+      "b_pass": 0,
+      "agreement": 4
+    }
+  },
+  "truncated": 4,
+  "total": 12,
+  "format": "dg023-review-score-v1",
+  "reviewer_disclosure": "two fresh isolated same-family model instances, v2 packets (trailing end-marker stripped, serving-faithful); v1 packets/results archived alongside",
+  "route2_gate_limitation": "the pre-registered route-2 gate omits the natural_reply requirement; the v1 round showed truncated reserved-token gibberish can satisfy it. Next registration must require natural_reply for uncertainty items; reported here as a limitation, not retrofitted."
+}

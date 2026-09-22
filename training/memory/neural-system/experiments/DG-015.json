@@ -1,0 +1,25 @@
+{
+  "id": "DG-015",
+  "status": "registered_contract_only",
+  "purpose": "V1 software-only activated-fact handle and ordered value transport; no semantic selector or model capability claim",
+  "optimizer_steps": 0,
+  "new_model_generation": false,
+  "deployment_approved": false,
+  "scope": "Immutable request/model/scope/snapshot-bound handle; explicit oracle fixture provenance; contiguous UTF-8 value spans; C tokenizer append-only compilation; transactional cursor; exact normal/NULL bypass",
+  "token_boundary_policy": "Only accept exact C encode(prefix+value) when original actual prefix token IDs are unchanged and decoded suffix bytes equal selected value bytes. Reject prefix retokenization, invalid UTF-8, control tokens, over-budget values before any emission. No alternate tokenizer, stripping whitespace, partial fallback or prefix rewriting.",
+  "native_fixtures": [
+    {"id":"ascii-riga","prefix":"City:","value":"Riga","expected":"accept"},
+    {"id":"ascii-quimper","prefix":"City:","value":"Quimper","expected":"accept"},
+    {"id":"chinese","prefix":"城市是","value":"里加","expected":"accept"},
+    {"id":"unicode","prefix":"Value:","value":"🧠","expected":"accept"},
+    {"id":"repeated","prefix":"Value:","value":"er er er","expected":"accept"},
+    {"id":"leading-space-value","prefix":"City:","value":" Riga","expected":"accept"},
+    {"id":"quoted-value","prefix":"Value:","value":"\"Riga\"","expected":"accept"},
+    {"id":"prefix-space-merge","prefix":"City: ","value":"Quimper","expected":"reject_prefix"},
+    {"id":"prefix-letter-merge","prefix":"R","value":"iga","expected":"reject_prefix"},
+    {"id":"control-marker","prefix":"City:","value":"<|im_end|>","expected":"reject_control"},
+    {"id":"over-budget","prefix":"City:","value":"Quimper","max_value_tokens":1,"expected":"reject_budget"}
+  ],
+  "unit_gates": ["scope/request/context/model/snapshot mismatch", "same revision changed payload", "explicit oracle opt-in", "NULL and normal identity", "span bounds and UTF-8 boundaries", "ordered repeated pieces", "no premature end/skip/repeat", "actual prefix binding", "invalid/control token rejection", "budget failure before emission", "end returns to base selection", "no source prompt injection"],
+  "stop": "Preserve every fixture outcome. On failure fix implementation or report unsupported boundary; never remove examples or label oracle success as neural recall. Do not train, alter CG-003 frozen code/weights, access LoCoMo or install this in HTTP serving."
+}

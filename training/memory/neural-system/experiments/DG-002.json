@@ -1,0 +1,19 @@
+{
+  "id": "DG-002",
+  "status": "registered_numeric_diagnostic_not_training",
+  "phase": "P1-cell-gradient-07",
+  "parent_experiment": "DG-001",
+  "hypothesis": "A backward anchored to native intermediates with fixed int8 codes and differentiable scales can match the local derivative inside unchanged quantization cells; this alone may not change output ranking.",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "seed": 3180922,
+  "initial_fusion_gain": 0.1,
+  "cases_from": "DG-001",
+  "gain_perturbations": [0.0001, 0.0003, 0.001, 0.003, 0.01, 0.05, 0.1],
+  "cell_definition": "Both perturbations preserve native codes, max-absolute index and sign at FFN-input, FFN-down-input and output-input quantizers. Report all cross-cell and ambiguous comparisons separately without deleting them.",
+  "local_derivative_tolerance": {"atol": 0.005, "rtol": 0.25},
+  "local_gate": "Each case needs at least two unchanged-cell comparisons; all qualifying finite differences must satisfy the preregistered derivative tolerance and sign agreement. Insufficient unchanged cells is inconclusive, not a pass.",
+  "acceptance_rule": "Use the first preregistered step whose proposed negative-gradient direction actually lowers native NLL by more than 1e-6; otherwise report no accepted diagnostic step. No optimizer update.",
+  "measurements": ["native forward bit equality", "nonzero fusion gradient", "quantizer code changes", "finite difference derivative", "actual NLL decrease", "target rank", "top-1 token", "fixed-code logit proportionality"],
+  "constraints": {"optimizer_steps": 0, "backbone_frozen": true, "kv_reuse": false, "lora": false, "svd": false, "nas_ng": false, "locomo": false},
+  "failure_action": "Do not change DG-001 or reclassify NLL improvement as memory capability. Passing local math does not approve a training method or architectural promotion."
+}

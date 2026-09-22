@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <float.h>
 
 void bitnet_silu_mul(float *gate, const float *up, int n);
 float bitnet_silu_mul_max_abs(float *gate, const float *up, int n);
@@ -10,6 +11,43 @@ float bitnet_silu_mul_max_abs(float *gate, const float *up, int n);
 static int close_enough(float a, float b, float tol) {
     float diff = fabsf(a - b);
     return diff <= tol;
+}
+
+static int test_silu_reference_grid(void) {
+    /* Independent scalar reference, not another entry point using the same
+     * SIMD approximation. Sweep SIMD lanes/tails and log2 range boundaries. */
+    enum { N = 4099 };
+    float source[N], plain[N], product[N], product_max[N], up[N];
+    const int lengths[] = {1, 3, 4, 7, 16, 257, N};
+    for (int i = 0; i < N; ++i) source[i] = -16.0f + 32.0f * (float)i / (float)(N - 1);
+    const float edges[] = {-FLT_MAX, -100.0f, -88.0f, -87.0f, -0.3465736f, -0.000001f,
+                           0.0f, 0.000001f, 0.3465736f, 87.0f, 88.0f, 100.0f};
+    for (size_t e = 0; e < sizeof(edges) / sizeof(edges[0]); ++e) source[e] = edges[e];
+    for (size_t length = 0; length < sizeof(lengths) / sizeof(lengths[0]); ++length) {
+        int n = lengths[length];
+        for (int i = 0; i < n; ++i) {
+            plain[i] = product[i] = product_max[i] = source[i];
+            up[i] = (float)(i % 17 - 8) * 0.5f;
+        }
+        bitnet_silu(plain, n);
+        bitnet_silu_mul(product, up, n);
+        float maximum = bitnet_silu_mul_max_abs(product_max, up, n), expected_max = 0.0f;
+        for (int i = 0; i < n; ++i) {
+            double x = (double)source[i];
+            double e = exp(-fabs(x));
+            float expected = (float)(x >= 0 ? x / (1.0 + e) : x * e / (1.0 + e));
+            float multiplied = expected * up[i];
+            if (!isfinite(plain[i]) || fabsf(plain[i] - expected) > 1e-6f + 1e-5f * fabsf(expected) ||
+                !isfinite(product[i]) || fabsf(product[i] - multiplied) > 1e-6f + 1e-5f * fabsf(multiplied) ||
+                !isfinite(product_max[i]) || fabsf(product_max[i] - multiplied) > 1e-6f + 1e-5f * fabsf(multiplied)) {
+                fprintf(stderr, "SiLU scalar reference mismatch n=%d i=%d x=%.9g got=%.9g expected=%.9g\n", n, i, source[i], plain[i], expected);
+                return 70;
+            }
+            if (fabsf(multiplied) > expected_max) expected_max = fabsf(multiplied);
+        }
+        if (fabsf(maximum - expected_max) > 1e-6f + 1e-5f * expected_max) return 71;
+    }
+    return 0;
 }
 
 static int test_rms_norm_lengths(void) {
@@ -175,6 +213,8 @@ static int test_rope_apply_null_safe(void) {
 }
 
 int main(void) {
+    int silu_status = test_silu_reference_grid();
+    if (silu_status) return silu_status;
     float x[8] = { -102.0f, -101.0f, -100.0f, -99.0f,
                    -103.0f, -104.0f, -105.0f, -106.0f };
     float ref[8];

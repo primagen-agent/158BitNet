@@ -1,0 +1,37 @@
+{
+  "format": "neural-memory-generation-audit-v2",
+  "template_version": "gguf-chatml-v2",
+  "input_count": 704,
+  "causal_pair_count": 416,
+  "independent_worlds": 16,
+  "pairs_by_split": {
+    "train": 208,
+    "dev": 208
+  },
+  "max_prompt_tokens": 47,
+  "reserved_generation_tokens": 32,
+  "all_paired_prefix_tokens_identical": true,
+  "all_paired_sources_differ": true,
+  "corpus_manifest_sha256": "c3090977a1c5e20bb0950b0d59ac832e8605183256c8f664f5db606a802d2607",
+  "protocol_sha256": "1e94a437e0bba457797b0b3cb5d068fc96b1061be18ad38613af160c88e2c1c2",
+  "token_record_sha256": "726244447a5218b8ec029569f765e9c39a7cff7ab3b58d83f1e6e1bd2410c126",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "tokenizer_binary_sha256": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+  "source_sha256": {
+    "python/neural_memory_generation.py": "f23ff36ce9260428369deedf62b1f711b1b2a562be3e1a0d6e46f13d62a93414",
+    "python/neural_memory_causality.py": "fcd387d7c0dbaba5570b1a7eb6715cd83f7ee0cd416ab7cf4d83871d5627fda9",
+    "python/audit_neural_memory_generation.py": "7bed21515f7e28719d705cfb3e593741155b1be185e8df6f346e84f775a8cd68",
+    "python/c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8",
+    "python/episode_memory_inputs.py": "3aa68b33252ad35f22ff150f905fe02fa1905ca55a0645d1229bc845a4feb0b5",
+    "python/review_neural_memory.py": "a72e7ff6b453a507e308ee4c8fe807b934922fd0830a05746f576a8084eabcbe",
+    "python/neural_memory_protocol.py": "2b886045196d0ede1b13369f0ff28fb5ff240c2830334fa475c1075762a94862",
+    "python/prepare_neural_memory_protocol.py": "1b0030b89ebefefdb8acc40929df8cb6c37ab68de8db051b7157c613a0288529"
+  },
+  "memory_accuracy_measured": false,
+  "model_inference_calls": 0,
+  "optimizer_steps": 0,
+  "training_approved": false,
+  "promotion_eligible": false,
+  "full_report": "build/neural-memory-p1-causal-v2/summary.json",
+  "full_report_sha256": "098119ea895ae52c30891a0f46141f177220a854934ec6fd0048bdbf852c7606"
+}

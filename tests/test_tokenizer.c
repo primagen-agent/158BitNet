@@ -20,11 +20,45 @@ int main(void) {
     if (bitnet_tokenizer_load(&tokenizer, model_path) != 0) return 1;
     if (tokenizer == NULL) return 2;
 
+    /* Independent GGUF/llama.cpp b9370 fixture: compare IDs, not just length.
+     * In particular user/assistant are space-prefixed AFTER a control token;
+     * there must not be a spurious standalone space before im_start. */
+    {
+        const char *text = "<|im_start|>user\nReply with exactly this word and nothing else: READY<|im_end|>\n<|im_start|>assistant\n";
+        const int expected[] = {73441,3060,5,40165,1450,7061,1536,3848,1384,6811,
+                                3686,59358,23018,59447,73440,59320,5,73441,16434,5};
+        n_tokens = bitnet_tokenizer_encode(tokenizer, text, tokens, 64);
+        if (n_tokens != (int)(sizeof expected / sizeof expected[0]) ||
+            memcmp(tokens, expected, sizeof expected)) return 15;
+        if (bitnet_tokenizer_encode(tokenizer, text, tokens, 3) >= 0) return 16;
+        if (bitnet_tokenizer_encode(tokenizer, "", tokens, 64) != 0) return 17;
+        n_tokens = bitnet_tokenizer_encode(tokenizer, "<|im_start|><|im_end|>", tokens, 64);
+        if (n_tokens != 2 || tokens[0] != 73441 || tokens[1] != 73440) return 18;
+    }
+
     n_tokens = bitnet_tokenizer_encode(tokenizer, "hello world", tokens, 64);
     if (n_tokens <= 0) return 3;
 
     rc = bitnet_tokenizer_decode(tokenizer, tokens[0], buf, sizeof(buf));
     if (rc <= 0) return 4;
+
+    /* Leading spaces/newlines or regular pieces may not absorb the opening
+     * '<' of a registered ChatML marker. This is the model's real EOS ID. */
+    {
+        const char *texts[] = {"<|im_end|>", "hello<|im_end|>world",
+                              "<|im_start|>user\nhello<|im_end|>\n<|im_start|>assistant\n"};
+        for (size_t j = 0; j < sizeof texts / sizeof texts[0]; ++j) {
+            int eos_count = 0, start_count = 0;
+            n_tokens = bitnet_tokenizer_encode(tokenizer, texts[j], tokens, 64);
+            if (n_tokens <= 0) return 13;
+            for (int i = 0; i < n_tokens; ++i) {
+                if (tokens[i] == bitnet_tokenizer_eos_id(tokenizer)) ++eos_count;
+                rc = bitnet_tokenizer_decode(tokenizer, tokens[i], buf, sizeof buf);
+                if (rc > 0 && strcmp(buf, "<|im_start|>") == 0) ++start_count;
+            }
+            if (eos_count != 1 || (j == 2 && start_count != 2)) return 14;
+        }
+    }
 
     /* An unmatched raw byte must use the SentencePiece <0xHH> fallback token,
      * not collapse to <unk>.  The leading-space token may also be emitted. */

@@ -1,0 +1,202 @@
+{
+  "format": "neural-memory-blind-review-v1",
+  "packets": [
+    {
+      "id": "2d7a43c2b52160f12718fe20933a78a0cdac86d481f794779c49d4370bd1eba7",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Seline currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Ronan currently lives in Quimper. Seline currently works in Riga."
+        }
+      ],
+      "response": " currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently",
+      "packet_sha256": "fd1ec743cebf93cab149abb2b5a6a5ac9ae2569be1a2def9860b8a92205816ae"
+    },
+    {
+      "id": "2f8ec43e42f4e5a3b31223e6df4e7d74a7d50aa29ced301b2ed170e00c0f0ade",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Seline目前工作的城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Ronan现在在Riga工作。Seline现在住在Quimper。"
+        }
+      ],
+      "response": "Seline currently works in currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently",
+      "packet_sha256": "0067c61f152eabd9da91f6f8518653ae3d551d6ca59bece70b90d8b38c701dd2"
+    },
+    {
+      "id": "3db40953068db14d7086d2d8825159ba9d1fe471678c2c51ea3c17bc044e3292",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Seline目前居住的城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Ronan现在住在Quimper。Seline现在在Riga工作。"
+        }
+      ],
+      "response": "Seline现在居住在Quererer。",
+      "packet_sha256": "36b57aa839f8da992e0cebc082f39fa4146ea3675378e553e4f466ddd356eb72"
+    },
+    {
+      "id": "600640168575a6b508b5ea6736871c493b29fbf2a4ba293db2b0fefa267f894a",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Seline currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Seline currently lives in Riga. Ronan currently works in Quimper."
+        }
+      ],
+      "response": " currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently",
+      "packet_sha256": "7f3f21cd7d46579eb8b74984d30a3271cd67892af2c94c86254b347eb2bc70e4"
+    },
+    {
+      "id": "7719fbd042f9dec4d4fd1c42a2b7a782adb04868f44bcb65fe313b7771891caf",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Seline currently working?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Seline currently works in Riga. Ronan currently lives in Quimper."
+        }
+      ],
+      "response": " currently working in currently working.",
+      "packet_sha256": "3a1bec658e045d5b307c7d30700beb1933a3a6ca53a46bcf8ea875335b575238"
+    },
+    {
+      "id": "82b27c57243177077e839b9901f10eae78414c77e3aa2625781190d3e7b4f6c2",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Seline currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Seline currently lives in Quimper. Ronan currently works in Riga."
+        }
+      ],
+      "response": " currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently",
+      "packet_sha256": "7d06532fe1adde0f5385a6f721166e993e22598f9225f787e7d49435987a4aef"
+    },
+    {
+      "id": "8807c727bdaa283977de268836a97ff1bdaa7eea944a1673f2d86b96cd31427a",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Seline目前工作的城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Seline现在在Quimper工作。Ronan现在住在Riga。"
+        }
+      ],
+      "response": "Seline currently works in currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently currently",
+      "packet_sha256": "b92f0c8fff3532901461421e5d55e146d4a38bb29d015ad5b05e138bbeebe974"
+    },
+    {
+      "id": "a25c3f52f818c0c513f8e457a87f8662fe4f8bcaebf648cc70ea2c036cb60ab0",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Seline currently working?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Seline currently works in Quimper. Ronan currently lives in Riga."
+        }
+      ],
+      "response": " currently working in currently working.",
+      "packet_sha256": "982af2bae22746b20fed1f67a5225f734ba04e5180e5d9cac1619aa41dc740e5"
+    },
+    {
+      "id": "a2b4efdff0bb797d407d4b9f3984d0b6286d0a08ca81425f8eee3978b4e392e8",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Seline目前居住的城市吗？"
+        }
+      ],
+      "episodes": [],
+      "response": "我还不知道Seline目前居住的城市。",
+      "packet_sha256": "d0f27eee77d8142bb6f49a8690b125010774f2851a4d7bb1d142f18cf4b1e6fc"
+    },
+    {
+      "id": "d003b293d626993cb83d49534452ea2e559d5c4ca65d1ecf266aff17f3833363",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Seline currently working?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Ronan currently works in Riga. Seline currently lives in Quimper."
+        }
+      ],
+      "response": " currently working in currently working.",
+      "packet_sha256": "5952dae6cc5f57a8293b5841af1397ef4ca6cf310e09034bc9d588a7ef792997"
+    },
+    {
+      "id": "f19511e6f8de8f7bb39789804ef66d536e523b9d2a2af4d98c055f35dc473cf6",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Seline目前工作的城市吗？"
+        }
+      ],
+      "episodes": [],
+      "response": "我还不知道Seline目前工作的城市。",
+      "packet_sha256": "0d12df7c2a56cb20166917724c2063fe981f1a7fcb7493b63933be0f2c14c80d"
+    }
+  ]
+}

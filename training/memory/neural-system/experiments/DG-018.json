@@ -1,0 +1,16 @@
+{
+  "id": "DG-018",
+  "status": "registered_zero_update_fine_boundaries",
+  "optimizer_steps": 0,
+  "deployment_approved": false,
+  "initialization": {"seed": 1018, "width": 64},
+  "scope": "Versioned untrained coarse-token/fine-byte fact and value selector. Preserve DG-017 code, four inputs, exact value labels and failed result. No semantic accuracy or training claim.",
+  "architecture": "Enumerate structurally allowed token spans as before, removing only spans with no legal UTF-8 endpoint. Compute all coarse fact/value probabilities and four token-local boundary score tables before any labels. Fine scores use frozen C features, learned query/source projections and learned within-token byte-offset embeddings, not character dictionaries or whitespace rules.",
+  "fine_contract": "For selected coarse fact/value spans, normalize four endpoint scores with a bounded log-sum-exp chain subject to fact_start <= value_start < value_end <= fact_end. Decode coarse MAP then conditional fine MAP; do not claim global joint MAP. Compute target NLL by indexing precomputed scores AFTER forward; never gold-condition a neural re-forward.",
+  "limits": {"max_payload_tokens":32,"max_span_tokens":16,"max_bytes_per_payload_token":64,"max_feature_rows":512},
+  "capacity_policy": "Fail closed on limits, invalid UTF-8 or unavailable source boundary. Derive all Unicode code-point cuts from verified full source bytes, including characters split across C tokens. No trimming, regex semantic extraction, labels in masks, or four-endpoint Cartesian tensor. DP transitions bounded by at most65x65 per stage.",
+  "native_records": ["joint-cff41e673284fbf1c6d9", "joint-3415d75b34a68cb08833", "joint-f417c9409407bcb8e962", "joint-00358fb1f7c2b30e2c7d"],
+  "native_gate": "All four DG-017 source/query/first-reply C inputs unchanged. Construct exact byte labels only after forward. Positive cases require connected finite coarse/fine gradients; negative cases route/mode gradients. Zero optimizer updates and unchanged parameter digest. Exact actual prefix IDs remain mandatory; no canonical replacement.",
+  "software_gates": ["DP normalization matches exhaustive tiny oracle", "MAP matches exhaustive tiny oracle", "unreachable states produce no NaN gradients", "token-internal fact and value endpoints", "UTF-8 split across tokens", "no label-conditioned forward", "stale input/output/weights rejected", "no source/context/model rebinding", "no skipped records or altered value labels"],
+  "stop": "No new C free generation, trained checkpoint, LoCoMo, sealed test, deployment, optimizer or GPU training. Passing four software/gradient fixtures does not complete V2: actual START/continuation/end supervision, counterexamples, full C feature compilation and reviewed experiment budget remain."
+}

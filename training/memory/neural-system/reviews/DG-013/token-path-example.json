@@ -1,0 +1,51 @@
+{
+  "scope": "Post-hoc illustrative token-path inspection, not another accuracy estimate",
+  "case_id": "joint-48795bbfa39e0bbb7c18",
+  "case_index": 14,
+  "arm": "joint_aux",
+  "intervention": "content_increment_off",
+  "text": "Seline目前居住的城市是Rio de Janeiro。",
+  "positions": [
+    {
+      "position": 6,
+      "base_top1": 20681,
+      "actual_top1": 59366,
+      "base_piece": "东京",
+      "actual_piece": "R",
+      "actual_is_eligible_payload_token": true,
+      "base_file_sha256": "6639e40bbf78ff2c7c4d41ed9e5c48cd7a02f9f7d7bc6ebf1c632eb948242d34"
+    },
+    {
+      "position": 7,
+      "base_top1": 1839,
+      "actual_top1": 1839,
+      "base_piece": "io",
+      "actual_piece": "io",
+      "actual_is_eligible_payload_token": false,
+      "base_file_sha256": "8a409f5d626cdde5abfb87b39d130a0aa50866c681da1926c1e1fd441201288f"
+    },
+    {
+      "position": 8,
+      "base_top1": 1564,
+      "actual_top1": 1564,
+      "base_piece": " de",
+      "actual_piece": " de",
+      "actual_is_eligible_payload_token": false,
+      "base_file_sha256": "1e66c4e7fbd73eabd8511bbc5fc0f6dd0818bb0fa15be1a48cec8bb88adf00e2"
+    },
+    {
+      "position": 9,
+      "base_top1": 56030,
+      "actual_top1": 56030,
+      "base_piece": " Janeiro",
+      "actual_piece": " Janeiro",
+      "actual_is_eligible_payload_token": false,
+      "base_file_sha256": "4c346a365227231d11f47dbe2272102771ebaf29994ac3bec6b9406869b0e398"
+    }
+  ],
+  "source_text": "Seline现在住在Riga。Ronan现在在Quimper工作。",
+  "generation_sha256": "761c2be7b529f37c900fc7de9718d194e7e5d6d4273e8b6e6696830cb0591599",
+  "backend_sha256": "8d53c93cecd6c6df9cadcbb57d73343f272b9b41329f471e59cdca4a59e9208d",
+  "source_encoding_sha256": "722c561d7b64c75bceec86d6a1706296f4b8967b9f9332254a8246d64671a41e",
+  "raw_directory": "build/neural-memory-dg013-joint_aux/case-14"
+}

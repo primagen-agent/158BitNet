@@ -1,0 +1,17 @@
+{
+  "id":"DG-020",
+  "status":"registered_autonomous_controller_contract",
+  "optimizer_steps":0,
+  "deployment_approved":false,
+  "initialization":{"seed":1018,"width":64},
+  "selection":{"split":"train","world_id":"jb-000","relation_family":"home_city","languages":["en","zh"],"scenarios":["correct","value_swap","role_swap","empty","ordinary_source","ordinary_empty"],"expected_records":12},
+  "scope":"Research reply-local controller consuming FineSpanReader predictions and exact live prefix observations. Never accept teacher trajectories, gold handles, external route overrides or future token sequences. No free-reply accuracy claim.",
+  "state_policy":"Bind initial route for the reply. normal emits base argmax. supported idle uses predicted START and predicted byte handle; active cursor alone selects subsequent value tokens. First step after value emits base under END and returns idle. A second requested activation beyond configured pilot limit is an explicit error, not silent suppression. EOS closes the controller.",
+  "insufficient_policy":"Return NEEDS_UNCERTAINTY with no token and no canned text, then refuse token commits. Query-only natural uncertainty generation remains unimplemented and is not replaced with base generation.",
+  "integrity":"Two-phase propose/commit, exact action identity and emitted-token acknowledgement, no second propose before commit. Bind model/input versions, scope/request/context/snapshot/codec, actual prefix, frozen FP32 C hidden/logits. Invalid or stale action, state change, unsafe value or budget failure enters FAILED with no fallback. Reserve one token/context slot before entering value mode for END handoff.",
+  "limits":{"max_new_tokens":64,"max_value_reads":1,"max_value_tokens":64,"max_value_bytes":256,"max_total_tokens":128},
+  "native_gate":"Same12 natural inputs selected by index, no labels/teacher reply read. Fresh 0.5B initial C prefix and ordinary reference for each case; bitwise hidden/logit parity and no cross-request KV reuse. Feed actual untrained predictions into controller. If it requests uncertainty, retain no-token blocked result; do not manufacture a response or change weights to create START.",
+  "software_gates":["normal and EOS exact bypass","insufficient emits no token and cannot commit","predicted START then uninterrupted cursor then END","teacher/oracle input rejected","wrong prefix/action/token rejected","model/source/frame mutation rejected","scope/request/context mismatch rejected","pre-emission budget/control rejection","repeated activation limit is explicit failure","UTF-8 bytes preserved"],
+  "fixture_policy":"Positive/normal/transition branches may use explicitly marked synthetic frames and stubbed predictions in unit tests only, with an explicit opt-in; never combine those counts with native untrained predictions or call them learned memory.",
+  "stop":"No optimizer, seed search, trained checkpoint, full C/HTTP serving, LoCoMo, sealed test or inherited CG-003 training budget. V2 remains incomplete: uncertainty generation, broader cases and full reply review still required."
+}

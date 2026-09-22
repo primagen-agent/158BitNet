@@ -1,0 +1,456 @@
+{
+  "experiment": {
+    "id": "CG-003-platform-preflight",
+    "seed": 1013,
+    "optimizer_steps": 0,
+    "training_approved": false,
+    "deployment_approved": false,
+    "native": {
+      "natural": "First train world, correct home_city, EN/ZH, both policies; four actual greedy positions per run, four runs. Prefix-chain smoke only, NOT complete-reply accuracy or registered 24-case baseline.",
+      "fixtures": "Separate fresh models, both policies, EN correct source. Four one-position fixtures: forced neural normal/supported/insufficient and disabled. Reader/factor output biases set for route coverage, content/uncertainty output matrices filled with deterministic nonzero normal noise std 0.001, seed 4013. These weights are NOT trained candidates, never saved or used as memory accuracy evidence.",
+      "tolerance": {
+        "atol": 1e-05,
+        "rtol": 0.0001,
+        "identical_top1": true
+      },
+      "backend": "Fresh C reference and C continuous projection at every actual predicted prefix. Python reader and copy remain; no answer/prefix-bank fallback or KV history reuse."
+    },
+    "cuda": {
+      "selection": "First train world, home_city, EN/ZH; correct, role_swap, value_swap, empty, ordinary_source, ordinary_empty. Twelve records, four pair kinds, two arms: sixteen comparisons. CPU and CUDA on the same GPU host use identical CPU-initialized weights.",
+      "forward_tolerance": {
+        "atol": 1e-05,
+        "rtol": 0.0001
+      },
+      "gradient_tolerance": {
+        "atol": 0.0001,
+        "rtol": 0.001
+      },
+      "loss_tolerance": {
+        "atol": 0.0001,
+        "rtol": 0.001
+      },
+      "precision": "FP32; AMP and TF32 off; finite active gradients, same disconnected gradients, no optimizer or parameter mutation",
+      "provenance": "Selected tensors exported from the verified full C package. Transfer a complete source snapshot into a fresh isolated server directory. Reuse output-head.npy ONLY after SHA256 verification; verify same 0.5B GGUF identity on server."
+    },
+    "failure_policy": "Retain every failure and denominator. No seed, tolerance or threshold search; a failure blocks training until diagnosed and separately revalidated."
+  },
+  "package_digest": "d299ad9f59c5a8500d751ee71b4f9139232cec9f80a2607e14953442e883b6fb",
+  "world": "jb-000",
+  "rows": [
+    {
+      "arm": "joint_aux",
+      "language": "en",
+      "numeric_fixture": false,
+      "fixture_route": null,
+      "enabled": true,
+      "generation": {
+        "text": "Brenna lives",
+        "generated_token_ids": [
+          59378,
+          2261,
+          3003,
+          7344
+        ],
+        "visible_token_ids": [
+          59378,
+          2261,
+          3003,
+          7344
+        ],
+        "raw_text_hex": "4272656e6e61206c69766573",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 4,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-00/backend.json",
+      "actual_routes": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "all_equal_base": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "zh",
+      "numeric_fixture": false,
+      "fixture_route": null,
+      "enabled": true,
+      "generation": {
+        "text": "好的，请稍",
+        "generated_token_ids": [
+          2987,
+          65,
+          59518,
+          61228
+        ],
+        "visible_token_ids": [
+          2987,
+          65,
+          59518,
+          61228
+        ],
+        "raw_text_hex": "e5a5bde79a84efbc8ce8afb7e7a88d",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 4,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-01/backend.json",
+      "actual_routes": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "all_equal_base": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "en",
+      "numeric_fixture": false,
+      "fixture_route": null,
+      "enabled": true,
+      "generation": {
+        "text": "Brenna lives",
+        "generated_token_ids": [
+          59378,
+          2261,
+          3003,
+          7344
+        ],
+        "visible_token_ids": [
+          59378,
+          2261,
+          3003,
+          7344
+        ],
+        "raw_text_hex": "4272656e6e61206c69766573",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 4,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-02/backend.json",
+      "actual_routes": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "all_equal_base": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "zh",
+      "numeric_fixture": false,
+      "fixture_route": null,
+      "enabled": true,
+      "generation": {
+        "text": "好的，请稍",
+        "generated_token_ids": [
+          2987,
+          65,
+          59518,
+          61228
+        ],
+        "visible_token_ids": [
+          2987,
+          65,
+          59518,
+          61228
+        ],
+        "raw_text_hex": "e5a5bde79a84efbc8ce8afb7e7a88d",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 4,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-03/backend.json",
+      "actual_routes": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "all_equal_base": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "en",
+      "numeric_fixture": true,
+      "fixture_route": 0,
+      "enabled": true,
+      "generation": {
+        "text": "B",
+        "generated_token_ids": [
+          59378
+        ],
+        "visible_token_ids": [
+          59378
+        ],
+        "raw_text_hex": "42",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 1,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-04/backend.json",
+      "actual_routes": [
+        0
+      ],
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "all_equal_base": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "en",
+      "numeric_fixture": true,
+      "fixture_route": 1,
+      "enabled": true,
+      "generation": {
+        "text": "B",
+        "generated_token_ids": [
+          59378
+        ],
+        "visible_token_ids": [
+          59378
+        ],
+        "raw_text_hex": "42",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 1,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-05/backend.json",
+      "actual_routes": [
+        1
+      ],
+      "copy_positions": 1,
+      "max_error": 1.9073486328125e-06,
+      "all_equal_base": false
+    },
+    {
+      "arm": "joint_aux",
+      "language": "en",
+      "numeric_fixture": true,
+      "fixture_route": 2,
+      "enabled": true,
+      "generation": {
+        "text": "B",
+        "generated_token_ids": [
+          59378
+        ],
+        "visible_token_ids": [
+          59378
+        ],
+        "raw_text_hex": "42",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 1,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-06/backend.json",
+      "actual_routes": [
+        2
+      ],
+      "copy_positions": 0,
+      "max_error": 9.5367431640625e-07,
+      "all_equal_base": false
+    },
+    {
+      "arm": "joint_aux",
+      "language": "en",
+      "numeric_fixture": true,
+      "fixture_route": 1,
+      "enabled": false,
+      "generation": {
+        "text": "B",
+        "generated_token_ids": [
+          59378
+        ],
+        "visible_token_ids": [
+          59378
+        ],
+        "raw_text_hex": "42",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 1,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-07/backend.json",
+      "actual_routes": [
+        1
+      ],
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "all_equal_base": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "en",
+      "numeric_fixture": true,
+      "fixture_route": 0,
+      "enabled": true,
+      "generation": {
+        "text": "B",
+        "generated_token_ids": [
+          59378
+        ],
+        "visible_token_ids": [
+          59378
+        ],
+        "raw_text_hex": "42",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 1,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-08/backend.json",
+      "actual_routes": [
+        0
+      ],
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "all_equal_base": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "en",
+      "numeric_fixture": true,
+      "fixture_route": 1,
+      "enabled": true,
+      "generation": {
+        "text": "B",
+        "generated_token_ids": [
+          59378
+        ],
+        "visible_token_ids": [
+          59378
+        ],
+        "raw_text_hex": "42",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 1,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-09/backend.json",
+      "actual_routes": [
+        1
+      ],
+      "copy_positions": 1,
+      "max_error": 1.9073486328125e-06,
+      "all_equal_base": false
+    },
+    {
+      "arm": "joint_product",
+      "language": "en",
+      "numeric_fixture": true,
+      "fixture_route": 2,
+      "enabled": true,
+      "generation": {
+        "text": "B",
+        "generated_token_ids": [
+          59378
+        ],
+        "visible_token_ids": [
+          59378
+        ],
+        "raw_text_hex": "42",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 1,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-10/backend.json",
+      "actual_routes": [
+        2
+      ],
+      "copy_positions": 0,
+      "max_error": 9.5367431640625e-07,
+      "all_equal_base": false
+    },
+    {
+      "arm": "joint_product",
+      "language": "en",
+      "numeric_fixture": true,
+      "fixture_route": 1,
+      "enabled": false,
+      "generation": {
+        "text": "B",
+        "generated_token_ids": [
+          59378
+        ],
+        "visible_token_ids": [
+          59378
+        ],
+        "raw_text_hex": "42",
+        "utf8_complete": true,
+        "finish_reason": "max_new_tokens",
+        "truncated": true,
+        "memory_enabled": true,
+        "forward_calls": 1,
+        "backend_cache_policy_verified": false
+      },
+      "backend": "case-11/backend.json",
+      "actual_routes": [
+        1
+      ],
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "all_equal_base": true
+    }
+  ],
+  "optimizer_steps": 0,
+  "candidate_parameters_unchanged": true,
+  "memory_accuracy_measured": false,
+  "training_approved": false,
+  "prefix_bank_used": false,
+  "semantic_review_complete": false,
+  "source_sha256": {
+    "qualify_joint_native.py": "ec7ce34085c0047f3e7799dc96db0a078cf34b04704ee8ee7a82cafa182dcbc0",
+    "native_joint_generation.py": "e44229eb749630d9f38922c9fc509321fc879aa39219209dd244339ae5614c06",
+    "joint_memory_model.py": "d1348a5138713257936904b20f50c45ca926881835e5ba4a2836f54f22ce5fc3"
+  },
+  "artifact_sha256": {
+    "experiment": "dd4fb92c15a138b0a43a63bc03a8ec2eaa1903fc30465c4efbcb53147772d4c8",
+    "gguf": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "probe": "4ce9aa3f21ef95f589fb996f2a43c30a917e038f3fc4e1285bd60769691288ce",
+    "reference_probe": "4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152",
+    "encoder_probe": "dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0",
+    "tok_probe": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc"
+  }
+}

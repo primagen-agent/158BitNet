@@ -1,0 +1,6281 @@
+{
+  "experiment": {
+    "id": "DG-008",
+    "status": "registered_zero_update_content_path_diagnostic",
+    "checkpoint_sha256": "eb6b9a551c616d08a2aa0e8d183a63233c87a3c10e296f290a7b48b99dea716d",
+    "feature_package_digest": "8f5b2d2ae685a7995d45422e661a8f59811357186d0cff370211eb596d5f36a6",
+    "scope": "All 8 development worlds, both languages: original, swapped_values, wrong_subject. 48 source records, 16 value pairs and 16 subject-only pairs. Separate diagnostic; original 16-case generation denominator unchanged.",
+    "value_control": "original versus swapped_values: same query and subject, only city changes",
+    "subject_control": "swapped_values versus wrong_subject: same query and city, only source subject changes. Original versus wrong_subject changes TWO factors and must not be called subject-only.",
+    "source_checks": "Exact C token IDs and bytes, annotated subject/value token spans after forward, presence in uncompressed input tokens; annotations never select neural attention or serving output",
+    "observations": [
+      "Initial user-prefill state probabilities; subject-only versus value-only contrasts",
+      "Projected source-token mean, SDPA read, pre-gate output and content residual differences; mean-vector similarity does not prove information loss",
+      "Post-forward attention mass on subject/value and relative to uniform mass; attention is descriptive, not a causal explanation",
+      "At first divergent target token after a common teacher-forced answer prefix: base/conditioned token ranks, two-choice margins, value-swap effect direction and full-vocabulary next-token correctness. No gold token is fed into this position.",
+      "Record whether that exact token prefix occurred in existing free generation. Oracle-prefix diagnostics are not complete replies or accuracy."
+    ],
+    "numeric_gate": "Reconstructed residual must match module output exactly; manual attention read versus SDPA within atol 1e-5 and rtol 1e-4",
+    "reporting": "Retain every pair and denominator, ties, ranks and failure cases. No rescaling, learned probes, optimizer, parameter search or third candidate.",
+    "optimizer_steps": 0,
+    "new_free_generated_answers": 0,
+    "training_approved": false,
+    "deployment_approved": false,
+    "constraints": {
+      "kv_reuse": false,
+      "lora": false,
+      "svd": false,
+      "nas_ng": false,
+      "locomo": false,
+      "labels_in_neural_forward": false
+    }
+  },
+  "pairs": [
+    {
+      "world_id": "av-000",
+      "language": "en",
+      "sources": {
+        "original": {
+          "id": "case-0afeea181bfe2cce15ae",
+          "source_sha256": "320cde3d0c5283708b74efe20ba45fff8d517d0c60de54556b1977fa449bd824",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            5250,
+            12941,
+            4686,
+            7344,
+            1377,
+            14666,
+            5560,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142154455184937,
+          "value_lexical_l2": 1.4142154455184937,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.100033700466156,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.07588145136833191,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.834695965051651
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0653986930847168,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7193856239318848
+            },
+            "read_l2": 25.951250076293945,
+            "content_delta_l2": 13.589844703674316,
+            "state_probabilities": [
+              0.0007872298592701554,
+              0.9944806098937988,
+              0.004732216242700815
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-8994b1d24f644a20010b",
+          "source_sha256": "7b4022400d649d04e37f6abead7ffc8ea949dabc6ec73c8186a5378abf885646",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            5250,
+            12941,
+            4686,
+            7344,
+            1377,
+            9332,
+            1347,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142154455184937,
+          "value_lexical_l2": 1.4142149686813354,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.09655322134494781,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.07375389337539673,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.811292827129364
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0724346786737442,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7967814654111862
+            },
+            "read_l2": 25.96208953857422,
+            "content_delta_l2": 13.566534996032715,
+            "state_probabilities": [
+              0.0007541178492829204,
+              0.9947680234909058,
+              0.004477915819734335
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-5b42a8f472741bfe0b21",
+          "source_sha256": "e83bbcbcc7355f3f1c96fdc1cf6e24cd33f28ef096d985883d3cee092bf70c0e",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            12844,
+            6685,
+            4686,
+            7344,
+            1377,
+            9332,
+            1347,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142147302627563,
+          "value_lexical_l2": 1.4142149686813354,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.09556197375059128,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0871468335390091,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.9586151689291
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0728498250246048,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.8013480752706528
+            },
+            "read_l2": 26.061904907226562,
+            "content_delta_l2": 13.900285720825195,
+            "state_probabilities": [
+              0.0008094636141322553,
+              0.9941747784614563,
+              0.005015742965042591
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.10713332007784743,
+            "cosine": 0.9942674583893198
+          },
+          "read": {
+            "relative_l2": 0.06779765726426433,
+            "cosine": 0.9977018258947054
+          },
+          "projected": {
+            "relative_l2": 0.0033227069713877787,
+            "cosine": 0.9999959535072604
+          },
+          "delta": {
+            "relative_l2": 0.0033227071077632205,
+            "cosine": 0.9999959535083962
+          },
+          "supported_probability_difference": -0.0002874135971069336
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.1021561587575983,
+            "cosine": 0.994782780839754
+          },
+          "read": {
+            "relative_l2": 0.07878382640725053,
+            "cosine": 0.9969039060264039
+          },
+          "projected": {
+            "relative_l2": 0.025021819963158023,
+            "cosine": 0.9999822512421552
+          },
+          "delta": {
+            "relative_l2": 0.02502181918791867,
+            "cosine": 0.9999822512400878
+          },
+          "supported_probability_difference": 0.0005932450294494629
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          2153,
+          1697,
+          4342,
+          1410,
+          3227,
+          12941,
+          4686,
+          5503,
+          74,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          5250,
+          12941,
+          4686,
+          7344,
+          1377
+        ],
+        "common_reply_prefix": "Adela currently lives in",
+        "offset": 5,
+        "target_values": [
+          "Rennes",
+          "Turin"
+        ],
+        "target_token_ids": [
+          14666,
+          9332
+        ],
+        "target_pieces_hex": [
+          "2052656e",
+          "20547572"
+        ],
+        "prefix_observed_in_free_generation": [
+          true,
+          true
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 14666,
+            "rank": 1330,
+            "log_probability": -10.033525781657623,
+            "top1_correct": false
+          },
+          {
+            "token_id": 9332,
+            "rank": 590,
+            "log_probability": -8.859756754662918,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 14666,
+            "rank": 566,
+            "log_probability": -8.563110950676228,
+            "top1_correct": false
+          },
+          {
+            "token_id": 9332,
+            "rank": 77,
+            "log_probability": -6.1695257568690955,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -1.1737689971923828,
+          "source_a": -2.3854384422302246,
+          "source_b": -2.394657611846924
+        },
+        "source_swap_effect": 0.009219169616699219,
+        "source_swap_effect_float64": 0.009222104262204489,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 21,
+            "null_mass": 0.013751792721450329,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.04700159281492233,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5170175209641457
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05943462625145912,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.6537808887660503
+            },
+            "read_l2": 26.565317153930664,
+            "content_delta_l2": 21.228862762451172
+          },
+          "source_b": {
+            "source_tokens": 21,
+            "null_mass": 0.01398036815226078,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0477067232131958,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5247739553451538
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05247768387198448,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5772545225918293
+            },
+            "read_l2": 26.60443878173828,
+            "content_delta_l2": 21.260953903198242
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.03398233082770378,
+          "cosine": 0.9994236828637737
+        },
+        "delta_difference": {
+          "relative_l2": 0.001876876641243244,
+          "cosine": 0.9999993795805238
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-000",
+      "language": "zh",
+      "sources": {
+        "original": {
+          "id": "case-d3cf42c1d8ad5b74a82c",
+          "source_sha256": "e988255b3b3e40350cbb98195582ea472003f2d09f239b6e808d7bb39d28b3d3",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            5250,
+            12941,
+            2634,
+            33345,
+            50839,
+            5560,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142154455184937,
+          "value_lexical_l2": 1.4142152070999146,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.15902569890022278,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.06989996880292892,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.7339496724307537
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.053041890263557434,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.5569398477673531
+            },
+            "read_l2": 21.370201110839844,
+            "content_delta_l2": 11.140278816223145,
+            "state_probabilities": [
+              0.010205931030213833,
+              0.9290891885757446,
+              0.060704879462718964
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-ed876424f9d365d8bc64",
+          "source_sha256": "5c23756b0a2e5b8c6ae85ecc73889922244718d72c77c3587bc9ea13a1b2935a",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            5250,
+            12941,
+            2634,
+            33345,
+            49014,
+            1347,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142154455184937,
+          "value_lexical_l2": 1.414215087890625,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.15130239725112915,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.06698508560657501,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.7033433988690376
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08051332086324692,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8453898690640926
+            },
+            "read_l2": 21.231107711791992,
+            "content_delta_l2": 11.075368881225586,
+            "state_probabilities": [
+              0.01000796165317297,
+              0.9301183223724365,
+              0.0598737858235836
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-b2fc395c06d8efd3ba47",
+          "source_sha256": "89041db23d959a063957ab44fb612d49f9742720c84a14e6f5490c4fee75b93b",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            12844,
+            6685,
+            2634,
+            33345,
+            49014,
+            1347,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142147302627563,
+          "value_lexical_l2": 1.414215087890625,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.16493214666843414,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.09003518521785736,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.9453694447875023
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0801846981048584,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8419393301010132
+            },
+            "read_l2": 21.367910385131836,
+            "content_delta_l2": 11.520145416259766,
+            "state_probabilities": [
+              0.011054092086851597,
+              0.9140563607215881,
+              0.07488957792520523
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.10693513812204782,
+            "cosine": 0.9943980371286094
+          },
+          "read": {
+            "relative_l2": 0.06125961507141681,
+            "cosine": 0.9981449303702661
+          },
+          "projected": {
+            "relative_l2": 0.006538330160593184,
+            "cosine": 0.9999956994165767
+          },
+          "delta": {
+            "relative_l2": 0.0065383272627247725,
+            "cosine": 0.9999956994187564
+          },
+          "supported_probability_difference": -0.0010291337966918945
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.10991287493025023,
+            "cosine": 0.9939745985430204
+          },
+          "read": {
+            "relative_l2": 0.11966574393699617,
+            "cosine": 0.9928606067378207
+          },
+          "projected": {
+            "relative_l2": 0.041886062384347576,
+            "cosine": 0.9998976821216637
+          },
+          "delta": {
+            "relative_l2": 0.04188606282641693,
+            "cosine": 0.9998976821351998
+          },
+          "supported_probability_difference": 0.01606196165084839
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          59440,
+          13576,
+          5250,
+          12941,
+          3602,
+          33345,
+          60129,
+          60348,
+          3522,
+          60088,
+          68,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          5250,
+          12941,
+          2634,
+          33345
+        ],
+        "common_reply_prefix": "Adela现在住在",
+        "offset": 4,
+        "target_values": [
+          "Rennes",
+          "Turin"
+        ],
+        "target_token_ids": [
+          50839,
+          49014
+        ],
+        "target_pieces_hex": [
+          "52656e",
+          "547572"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 50839,
+            "rank": 12026,
+            "log_probability": -14.489641963369166,
+            "top1_correct": false
+          },
+          {
+            "token_id": 49014,
+            "rank": 8990,
+            "log_probability": -13.988778888112819,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 50839,
+            "rank": 2662,
+            "log_probability": -11.661263440576773,
+            "top1_correct": false
+          },
+          {
+            "token_id": 49014,
+            "rank": 4031,
+            "log_probability": -12.29925322883592,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -0.5008630752563477,
+          "source_a": 0.6213520765304565,
+          "source_b": 0.5964280366897583
+        },
+        "source_swap_effect": 0.024924039840698242,
+        "source_swap_effect_float64": 0.024923431455502243,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 20,
+            "null_mass": 0.04463757202029228,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0999697595834732,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 1.0496824756264687
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07082896679639816,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.7437041513621807
+            },
+            "read_l2": 24.087392807006836,
+            "content_delta_l2": 19.32777214050293
+          },
+          "source_b": {
+            "source_tokens": 20,
+            "null_mass": 0.044069040566682816,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0990016981959343,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 1.03951783105731
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07787119597196579,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8176475577056408
+            },
+            "read_l2": 23.80832290649414,
+            "content_delta_l2": 19.085920333862305
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.0469240161620047,
+          "cosine": 0.9989669332043769
+        },
+        "delta_difference": {
+          "relative_l2": 0.012775025217242312,
+          "cosine": 0.9999976799175417
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-001",
+      "language": "en",
+      "sources": {
+        "original": {
+          "id": "case-d68ac9d7b2b39fe94695",
+          "source_sha256": "8699c034ac9f0e31390165430f21958c7ce9ee0e232b0db29371762b1c5ba73a",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            56222,
+            23262,
+            4686,
+            7344,
+            1377,
+            9332,
+            1347,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.414215326309204,
+          "value_lexical_l2": 1.4142149686813354,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.09714816510677338,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.11325434595346451,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 1.2457978054881096
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06251443177461624,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.6876587495207787
+            },
+            "read_l2": 25.853654861450195,
+            "content_delta_l2": 13.409327507019043,
+            "state_probabilities": [
+              0.000778109417296946,
+              0.9947099685668945,
+              0.0045118932612240314
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-2841cfa9cf20f00891d1",
+          "source_sha256": "f2056004b9086500cefce0f4e99bb1c9cbec3506e220ce962c62fd13d476ab02",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            56222,
+            23262,
+            4686,
+            7344,
+            1377,
+            18692,
+            59398,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.414215326309204,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.10035698115825653,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.11803385615348816,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 1.2983724176883698
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05125068500638008,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5637575350701809
+            },
+            "read_l2": 25.833587646484375,
+            "content_delta_l2": 13.418688774108887,
+            "state_probabilities": [
+              0.0007970345905050635,
+              0.9944664835929871,
+              0.004736496601253748
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-d4de7d60f4b2e171b11a",
+          "source_sha256": "ddbcb4bec7236619307af4bc59be0b2b1b1e90024fad27373a629408e1190a95",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            44072,
+            1770,
+            4686,
+            7344,
+            1377,
+            18692,
+            59398,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142154455184937,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.10072259604930878,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0965941846370697,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 1.0625360310077667
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05759449303150177,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.6335394233465195
+            },
+            "read_l2": 25.903133392333984,
+            "content_delta_l2": 13.67362117767334,
+            "state_probabilities": [
+              0.0008117097313515842,
+              0.9939824938774109,
+              0.005205783527344465
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.11604747453091241,
+            "cosine": 0.9932676428157219
+          },
+          "read": {
+            "relative_l2": 0.05818206675000969,
+            "cosine": 0.9983077248749456
+          },
+          "projected": {
+            "relative_l2": 0.0023546350141394256,
+            "cosine": 0.9999974712734213
+          },
+          "delta": {
+            "relative_l2": 0.002354632506431787,
+            "cosine": 0.9999974712766412
+          },
+          "supported_probability_difference": 0.0002434849739074707
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.11736982555075477,
+            "cosine": 0.9931174412779082
+          },
+          "read": {
+            "relative_l2": 0.10217232889062254,
+            "cosine": 0.994784012166652
+          },
+          "projected": {
+            "relative_l2": 0.019498449025348145,
+            "cosine": 0.9999869912636437
+          },
+          "delta": {
+            "relative_l2": 0.019498450103050395,
+            "cosine": 0.9999869912701781
+          },
+          "supported_probability_difference": 0.0004839897155761719
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          2153,
+          1697,
+          4342,
+          1410,
+          26774,
+          1627,
+          4686,
+          5503,
+          74,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          56222,
+          23262,
+          4686,
+          7344,
+          1377
+        ],
+        "common_reply_prefix": "Celia currently lives in",
+        "offset": 5,
+        "target_values": [
+          "Turin",
+          "Graz"
+        ],
+        "target_token_ids": [
+          9332,
+          18692
+        ],
+        "target_pieces_hex": [
+          "20547572",
+          "20477261"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 9332,
+            "rank": 531,
+            "log_probability": -8.861154385483747,
+            "top1_correct": false
+          },
+          {
+            "token_id": 18692,
+            "rank": 2315,
+            "log_probability": -10.945102193034177,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 9332,
+            "rank": 68,
+            "log_probability": -6.15774302400523,
+            "top1_correct": false
+          },
+          {
+            "token_id": 18692,
+            "rank": 800,
+            "log_probability": -9.12167080471761,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": 2.0839478969573975,
+          "source_a": 2.962684154510498,
+          "source_b": 2.9558496475219727
+        },
+        "source_swap_effect": 0.006834506988525391,
+        "source_swap_effect_float64": 0.00683643805375489,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 21,
+            "null_mass": 0.015427247621119022,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.04148039594292641,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.4562843553721905
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05396869406104088,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5936556346714497
+            },
+            "read_l2": 26.572261810302734,
+            "content_delta_l2": 21.59270477294922
+          },
+          "source_b": {
+            "source_tokens": 21,
+            "null_mass": 0.015330526046454906,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.041352421045303345,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.4548766314983368
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05349937826395035,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5884931609034538
+            },
+            "read_l2": 26.538619995117188,
+            "content_delta_l2": 21.563344955444336
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.0343322346068871,
+          "cosine": 0.9994114510813604
+        },
+        "delta_difference": {
+          "relative_l2": 0.0020413852586541265,
+          "cosine": 0.9999988422039129
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-001",
+      "language": "zh",
+      "sources": {
+        "original": {
+          "id": "case-5e76236adb954331887e",
+          "source_sha256": "5fffdc3f3831f9f393bcb2cc8fda3b406aa05e34a3f2229c1340bc915bd417be",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            56222,
+            23262,
+            2634,
+            33345,
+            49014,
+            1347,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.414215326309204,
+          "value_lexical_l2": 1.414215087890625,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.13552531599998474,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.13442187011241913,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 1.4114296361804008
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0685674250125885,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.7199579626321793
+            },
+            "read_l2": 20.949583053588867,
+            "content_delta_l2": 10.43423843383789,
+            "state_probabilities": [
+              0.005618651397526264,
+              0.9649739265441895,
+              0.02940746396780014
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-0955f6c759b8d1cc160d",
+          "source_sha256": "111470fef95bacf50d5f5f1b3b7e217cb36f5382ca2791e77c124d96eff7b9a5",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            56222,
+            23262,
+            2634,
+            33345,
+            13906,
+            2215,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.414215326309204,
+          "value_lexical_l2": 1.4142152070999146,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.13863423466682434,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.13772335648536682,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 1.4460952430963516
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06811320781707764,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.7151886820793152
+            },
+            "read_l2": 20.928226470947266,
+            "content_delta_l2": 10.44233226776123,
+            "state_probabilities": [
+              0.005123657640069723,
+              0.9656792283058167,
+              0.029197098687291145
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-527177108b1c6446ca2d",
+          "source_sha256": "faf9684d1e56c10f2827892b73555186adba689c6f1a35045564145dc75aaf12",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            44072,
+            1770,
+            2634,
+            33345,
+            13906,
+            2215,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142154455184937,
+          "value_lexical_l2": 1.4142152070999146,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.14922508597373962,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.08491205424070358,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8915765695273876
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07873094081878662,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8266748785972595
+            },
+            "read_l2": 21.792308807373047,
+            "content_delta_l2": 11.294329643249512,
+            "state_probabilities": [
+              0.004578626714646816,
+              0.9629017114639282,
+              0.03251972422003746
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.12792615209674585,
+            "cosine": 0.9918178493863292
+          },
+          "read": {
+            "relative_l2": 0.07619975717853703,
+            "cosine": 0.9970973178605287
+          },
+          "projected": {
+            "relative_l2": 0.002509537138919463,
+            "cosine": 0.9999971518080292
+          },
+          "delta": {
+            "relative_l2": 0.0025095378412867387,
+            "cosine": 0.9999971518040917
+          },
+          "supported_probability_difference": -0.0007053017616271973
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.13059840099355452,
+            "cosine": 0.9915621576772973
+          },
+          "read": {
+            "relative_l2": 0.15905646621777292,
+            "cosine": 0.9881638946355639
+          },
+          "projected": {
+            "relative_l2": 0.08009042377768624,
+            "cosine": 0.9998652640181659
+          },
+          "delta": {
+            "relative_l2": 0.08009042367249153,
+            "cosine": 0.9998652640031557
+          },
+          "supported_probability_difference": 0.0027775168418884277
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          59440,
+          13576,
+          56222,
+          23262,
+          3602,
+          33345,
+          60129,
+          60348,
+          3522,
+          60088,
+          68,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          56222,
+          23262,
+          2634,
+          33345
+        ],
+        "common_reply_prefix": "Celia现在住在",
+        "offset": 4,
+        "target_values": [
+          "Turin",
+          "Graz"
+        ],
+        "target_token_ids": [
+          49014,
+          13906
+        ],
+        "target_pieces_hex": [
+          "547572",
+          "4772"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 49014,
+            "rank": 10300,
+            "log_probability": -14.03224833693563,
+            "top1_correct": false
+          },
+          {
+            "token_id": 13906,
+            "rank": 3128,
+            "log_probability": -12.04655452456533,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 49014,
+            "rank": 4979,
+            "log_probability": -12.462457285678637,
+            "top1_correct": false
+          },
+          {
+            "token_id": 13906,
+            "rank": 1005,
+            "log_probability": -9.863350892792715,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -1.9856938123703003,
+          "source_a": -2.595712423324585,
+          "source_b": -2.600123882293701
+        },
+        "source_swap_effect": 0.004411458969116211,
+        "source_swap_effect_float64": 0.0044108875165330685,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 20,
+            "null_mass": 0.0537479929625988,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.10587139427661896,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 1.111649639904499
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08193674683570862,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8603358417749405
+            },
+            "read_l2": 23.213449478149414,
+            "content_delta_l2": 18.494915008544922
+          },
+          "source_b": {
+            "source_tokens": 20,
+            "null_mass": 0.0542663037776947,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.10706982016563416,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 1.1242331117391586
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08079174160957336,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8483132869005203
+            },
+            "read_l2": 23.19627571105957,
+            "content_delta_l2": 18.527851104736328
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.061712495853653654,
+          "cosine": 0.9980960575725717
+        },
+        "delta_difference": {
+          "relative_l2": 0.0028237310185215904,
+          "cosine": 0.9999975961952358
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-009",
+      "language": "en",
+      "sources": {
+        "original": {
+          "id": "case-9a0800ca63ccc614cddf",
+          "source_sha256": "16ee06c0387a0f5c09eec60c2578578a6327c727ab7e3fc360222f1697400a49",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            46445,
+            21381,
+            1627,
+            4686,
+            7344,
+            1377,
+            9332,
+            1347,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.7320526838302612,
+          "value_lexical_l2": 1.4142149686813354,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.09514120221138,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.09404583275318146,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.7210180511077245
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07768397033214569,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.8933656588196754
+            },
+            "read_l2": 26.30646514892578,
+            "content_delta_l2": 13.575942039489746,
+            "state_probabilities": [
+              0.0014283807249739766,
+              0.9932270646095276,
+              0.0053445640951395035
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-30c7f17a14addbfc61db",
+          "source_sha256": "9308d5c15ad2c1fb9f5b77dcf7c8048dd6394edf364ac9357ed1c0533472f487",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            46445,
+            21381,
+            1627,
+            4686,
+            7344,
+            1377,
+            18692,
+            59398,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.7320526838302612,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.10061085969209671,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.09892754256725311,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.7584444930156072
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05399960279464722,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.620995432138443
+            },
+            "read_l2": 26.339588165283203,
+            "content_delta_l2": 13.650580406188965,
+            "state_probabilities": [
+              0.0014288397505879402,
+              0.9929718375205994,
+              0.005599370691925287
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-762f01f4baa1b1f2f34b",
+          "source_sha256": "e9aa0c1a7f7e1772f5357e0fb7286012dbffcc4b3e68a83f318a5c1a9547a4da",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            36160,
+            2296,
+            4686,
+            7344,
+            1377,
+            18692,
+            59398,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142149686813354,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.09958391636610031,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.07389526069164276,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.8128478676080704
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05966026708483696,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.6562629379332066
+            },
+            "read_l2": 26.02171516418457,
+            "content_delta_l2": 13.452733993530273,
+            "state_probabilities": [
+              0.0014331878628581762,
+              0.9926693439483643,
+              0.005897428374737501
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.11245067820151869,
+            "cosine": 0.9936802820334476
+          },
+          "read": {
+            "relative_l2": 0.06685402248982114,
+            "cosine": 0.9977660606388726
+          },
+          "projected": {
+            "relative_l2": 0.006148622884312532,
+            "cosine": 0.9999961280723645
+          },
+          "delta": {
+            "relative_l2": 0.006148623023452741,
+            "cosine": 0.999996128073168
+          },
+          "supported_probability_difference": 0.00025522708892822266
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.11341229597094114,
+            "cosine": 0.9935992649034502
+          },
+          "read": {
+            "relative_l2": 0.08160576037527287,
+            "cosine": 0.99674383819641
+          },
+          "projected": {
+            "relative_l2": 0.015238235553360218,
+            "cosine": 0.9999904693286819
+          },
+          "delta": {
+            "relative_l2": 0.015238233333586386,
+            "cosine": 0.9999904693317154
+          },
+          "supported_probability_difference": 0.0003024935722351074
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          2153,
+          1697,
+          4342,
+          1410,
+          51222,
+          23262,
+          4686,
+          5503,
+          74,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          46445,
+          21381,
+          1627,
+          4686,
+          7344,
+          1377
+        ],
+        "common_reply_prefix": "Tahlia currently lives in",
+        "offset": 6,
+        "target_values": [
+          "Turin",
+          "Graz"
+        ],
+        "target_token_ids": [
+          9332,
+          18692
+        ],
+        "target_pieces_hex": [
+          "20547572",
+          "20477261"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 9332,
+            "rank": 120,
+            "log_probability": -7.400291810473337,
+            "top1_correct": false
+          },
+          {
+            "token_id": 18692,
+            "rank": 5091,
+            "log_probability": -12.444449315508738,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 9332,
+            "rank": 8,
+            "log_probability": -5.099665482412444,
+            "top1_correct": false
+          },
+          {
+            "token_id": 18692,
+            "rank": 1712,
+            "log_probability": -10.989354572988198,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": 5.0441575050354,
+          "source_a": 5.8886847496032715,
+          "source_b": 5.882007598876953
+        },
+        "source_swap_effect": 0.006677150726318359,
+        "source_swap_effect_float64": 0.006675870239357895,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 22,
+            "null_mass": 0.015209650620818138,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.0840614065527916,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.6444707835714022
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05253863334655762,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.6041942834854126
+            },
+            "read_l2": 26.48040008544922,
+            "content_delta_l2": 20.84368324279785
+          },
+          "source_b": {
+            "source_tokens": 22,
+            "null_mass": 0.015000110492110252,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.08320345729589462,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.6378931726018587
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05632670968770981,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.6477571614086628
+            },
+            "read_l2": 26.449661254882812,
+            "content_delta_l2": 20.8122615814209
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.035747220058276095,
+          "cosine": 0.9993617424050282
+        },
+        "delta_difference": {
+          "relative_l2": 0.0022777761001232842,
+          "cosine": 0.9999985437966864
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-009",
+      "language": "zh",
+      "sources": {
+        "original": {
+          "id": "case-9d1500ce40f8afadb436",
+          "source_sha256": "f13425ad036cdbb533d59be43096edef10db0a31ae382f6d9613a6ccebc49ba0",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            46445,
+            21381,
+            1627,
+            2634,
+            33345,
+            49014,
+            1347,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.7320526838302612,
+          "value_lexical_l2": 1.414215087890625,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.17289389669895172,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.08377918601036072,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.614380697409312
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08392591774463654,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.9231850951910019
+            },
+            "read_l2": 21.658145904541016,
+            "content_delta_l2": 11.637674331665039,
+            "state_probabilities": [
+              0.007334294728934765,
+              0.9542208313941956,
+              0.03844483941793442
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-6f83be7ce328842c44cd",
+          "source_sha256": "583351a59fc60a039ab24970d0824e5c75a2160f007dbb12fab0f13cc8ffe3b4",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            46445,
+            21381,
+            1627,
+            2634,
+            33345,
+            13906,
+            2215,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.7320526838302612,
+          "value_lexical_l2": 1.4142152070999146,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.1784137487411499,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.08675690740346909,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.6362173209587734
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07549412548542023,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.8304353803396225
+            },
+            "read_l2": 21.72592544555664,
+            "content_delta_l2": 11.674869537353516,
+            "state_probabilities": [
+              0.006805606186389923,
+              0.9548168182373047,
+              0.038377564400434494
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-f09f8506c6f86b8fd31b",
+          "source_sha256": "3b6680429eb7ea065fa821eeb7cd60230fa76199b8f0f953579673941a632c25",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            36160,
+            2296,
+            2634,
+            33345,
+            13906,
+            2215,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142149686813354,
+          "value_lexical_l2": 1.4142152070999146,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.1764659285545349,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.06121697649359703,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.6427782531827688
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08287034183740616,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8701385892927647
+            },
+            "read_l2": 21.637168884277344,
+            "content_delta_l2": 11.497122764587402,
+            "state_probabilities": [
+              0.00833476334810257,
+              0.9378653168678284,
+              0.053799938410520554
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.11996581008047981,
+            "cosine": 0.9928175730513895
+          },
+          "read": {
+            "relative_l2": 0.08307952878492621,
+            "cosine": 0.9965537692485057
+          },
+          "projected": {
+            "relative_l2": 0.0038357478232505272,
+            "cosine": 0.99999773510373
+          },
+          "delta": {
+            "relative_l2": 0.003835747861536168,
+            "cosine": 0.9999977351006164
+          },
+          "supported_probability_difference": -0.0005959868431091309
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.12240161222327714,
+            "cosine": 0.9925231893032181
+          },
+          "read": {
+            "relative_l2": 0.1308297617228225,
+            "cosine": 0.9914501298981616
+          },
+          "projected": {
+            "relative_l2": 0.0167269144722194,
+            "cosine": 0.9999777876204844
+          },
+          "delta": {
+            "relative_l2": 0.016726914657722934,
+            "cosine": 0.9999777876225158
+          },
+          "supported_probability_difference": 0.01695150136947632
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          59440,
+          13576,
+          46445,
+          21381,
+          1627,
+          3602,
+          33345,
+          60129,
+          60348,
+          3522,
+          60088,
+          68,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          46445,
+          21381,
+          1627,
+          2634,
+          33345
+        ],
+        "common_reply_prefix": "Tahlia现在住在",
+        "offset": 5,
+        "target_values": [
+          "Turin",
+          "Graz"
+        ],
+        "target_token_ids": [
+          49014,
+          13906
+        ],
+        "target_pieces_hex": [
+          "547572",
+          "4772"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 49014,
+            "rank": 2605,
+            "log_probability": -11.431031526524022,
+            "top1_correct": false
+          },
+          {
+            "token_id": 13906,
+            "rank": 1703,
+            "log_probability": -10.772160561281636,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 49014,
+            "rank": 1153,
+            "log_probability": -9.887930627850217,
+            "top1_correct": false
+          },
+          {
+            "token_id": 13906,
+            "rank": 529,
+            "log_probability": -8.59200875776958,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -0.6588709354400635,
+          "source_a": -1.2886664867401123,
+          "source_b": -1.293793797492981
+        },
+        "source_swap_effect": 0.005127310752868652,
+        "source_swap_effect_float64": 0.005128623246440922,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 21,
+            "null_mass": 0.0493616983294487,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.14952340722084045,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 1.0965049862861633
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07763473689556122,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.8539821058511734
+            },
+            "read_l2": 23.95471954345703,
+            "content_delta_l2": 19.198936462402344
+          },
+          "source_b": {
+            "source_tokens": 21,
+            "null_mass": 0.050145670771598816,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.15028397738933563,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 1.102082500855128
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.074827641248703,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.823104053735733
+            },
+            "read_l2": 24.011234283447266,
+            "content_delta_l2": 19.270366668701172
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.05615944145893419,
+          "cosine": 0.998425832679593
+        },
+        "delta_difference": {
+          "relative_l2": 0.004230287139632433,
+          "cosine": 0.9999979479094476
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-013",
+      "language": "en",
+      "sources": {
+        "original": {
+          "id": "case-75046602d5e956115f0c",
+          "source_sha256": "1e687b2c81e65aff707b787788eae7b62c0a78d29fae7c08974314c12a696d54",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            2747,
+            1920,
+            1437,
+            4686,
+            7344,
+            1377,
+            8351,
+            59398,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.08581308275461197,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.13135868310928345,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 1.007083237171173
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06114362180233002,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.7031516507267952
+            },
+            "read_l2": 25.97586441040039,
+            "content_delta_l2": 13.392990112304688,
+            "state_probabilities": [
+              0.0007041033240966499,
+              0.9936734437942505,
+              0.005622511263936758
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-2f227c85d781fc22e1b5",
+          "source_sha256": "aa80d768b3a00b18f67340772ce2f50cc6cf11248a09398de9b31a466506aeac",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            2747,
+            1920,
+            1437,
+            4686,
+            7344,
+            1377,
+            6551,
+            59326,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.08621228486299515,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.13156758248806,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 1.0086847990751266
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.060913633555173874,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.7005067858844995
+            },
+            "read_l2": 25.974292755126953,
+            "content_delta_l2": 13.362910270690918,
+            "state_probabilities": [
+              0.00068202696274966,
+              0.9938095211982727,
+              0.005508493632078171
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-9611bc42f16ca3f2cb91",
+          "source_sha256": "66ccb256c6278e715b4c730ad2e97468cf6644ae80643499ed50d17a87b64d09",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            5561,
+            14069,
+            4686,
+            7344,
+            1377,
+            6551,
+            59326,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.414215087890625,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.09697826206684113,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.071626678109169,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7878934592008591
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0721847340464592,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7940320745110512
+            },
+            "read_l2": 25.878429412841797,
+            "content_delta_l2": 13.149235725402832,
+            "state_probabilities": [
+              0.0006732185138389468,
+              0.9941799640655518,
+              0.005146915093064308
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.09849600163880519,
+            "cosine": 0.9951492936023402
+          },
+          "read": {
+            "relative_l2": 0.046353238031289296,
+            "cosine": 0.9989256904903416
+          },
+          "projected": {
+            "relative_l2": 0.0033500555932439737,
+            "cosine": 0.9999969169732653
+          },
+          "delta": {
+            "relative_l2": 0.00335005506158002,
+            "cosine": 0.9999969169731551
+          },
+          "supported_probability_difference": -0.0001360774040222168
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.11987758972561946,
+            "cosine": 0.9928216951020954
+          },
+          "read": {
+            "relative_l2": 0.08299460076160707,
+            "cosine": 0.996562772383111
+          },
+          "projected": {
+            "relative_l2": 0.01637511182305253,
+            "cosine": 0.9999958375319729
+          },
+          "delta": {
+            "relative_l2": 0.01637511066632383,
+            "cosine": 0.9999958375363585
+          },
+          "supported_probability_difference": -0.00037044286727905273
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          2153,
+          1697,
+          4342,
+          1410,
+          31174,
+          1613,
+          4686,
+          5503,
+          74,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          2747,
+          1920,
+          1437,
+          4686,
+          7344,
+          1377
+        ],
+        "common_reply_prefix": "Clarice currently lives in",
+        "offset": 6,
+        "target_values": [
+          "Linz",
+          "Porto"
+        ],
+        "target_token_ids": [
+          8351,
+          6551
+        ],
+        "target_pieces_hex": [
+          "204c696e",
+          "20506f7274"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 8351,
+            "rank": 2533,
+            "log_probability": -11.114263197904648,
+            "top1_correct": false
+          },
+          {
+            "token_id": 6551,
+            "rank": 7,
+            "log_probability": -4.543853780752244,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 8351,
+            "rank": 2011,
+            "log_probability": -10.496814804875926,
+            "top1_correct": false
+          },
+          {
+            "token_id": 6551,
+            "rank": 6,
+            "log_probability": -4.091810122958723,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -6.570409297943115,
+          "source_a": -6.403773784637451,
+          "source_b": -6.406301021575928
+        },
+        "source_swap_effect": 0.0025272369384765625,
+        "source_swap_effect_float64": 0.002527667676500034,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 22,
+            "null_mass": 0.016388708725571632,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.07416943460702896,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.5686323319872221
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.051174819469451904,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.5885104238986969
+            },
+            "read_l2": 26.28766441345215,
+            "content_delta_l2": 20.629547119140625
+          },
+          "source_b": {
+            "source_tokens": 22,
+            "null_mass": 0.016592347994446754,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.07479964941740036,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.5734639788667361
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.044551678001880646,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.5123442970216274
+            },
+            "read_l2": 26.306055068969727,
+            "content_delta_l2": 20.642683029174805
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.028905353964083443,
+          "cosine": 0.9995824848031878
+        },
+        "delta_difference": {
+          "relative_l2": 0.0014927087630419616,
+          "cosine": 0.9999990884884933
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-013",
+      "language": "zh",
+      "sources": {
+        "original": {
+          "id": "case-b09fbd12169eea0fbf48",
+          "source_sha256": "67116ec691d6ff740f89c4bb5736b98c0b3b5087fd2e98b8c0628515385b158c",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            2747,
+            1920,
+            1437,
+            2634,
+            33345,
+            11602,
+            59398,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.4142147302627563,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.14122053980827332,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.10787152498960495,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.7910578499237697
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07716253399848938,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.8487878739833832
+            },
+            "read_l2": 21.336610794067383,
+            "content_delta_l2": 11.199390411376953,
+            "state_probabilities": [
+              0.008639968931674957,
+              0.9294164180755615,
+              0.06194358691573143
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-8c22e1ac091e488b750a",
+          "source_sha256": "8dc4bcf12b8dc0c6b8c9bb4bb7546a199340f3550fcfcaf0030d92c27af09787",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            2747,
+            1920,
+            1437,
+            2634,
+            33345,
+            11505,
+            59326,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.14586763083934784,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.11119799315929413,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.8154519498348237
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06588004529476166,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7246804982423782
+            },
+            "read_l2": 21.47638702392578,
+            "content_delta_l2": 11.33674144744873,
+            "state_probabilities": [
+              0.007874084636569023,
+              0.9343994855880737,
+              0.05772634595632553
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-145c5c1310ca9d8a1155",
+          "source_sha256": "aa01136a75f9883a8e39541a4725436ec50aeaa326ec9cf4d65a19e80435a00e",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            5561,
+            14069,
+            2634,
+            33345,
+            11505,
+            59326,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.414215087890625,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.1848955750465393,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.07385071367025375,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.7754324935376644
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07494121789932251,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.7868827879428864
+            },
+            "read_l2": 21.69484519958496,
+            "content_delta_l2": 11.764263153076172,
+            "state_probabilities": [
+              0.00762976985424757,
+              0.934114933013916,
+              0.05825533717870712
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.10718059121123201,
+            "cosine": 0.9943231378604132
+          },
+          "read": {
+            "relative_l2": 0.06635757985288086,
+            "cosine": 0.9978196299663425
+          },
+          "projected": {
+            "relative_l2": 0.012921221311308888,
+            "cosine": 0.9999908106657533
+          },
+          "delta": {
+            "relative_l2": 0.012921220655289957,
+            "cosine": 0.9999908106654262
+          },
+          "supported_probability_difference": -0.004983067512512207
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.12638894406669687,
+            "cosine": 0.9921289855786961
+          },
+          "read": {
+            "relative_l2": 0.12629439311980162,
+            "cosine": 0.9920758731613749
+          },
+          "projected": {
+            "relative_l2": 0.038694510389196884,
+            "cosine": 0.9999363429013794
+          },
+          "delta": {
+            "relative_l2": 0.03869451018109675,
+            "cosine": 0.9999363428919559
+          },
+          "supported_probability_difference": 0.00028455257415771484
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          59440,
+          13576,
+          2747,
+          1920,
+          1437,
+          3602,
+          33345,
+          60129,
+          60348,
+          3522,
+          60088,
+          68,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          2747,
+          1920,
+          1437,
+          2634,
+          33345
+        ],
+        "common_reply_prefix": "Clarice现在住在",
+        "offset": 5,
+        "target_values": [
+          "Linz",
+          "Porto"
+        ],
+        "target_token_ids": [
+          11602,
+          11505
+        ],
+        "target_pieces_hex": [
+          "4c696e",
+          "506f7274"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 11602,
+            "rank": 6027,
+            "log_probability": -12.617988023062248,
+            "top1_correct": false
+          },
+          {
+            "token_id": 11505,
+            "rank": 736,
+            "log_probability": -9.40262630869915,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 11602,
+            "rank": 3442,
+            "log_probability": -11.468911920646427,
+            "top1_correct": false
+          },
+          {
+            "token_id": 11505,
+            "rank": 482,
+            "log_probability": -8.388746696559583,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -3.2153615951538086,
+          "source_a": -3.0625929832458496,
+          "source_b": -3.068204402923584
+        },
+        "source_swap_effect": 0.005611419677734375,
+        "source_swap_effect_float64": 0.0056101054432218245,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 21,
+            "null_mass": 0.05004877597093582,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.13941170275211334,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 1.0223524868488312
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08203500509262085,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.9023850560188293
+            },
+            "read_l2": 23.385530471801758,
+            "content_delta_l2": 18.278249740600586
+          },
+          "source_b": {
+            "source_tokens": 21,
+            "null_mass": 0.050140269100666046,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.14028726518154144,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 1.0287732779979706
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07831241190433502,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.8614365309476852
+            },
+            "read_l2": 23.749786376953125,
+            "content_delta_l2": 18.61415672302246
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.05737426243102483,
+          "cosine": 0.998473443894137
+        },
+        "delta_difference": {
+          "relative_l2": 0.01863480457175784,
+          "cosine": 0.9999921738236316
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-014",
+      "language": "en",
+      "sources": {
+        "original": {
+          "id": "case-2e56670fdbf93609184c",
+          "source_sha256": "a8ebe1fd4d1908a63f8be285865caeb7aa01f53b714787007690354337f9a58b",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            8460,
+            32224,
+            4686,
+            7344,
+            1377,
+            6551,
+            59326,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142144918441772,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.09225557744503021,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.087690070271492,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.964590772986412
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0710919126868248,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7820110395550728
+            },
+            "read_l2": 25.92753791809082,
+            "content_delta_l2": 13.52098560333252,
+            "state_probabilities": [
+              0.0010570145677775145,
+              0.9925018548965454,
+              0.0064411466009914875
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-0ea9aa05612b8fb9b801",
+          "source_sha256": "e4529b92700f85753ff13c2ea55d140c445fdfe155f45b0675c0529e0aa05b68",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            8460,
+            32224,
+            4686,
+            7344,
+            1377,
+            8368,
+            59329,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142144918441772,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.09622466564178467,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.09173116832971573,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 1.009042851626873
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.051957279443740845,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5715300738811493
+            },
+            "read_l2": 25.943361282348633,
+            "content_delta_l2": 13.55665111541748,
+            "state_probabilities": [
+              0.001019955612719059,
+              0.9927603006362915,
+              0.00621975539252162
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-7050d1f8466e183911e8",
+          "source_sha256": "cf9a57749d2744c6a4eff0992f5cc574787096d9f0513a5477db397ce7a73dd0",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            9154,
+            2004,
+            59332,
+            4686,
+            7344,
+            1377,
+            8368,
+            59329,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.09456342458724976,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.10805553197860718,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.8284257451693218
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05173719674348831,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.5949777625501156
+            },
+            "read_l2": 26.352344512939453,
+            "content_delta_l2": 14.51020336151123,
+            "state_probabilities": [
+              0.0011016888311132789,
+              0.9912202954292297,
+              0.007678143680095673
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.10697640842278844,
+            "cosine": 0.9942790818204135
+          },
+          "read": {
+            "relative_l2": 0.04864102205256445,
+            "cosine": 0.9988172115565936
+          },
+          "projected": {
+            "relative_l2": 0.0034299399446134178,
+            "cosine": 0.9999975873451297
+          },
+          "delta": {
+            "relative_l2": 0.003429938082446867,
+            "cosine": 0.999997587341869
+          },
+          "supported_probability_difference": -0.00025844573974609375
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.11527312699245351,
+            "cosine": 0.993387011027975
+          },
+          "read": {
+            "relative_l2": 0.1261737687086569,
+            "cosine": 0.9921619335850378
+          },
+          "projected": {
+            "relative_l2": 0.06926449237916338,
+            "cosine": 0.9999096181297222
+          },
+          "delta": {
+            "relative_l2": 0.06926449424297222,
+            "cosine": 0.9999096181302433
+          },
+          "supported_probability_difference": 0.0015400052070617676
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          2153,
+          1697,
+          4342,
+          1410,
+          6503,
+          32224,
+          4686,
+          5503,
+          74,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          8460,
+          32224,
+          4686,
+          7344,
+          1377
+        ],
+        "common_reply_prefix": "Emilia currently lives in",
+        "offset": 5,
+        "target_values": [
+          "Porto",
+          "Basel"
+        ],
+        "target_token_ids": [
+          6551,
+          8368
+        ],
+        "target_pieces_hex": [
+          "20506f7274",
+          "2042617365"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 6551,
+            "rank": 194,
+            "log_probability": -8.137664570628498,
+            "top1_correct": false
+          },
+          {
+            "token_id": 8368,
+            "rank": 2509,
+            "log_probability": -11.762871577559803,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 6551,
+            "rank": 186,
+            "log_probability": -7.791798282000363,
+            "top1_correct": false
+          },
+          {
+            "token_id": 8368,
+            "rank": 991,
+            "log_probability": -10.17326645685908,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": 3.62520694732666,
+          "source_a": 2.3801767826080322,
+          "source_b": 2.380105495452881
+        },
+        "source_swap_effect": 7.128715515136719e-05,
+        "source_swap_effect_float64": 7.182775763969751e-05,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 21,
+            "null_mass": 0.012874900363385677,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.042542096227407455,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.467963058501482
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.04133101925253868,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.4546412117779255
+            },
+            "read_l2": 26.708812713623047,
+            "content_delta_l2": 21.335994720458984
+          },
+          "source_b": {
+            "source_tokens": 21,
+            "null_mass": 0.012693304568529129,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0419325977563858,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.46125857532024384
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.051185183227062225,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5630370154976845
+            },
+            "read_l2": 26.616458892822266,
+            "content_delta_l2": 21.27974510192871
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.028121112709229002,
+          "cosine": 0.9996105986920817
+        },
+        "delta_difference": {
+          "relative_l2": 0.0027859390398031537,
+          "cosine": 0.9999996035965215
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-014",
+      "language": "zh",
+      "sources": {
+        "original": {
+          "id": "case-b4298ff710b4364ba36a",
+          "source_sha256": "365591cda566028547e8badaa286bf8383969331c711fba11cf98ddede8810b6",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            8460,
+            32224,
+            2634,
+            33345,
+            11505,
+            59326,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142144918441772,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.13287988305091858,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.09179989993572235,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.9638989493250847
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06751163303852081,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.7088721469044685
+            },
+            "read_l2": 21.49629783630371,
+            "content_delta_l2": 10.8931245803833,
+            "state_probabilities": [
+              0.007463166024535894,
+              0.9304644465446472,
+              0.06207241490483284
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-c5d6cd704d1efb8c34db",
+          "source_sha256": "7981fc79aeb3cf5343167dd4def51e7cd0fdbcf0ffeef0efed44e63fcb9d20ec",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            8460,
+            32224,
+            2634,
+            33345,
+            6044,
+            59329,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142144918441772,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.1366877257823944,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.09443533420562744,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.9915710091590881
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05962514132261276,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.626063983887434
+            },
+            "read_l2": 21.38680648803711,
+            "content_delta_l2": 10.795258522033691,
+            "state_probabilities": [
+              0.007432563230395317,
+              0.9314143061637878,
+              0.06115307658910751
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-a7808bfde14f7559a030",
+          "source_sha256": "d1a857b6795036b54d0ffcfd82b8f97626720d1554b308eba878fe6f20c02c1c",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            9154,
+            2004,
+            59332,
+            2634,
+            33345,
+            6044,
+            59329,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.19226031005382538,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.10016946494579315,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.7345760762691498
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0689956396818161,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7589520364999771
+            },
+            "read_l2": 21.564716339111328,
+            "content_delta_l2": 11.789280891418457,
+            "state_probabilities": [
+              0.008523233234882355,
+              0.895071268081665,
+              0.09640544652938843
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.11088320685905464,
+            "cosine": 0.993856232579918
+          },
+          "read": {
+            "relative_l2": 0.05786132489448355,
+            "cosine": 0.9983390612709979
+          },
+          "projected": {
+            "relative_l2": 0.009186208502505832,
+            "cosine": 0.9999985303868144
+          },
+          "delta": {
+            "relative_l2": 0.009186209732770989,
+            "cosine": 0.9999985303840911
+          },
+          "supported_probability_difference": -0.000949859619140625
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.12272756928816059,
+            "cosine": 0.9925734574692542
+          },
+          "read": {
+            "relative_l2": 0.22134167632770757,
+            "cosine": 0.9755378256535703
+          },
+          "projected": {
+            "relative_l2": 0.09312298463487087,
+            "cosine": 0.9995375128658359
+          },
+          "delta": {
+            "relative_l2": 0.09312298323931165,
+            "cosine": 0.9995375129252622
+          },
+          "supported_probability_difference": 0.0363430380821228
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          59440,
+          13576,
+          8460,
+          32224,
+          3602,
+          33345,
+          60129,
+          60348,
+          3522,
+          60088,
+          68,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          8460,
+          32224,
+          2634,
+          33345
+        ],
+        "common_reply_prefix": "Emilia现在住在",
+        "offset": 4,
+        "target_values": [
+          "Porto",
+          "Basel"
+        ],
+        "target_token_ids": [
+          11505,
+          6044
+        ],
+        "target_pieces_hex": [
+          "506f7274",
+          "42617365"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 11505,
+            "rank": 498,
+            "log_probability": -9.307872279589432,
+            "top1_correct": false
+          },
+          {
+            "token_id": 6044,
+            "rank": 3763,
+            "log_probability": -12.525172813837784,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 11505,
+            "rank": 310,
+            "log_probability": -8.060795411577455,
+            "top1_correct": false
+          },
+          {
+            "token_id": 6044,
+            "rank": 1150,
+            "log_probability": -10.197317138193997,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": 3.2173004150390625,
+          "source_a": 2.1359004974365234,
+          "source_b": 2.1301865577697754
+        },
+        "source_swap_effect": 0.005713939666748047,
+        "source_swap_effect_float64": 0.005712623160619934,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 20,
+            "null_mass": 0.04031791165471077,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.09952947497367859,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 1.0450594872236252
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0769069492816925,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8075229674577713
+            },
+            "read_l2": 24.1468448638916,
+            "content_delta_l2": 19.96127700805664
+          },
+          "source_b": {
+            "source_tokens": 20,
+            "null_mass": 0.040776923298835754,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.10036881268024445,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 1.0538725331425667
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0774417296051979,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.813138160854578
+            },
+            "read_l2": 24.007375717163086,
+            "content_delta_l2": 19.894067764282227
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.04967817819820829,
+          "cosine": 0.9987828068714016
+        },
+        "delta_difference": {
+          "relative_l2": 0.0037580370876081287,
+          "cosine": 0.999998625593079
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-015",
+      "language": "en",
+      "sources": {
+        "original": {
+          "id": "case-34a3e81589cff5b71789",
+          "source_sha256": "8ce2349dd85d506eecf6346d72d4db58007be61eb653d1c17cd1c652295db7a7",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            43230,
+            46489,
+            2888,
+            4686,
+            7344,
+            1377,
+            8368,
+            59329,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.0916832983493805,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.09988623857498169,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.7657944957415264
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.04877343028783798,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.5608944483101368
+            },
+            "read_l2": 26.160247802734375,
+            "content_delta_l2": 13.286542892456055,
+            "state_probabilities": [
+              0.0016837427392601967,
+              0.9923203587532043,
+              0.005995891056954861
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-efce6acb0b0558f6ef4c",
+          "source_sha256": "10159982dec498c5be43c6563633ec4ed06e623116e012c52927807fb681dee7",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            43230,
+            46489,
+            2888,
+            4686,
+            7344,
+            1377,
+            14666,
+            5560,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.4142154455184937,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.08949634432792664,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.09737323969602585,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.7465281710028648
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0636763647198677,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.7322781942784786
+            },
+            "read_l2": 26.18512535095215,
+            "content_delta_l2": 13.284882545471191,
+            "state_probabilities": [
+              0.0017803995870053768,
+              0.992090106010437,
+              0.006129452493041754
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-51064f309bdf8df667e5",
+          "source_sha256": "ca8a4153cac5994ecf3d6e1f0d7313bd6d8225f5f1667e6d4091f7ad0d6bd9f6",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            42165,
+            9283,
+            1770,
+            4686,
+            7344,
+            1377,
+            14666,
+            5560,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.7320526838302612,
+          "value_lexical_l2": 1.4142154455184937,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.08915713429450989,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.09772400557994843,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.7492173761129379
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06747636198997498,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.7759781628847122
+            },
+            "read_l2": 26.35015106201172,
+            "content_delta_l2": 13.605947494506836,
+            "state_probabilities": [
+              0.0017825355753302574,
+              0.9914202690124512,
+              0.006797299720346928
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.10796611522800545,
+            "cosine": 0.9941718790484597
+          },
+          "read": {
+            "relative_l2": 0.04420798605241504,
+            "cosine": 0.9990232783843693
+          },
+          "projected": {
+            "relative_l2": 0.0021421271321991142,
+            "cosine": 0.9999977134546044
+          },
+          "delta": {
+            "relative_l2": 0.0021421261276432886,
+            "cosine": 0.9999977134568173
+          },
+          "supported_probability_difference": 0.00023025274276733398
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.12732644706042973,
+            "cosine": 0.9919598448580104
+          },
+          "read": {
+            "relative_l2": 0.09122419247426493,
+            "cosine": 0.9958587667959766
+          },
+          "projected": {
+            "relative_l2": 0.024283435715687127,
+            "cosine": 0.9999902634107913
+          },
+          "delta": {
+            "relative_l2": 0.024283434489856086,
+            "cosine": 0.9999902634206819
+          },
+          "supported_probability_difference": 0.0006698369979858398
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          2153,
+          1697,
+          4342,
+          1410,
+          11181,
+          2888,
+          4686,
+          5503,
+          74,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          43230,
+          46489,
+          2888,
+          4686,
+          7344,
+          1377
+        ],
+        "common_reply_prefix": "Georgina currently lives in",
+        "offset": 6,
+        "target_values": [
+          "Basel",
+          "Rennes"
+        ],
+        "target_token_ids": [
+          8368,
+          14666
+        ],
+        "target_pieces_hex": [
+          "2042617365",
+          "2052656e"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 8368,
+            "rank": 2098,
+            "log_probability": -10.740159588103417,
+            "top1_correct": false
+          },
+          {
+            "token_id": 14666,
+            "rank": 598,
+            "log_probability": -9.016913304274205,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 8368,
+            "rank": 798,
+            "log_probability": -9.173742527071061,
+            "top1_correct": false
+          },
+          {
+            "token_id": 14666,
+            "rank": 247,
+            "log_probability": -7.648242252695544,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -1.7232463359832764,
+          "source_a": -1.5231986045837402,
+          "source_b": -1.53133225440979
+        },
+        "source_swap_effect": 0.008133649826049805,
+        "source_swap_effect_float64": 0.008134566216988937,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 22,
+            "null_mass": 0.014560772106051445,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.08522363752126694,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.6533812209963799
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0524878166615963,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.6036098916083574
+            },
+            "read_l2": 26.268930435180664,
+            "content_delta_l2": 20.74950408935547
+          },
+          "source_b": {
+            "source_tokens": 22,
+            "null_mass": 0.014426380395889282,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.08465422689914703,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.6490157395601273
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05613376945257187,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.6455383487045765
+            },
+            "read_l2": 26.259929656982422,
+            "content_delta_l2": 20.72422218322754
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.032638030091836634,
+          "cosine": 0.9994674382306957
+        },
+        "delta_difference": {
+          "relative_l2": 0.0017810325989843652,
+          "cosine": 0.9999991571963234
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-015",
+      "language": "zh",
+      "sources": {
+        "original": {
+          "id": "case-e3848295190c00894ea7",
+          "source_sha256": "aff01aad8d36aa378d84bfdaa809078b2591ff550e88b0f6c6ca5beb63694974",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            43230,
+            46489,
+            2888,
+            2634,
+            33345,
+            6044,
+            59329,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.16791963577270508,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.0899602472782135,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.6597084800402324
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05245233699679375,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5769757069647312
+            },
+            "read_l2": 21.60581398010254,
+            "content_delta_l2": 11.453383445739746,
+            "state_probabilities": [
+              0.005531389266252518,
+              0.9581075310707092,
+              0.036361150443553925
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-c1a38d909545719927f4",
+          "source_sha256": "999d6fcba0f9a97e5536bc030e95f88010c93ad4dc5cfb5ddd1eb6157b9ed6cd",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            43230,
+            46489,
+            2888,
+            2634,
+            33345,
+            50839,
+            5560,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.732052206993103,
+          "value_lexical_l2": 1.4142152070999146,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.16983382403850555,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.09113742411136627,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.6683411101500194
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.03980371356010437,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.43784084916114807
+            },
+            "read_l2": 21.69814682006836,
+            "content_delta_l2": 11.505729675292969,
+            "state_probabilities": [
+              0.005675428081303835,
+              0.9591416716575623,
+              0.0351829007267952
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-0195c30c2e3966449ab2",
+          "source_sha256": "c45ac202a2eb182fe1cd73cd4781031ad5df36fa313733b72892b35d99192ff8",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            42165,
+            9283,
+            1770,
+            2634,
+            33345,
+            50839,
+            5560,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.7320526838302612,
+          "value_lexical_l2": 1.4142152070999146,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.1637633740901947,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.08376595377922058,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.6142836610476177
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.04536540061235428,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.49901940673589706
+            },
+            "read_l2": 22.307374954223633,
+            "content_delta_l2": 12.129557609558105,
+            "state_probabilities": [
+              0.005660317838191986,
+              0.947790265083313,
+              0.046549465507268906
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.10771340288474951,
+            "cosine": 0.9942203808890716
+          },
+          "read": {
+            "relative_l2": 0.04285744484657216,
+            "cosine": 0.9990907079696453
+          },
+          "projected": {
+            "relative_l2": 0.005241011894443951,
+            "cosine": 0.9999966625408028
+          },
+          "delta": {
+            "relative_l2": 0.005241014034256005,
+            "cosine": 0.9999966625406975
+          },
+          "supported_probability_difference": -0.0010341405868530273
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.14085021750354895,
+            "cosine": 0.9900998660506812
+          },
+          "read": {
+            "relative_l2": 0.16242151537798305,
+            "cosine": 0.9871905025464117
+          },
+          "projected": {
+            "relative_l2": 0.05483120050346069,
+            "cosine": 0.9998899662323067
+          },
+          "delta": {
+            "relative_l2": 0.054831197531588056,
+            "cosine": 0.9998899662343484
+          },
+          "supported_probability_difference": 0.011351406574249268
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          59440,
+          13576,
+          43230,
+          46489,
+          2888,
+          3602,
+          33345,
+          60129,
+          60348,
+          3522,
+          60088,
+          68,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          43230,
+          46489,
+          2888,
+          2634,
+          33345
+        ],
+        "common_reply_prefix": "Georgina现在住在",
+        "offset": 5,
+        "target_values": [
+          "Basel",
+          "Rennes"
+        ],
+        "target_token_ids": [
+          6044,
+          50839
+        ],
+        "target_pieces_hex": [
+          "42617365",
+          "52656e"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 6044,
+            "rank": 6385,
+            "log_probability": -12.83644618324485,
+            "top1_correct": false
+          },
+          {
+            "token_id": 50839,
+            "rank": 5312,
+            "log_probability": -12.548008220712807,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 6044,
+            "rank": 2077,
+            "log_probability": -10.780455201653181,
+            "top1_correct": false
+          },
+          {
+            "token_id": 50839,
+            "rank": 1189,
+            "log_probability": -9.890317001134699,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -0.28843796253204346,
+          "source_a": -0.8636876344680786,
+          "source_b": -0.8832038640975952
+        },
+        "source_swap_effect": 0.0195162296295166,
+        "source_swap_effect_float64": 0.019517714400134167,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 21,
+            "null_mass": 0.05217823013663292,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.13217946887016296,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.9693161050478618
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07590380311012268,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.8349418342113495
+            },
+            "read_l2": 23.77962875366211,
+            "content_delta_l2": 18.787546157836914
+          },
+          "source_b": {
+            "source_tokens": 21,
+            "null_mass": 0.052458301186561584,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.13330796360969543,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.9775917331377666
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06732603907585144,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7405864298343658
+            },
+            "read_l2": 23.968965530395508,
+            "content_delta_l2": 18.910491943359375
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.04725862761174136,
+          "cosine": 0.9989147411518993
+        },
+        "delta_difference": {
+          "relative_l2": 0.007075403765649094,
+          "cosine": 0.9999962424843307
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-020",
+      "language": "en",
+      "sources": {
+        "original": {
+          "id": "case-71036390bf7be9b3ea7c",
+          "source_sha256": "3dabc11f71e44890a1cc34ec241c6b1fef602f0ac18a441eb8a2c9c8d0c7240a",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            13292,
+            9321,
+            4686,
+            7344,
+            1377,
+            26955,
+            1356,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142146110534668,
+          "value_lexical_l2": 1.4142142534255981,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.10484291613101959,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.06505738198757172,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7156312018632889
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06295798718929291,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.692537859082222
+            },
+            "read_l2": 26.12516212463379,
+            "content_delta_l2": 13.516075134277344,
+            "state_probabilities": [
+              0.0006463288445957005,
+              0.9933085441589355,
+              0.006045105867087841
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-59b8b45240a5f903602a",
+          "source_sha256": "d6752e5611482d021f1a6fef2d2d6fef77707316a616d361c0692379305d04de",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            13292,
+            9321,
+            4686,
+            7344,
+            1377,
+            8351,
+            59398,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142146110534668,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.10414772480726242,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.06411112844944,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.70522241294384
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06981347501277924,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7679482251405716
+            },
+            "read_l2": 26.105905532836914,
+            "content_delta_l2": 13.525843620300293,
+            "state_probabilities": [
+              0.0006394002703018486,
+              0.9932088255882263,
+              0.006151759997010231
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-e4034ccf2b91e2ebf0e6",
+          "source_sha256": "24b9d775a25f702e3f86138aa8f0ce0be5622902029f63f8f84f7ae4800dd875",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            33956,
+            7871,
+            4686,
+            7344,
+            1377,
+            8351,
+            59398,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.4142152070999146,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.10317058861255646,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.06813391298055649,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7494730427861214
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06743982434272766,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7418380677700043
+            },
+            "read_l2": 26.018449783325195,
+            "content_delta_l2": 13.424967765808105,
+            "state_probabilities": [
+              0.0006623232620768249,
+              0.9933225512504578,
+              0.006015160121023655
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.09645022955717325,
+            "cosine": 0.9953487072850502
+          },
+          "read": {
+            "relative_l2": 0.04982504953796602,
+            "cosine": 0.9987590038412717
+          },
+          "projected": {
+            "relative_l2": 0.0021894596792948586,
+            "cosine": 0.9999978641723842
+          },
+          "delta": {
+            "relative_l2": 0.0021894566674004884,
+            "cosine": 0.999997864174818
+          },
+          "supported_probability_difference": 9.971857070922852e-05
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.10052435546365322,
+            "cosine": 0.9949559295405355
+          },
+          "read": {
+            "relative_l2": 0.06358406443268756,
+            "cosine": 0.9979841575259277
+          },
+          "projected": {
+            "relative_l2": 0.007672418856772133,
+            "cosine": 0.9999985864458766
+          },
+          "delta": {
+            "relative_l2": 0.007672414322361441,
+            "cosine": 0.9999985864485605
+          },
+          "supported_probability_difference": -0.00011372566223144531
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          2153,
+          1697,
+          4342,
+          1410,
+          20236,
+          9321,
+          4686,
+          5503,
+          74,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          13292,
+          9321,
+          4686,
+          7344,
+          1377
+        ],
+        "common_reply_prefix": "Rowena currently lives in",
+        "offset": 5,
+        "target_values": [
+          "Bergen",
+          "Linz"
+        ],
+        "target_token_ids": [
+          26955,
+          8351
+        ],
+        "target_pieces_hex": [
+          "2042657267",
+          "204c696e"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 26955,
+            "rank": 5045,
+            "log_probability": -12.234697857024859,
+            "top1_correct": false
+          },
+          {
+            "token_id": 8351,
+            "rank": 836,
+            "log_probability": -9.580832519653033,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 26955,
+            "rank": 1836,
+            "log_probability": -10.325079823186222,
+            "top1_correct": false
+          },
+          {
+            "token_id": 8351,
+            "rank": 659,
+            "log_probability": -8.860658167453224,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -2.653865337371826,
+          "source_a": -1.4630507230758667,
+          "source_b": -1.465863823890686
+        },
+        "source_swap_effect": 0.002813100814819336,
+        "source_swap_effect_float64": 0.002811563167836706,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 21,
+            "null_mass": 0.01513980794698,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.05280926823616028,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5809019505977631
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.04974636808037758,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5472100488841534
+            },
+            "read_l2": 26.68561363220215,
+            "content_delta_l2": 21.379474639892578
+          },
+          "source_b": {
+            "source_tokens": 21,
+            "null_mass": 0.01506812870502472,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0526815801858902,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5794973820447922
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.050473276525735855,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.5552060417830944
+            },
+            "read_l2": 26.69344139099121,
+            "content_delta_l2": 21.39055633544922
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.02656908765412605,
+          "cosine": 0.9996470847989598
+        },
+        "delta_difference": {
+          "relative_l2": 0.0011826200572002071,
+          "cosine": 0.9999994349218378
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-020",
+      "language": "zh",
+      "sources": {
+        "original": {
+          "id": "case-6a48fa9630f1d2033869",
+          "source_sha256": "f9f36121f8dea923c80757e5bdd498b82156716af40b1528dfdab7a73fe5df76",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            13292,
+            9321,
+            2634,
+            33345,
+            46221,
+            3458,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142146110534668,
+          "value_lexical_l2": 1.4142149686813354,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.16218173503875732,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.05472831055521965,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.5746472608298063
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06393095850944519,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.6712750643491745
+            },
+            "read_l2": 21.974159240722656,
+            "content_delta_l2": 11.278239250183105,
+            "state_probabilities": [
+              0.006967642810195684,
+              0.943642258644104,
+              0.049390096217393875
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-c9ee77e3c1cdcfb225ca",
+          "source_sha256": "df50247ce9cf9fb286f63cf69a24d8c896f93497f70fc1d5d35bcdd86927f02b",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            13292,
+            9321,
+            2634,
+            33345,
+            11602,
+            59398,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142146110534668,
+          "value_lexical_l2": 1.4142147302627563,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.1552169919013977,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0517907552421093,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.5438029300421476
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08057578653097153,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.846045758575201
+            },
+            "read_l2": 21.822668075561523,
+            "content_delta_l2": 11.160371780395508,
+            "state_probabilities": [
+              0.007304622791707516,
+              0.9379295110702515,
+              0.05476580187678337
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-245680040669d99b92d9",
+          "source_sha256": "4cb011c9a8177204735d274044b77d82807e06eba7224832f0661bddb19b7088",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            33956,
+            7871,
+            2634,
+            33345,
+            11602,
+            59398,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13
+          ],
+          "value_token_positions": [
+            16,
+            17
+          ],
+          "subject_lexical_l2": 1.4142152070999146,
+          "value_lexical_l2": 1.4142147302627563,
+          "initial": {
+            "source_tokens": 20,
+            "null_mass": 0.15757322311401367,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.05940508097410202,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.6237533502280712
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08722187578678131,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.9158296957612038
+            },
+            "read_l2": 21.336933135986328,
+            "content_delta_l2": 10.746538162231445,
+            "state_probabilities": [
+              0.007890012115240097,
+              0.9416696429252625,
+              0.05044031888246536
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.10591651013415736,
+            "cosine": 0.9944650153429947
+          },
+          "read": {
+            "relative_l2": 0.0636277580329013,
+            "cosine": 0.9979996587821809
+          },
+          "projected": {
+            "relative_l2": 0.010722593972129787,
+            "cosine": 0.9999976981784836
+          },
+          "delta": {
+            "relative_l2": 0.010722596110458274,
+            "cosine": 0.9999976981739376
+          },
+          "supported_probability_difference": 0.005712747573852539
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.11236824534840906,
+            "cosine": 0.9936933468849409
+          },
+          "read": {
+            "relative_l2": 0.10700319264216437,
+            "cosine": 0.9945277880223493
+          },
+          "projected": {
+            "relative_l2": 0.03898734857679728,
+            "cosine": 0.9999536847939122
+          },
+          "delta": {
+            "relative_l2": 0.03898735001339897,
+            "cosine": 0.9999536848021676
+          },
+          "supported_probability_difference": -0.0037401318550109863
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          59440,
+          13576,
+          13292,
+          9321,
+          3602,
+          33345,
+          60129,
+          60348,
+          3522,
+          60088,
+          68,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          13292,
+          9321,
+          2634,
+          33345
+        ],
+        "common_reply_prefix": "Rowena现在住在",
+        "offset": 4,
+        "target_values": [
+          "Bergen",
+          "Linz"
+        ],
+        "target_token_ids": [
+          46221,
+          11602
+        ],
+        "target_pieces_hex": [
+          "426572",
+          "4c696e"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 46221,
+            "rank": 1454,
+            "log_probability": -10.738790195612133,
+            "top1_correct": false
+          },
+          {
+            "token_id": 11602,
+            "rank": 4325,
+            "log_probability": -12.439610462812603,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 46221,
+            "rank": 628,
+            "log_probability": -9.052499195671142,
+            "top1_correct": false
+          },
+          {
+            "token_id": 11602,
+            "rank": 2377,
+            "log_probability": -11.175229727888821,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": 1.7008202075958252,
+          "source_a": 2.1113600730895996,
+          "source_b": 2.098447561264038
+        },
+        "source_swap_effect": 0.012912511825561523,
+        "source_swap_effect_float64": 0.012910317818504158,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 20,
+            "null_mass": 0.04365873336791992,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0956404060125351,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 1.0042242631316185
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08222012221813202,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8633112832903862
+            },
+            "read_l2": 24.523818969726562,
+            "content_delta_l2": 19.62944984436035
+          },
+          "source_b": {
+            "source_tokens": 20,
+            "null_mass": 0.043507128953933716,
+            "subject_attention": {
+              "token_count": 2,
+              "mass": 0.0952238216996193,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.9998501278460026
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0827145054936409,
+              "uniform_mass": 0.09523809523809523,
+              "density_over_uniform": 0.8685023076832294
+            },
+            "read_l2": 24.167814254760742,
+            "content_delta_l2": 19.3454647064209
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.05297879938975022,
+          "cosine": 0.9987034697398709
+        },
+        "delta_difference": {
+          "relative_l2": 0.014672081697215757,
+          "cosine": 0.9999985462423442
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-021",
+      "language": "en",
+      "sources": {
+        "original": {
+          "id": "case-96b4a7319b8660364360",
+          "source_sha256": "b317c55b1243e9522c2eff2ccf37f5cacb08ab7260146e01ece3773ecf062b78",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            6755,
+            1885,
+            59324,
+            4686,
+            7344,
+            1377,
+            8351,
+            59398,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.732051968574524,
+          "value_lexical_l2": 1.414214849472046,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.10267864912748337,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.07573462277650833,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.5806321079532305
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07293865829706192,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.8387945704162121
+            },
+            "read_l2": 26.154191970825195,
+            "content_delta_l2": 13.31331729888916,
+            "state_probabilities": [
+              0.0012424532324075699,
+              0.9929711222648621,
+              0.005786455702036619
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-e0eedc94348cb398a5a4",
+          "source_sha256": "355dba991b2c64c937fdad45a1fabf77654ae4b70e010d3c9e37d1ec7d0cecd4",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            6755,
+            1885,
+            59324,
+            4686,
+            7344,
+            1377,
+            6551,
+            59326,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.732051968574524,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.10372553765773773,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.07609207928180695,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.5833726078271866
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07197901606559753,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.8277586847543716
+            },
+            "read_l2": 26.126089096069336,
+            "content_delta_l2": 13.24915599822998,
+            "state_probabilities": [
+              0.0012264411197975278,
+              0.9930598735809326,
+              0.005713670048862696
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-433e064005843e047ab0",
+          "source_sha256": "c0fa8d2fdee6af17164a4fd819fe35eb125a88d0818829271bd3175b6cc6f3db",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            43070,
+            25775,
+            5262,
+            4686,
+            7344,
+            1377,
+            6551,
+            59326,
+            72,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            18,
+            19
+          ],
+          "subject_lexical_l2": 1.7320525646209717,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 22,
+            "null_mass": 0.103146992623806,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.10075531154870987,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.772457388540109
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.06552797555923462,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.7535717189311981
+            },
+            "read_l2": 26.337207794189453,
+            "content_delta_l2": 13.464323997497559,
+            "state_probabilities": [
+              0.0012069414369761944,
+              0.9931307435035706,
+              0.005662240087985992
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.0978347159615103,
+            "cosine": 0.9952142062388352
+          },
+          "read": {
+            "relative_l2": 0.05494935606477193,
+            "cosine": 0.9984908616952533
+          },
+          "projected": {
+            "relative_l2": 0.0056202528381121995,
+            "cosine": 0.9999958750333611
+          },
+          "delta": {
+            "relative_l2": 0.005620254371995966,
+            "cosine": 0.9999958750294805
+          },
+          "supported_probability_difference": -8.875131607055664e-05
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.11720806874075496,
+            "cosine": 0.9931321366150249
+          },
+          "read": {
+            "relative_l2": 0.08170889886472722,
+            "cosine": 0.9966941616433769
+          },
+          "projected": {
+            "relative_l2": 0.016607721933447523,
+            "cosine": 0.9999918464131939
+          },
+          "delta": {
+            "relative_l2": 0.016607718802387355,
+            "cosine": 0.9999918464126443
+          },
+          "supported_probability_difference": -7.086992263793945e-05
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          2153,
+          1697,
+          4342,
+          1410,
+          30132,
+          12543,
+          4686,
+          5503,
+          74,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          6755,
+          1885,
+          59324,
+          4686,
+          7344,
+          1377
+        ],
+        "common_reply_prefix": "Tessa currently lives in",
+        "offset": 6,
+        "target_values": [
+          "Linz",
+          "Porto"
+        ],
+        "target_token_ids": [
+          8351,
+          6551
+        ],
+        "target_pieces_hex": [
+          "204c696e",
+          "20506f7274"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 8351,
+            "rank": 1500,
+            "log_probability": -10.546562600319909,
+            "top1_correct": false
+          },
+          {
+            "token_id": 6551,
+            "rank": 171,
+            "log_probability": -7.597189116662071,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 8351,
+            "rank": 1180,
+            "log_probability": -10.04677937476629,
+            "top1_correct": false
+          },
+          {
+            "token_id": 6551,
+            "rank": 150,
+            "log_probability": -7.265179242745889,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -2.949373483657837,
+          "source_a": -2.7802538871765137,
+          "source_b": -2.7828330993652344
+        },
+        "source_swap_effect": 0.002579212188720703,
+        "source_swap_effect_float64": 0.0025788998287739062,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 22,
+            "null_mass": 0.015290217474102974,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.08141572773456573,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.624187245965004
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.05236780270934105,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.6022297311574221
+            },
+            "read_l2": 26.474063873291016,
+            "content_delta_l2": 21.023714065551758
+          },
+          "source_b": {
+            "source_tokens": 22,
+            "null_mass": 0.015491637401282787,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.08226995170116425,
+              "uniform_mass": 0.13043478260869565,
+              "density_over_uniform": 0.6307362963755926
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.043699268251657486,
+              "uniform_mass": 0.08695652173913043,
+              "density_over_uniform": 0.5025415848940611
+            },
+            "read_l2": 26.488759994506836,
+            "content_delta_l2": 21.032730102539062
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.029233067755378067,
+          "cosine": 0.999572867753431
+        },
+        "delta_difference": {
+          "relative_l2": 0.0013610947420475787,
+          "cosine": 0.9999991656247995
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    },
+    {
+      "world_id": "av-021",
+      "language": "zh",
+      "sources": {
+        "original": {
+          "id": "case-5f88a1807e928f79a340",
+          "source_sha256": "a76bb9bd8c34f939dd13199a0cf721418635750b4e4df2467ff8c5192f3b7697",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            6755,
+            1885,
+            59324,
+            2634,
+            33345,
+            11602,
+            59398,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.732051968574524,
+          "value_lexical_l2": 1.4142147302627563,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.17353041470050812,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.06890220940113068,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.505282868941625
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.0882464200258255,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.9707106202840805
+            },
+            "read_l2": 21.658267974853516,
+            "content_delta_l2": 11.84536075592041,
+            "state_probabilities": [
+              0.008003666065633297,
+              0.9238033294677734,
+              0.06819311529397964
+            ],
+            "predicted_state": 1
+          }
+        },
+        "swapped_values": {
+          "id": "case-3f29206294768844b232",
+          "source_sha256": "5941a1f04c57657482b3783afbfce39f15daddac5cf7938f87616cea1350df25",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            6755,
+            1885,
+            59324,
+            2634,
+            33345,
+            11505,
+            59326,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.732051968574524,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.178095281124115,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.07067041099071503,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.5182496805985769
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07596609741449356,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.8356270715594292
+            },
+            "read_l2": 21.797727584838867,
+            "content_delta_l2": 11.985504150390625,
+            "state_probabilities": [
+              0.007268342189490795,
+              0.9286755919456482,
+              0.06405600160360336
+            ],
+            "predicted_state": 1
+          }
+        },
+        "wrong_subject": {
+          "id": "case-1d35f3c78345a999ce12",
+          "source_sha256": "14f01f53fe5d2776a8f46a07e57a5aa356aeb07fd3ccccd61acfb257978a51a6",
+          "token_ids": [
+            1,
+            10354,
+            11096,
+            3552,
+            1836,
+            3359,
+            21073,
+            5240,
+            3552,
+            1836,
+            3359,
+            2384,
+            3552,
+            43070,
+            25775,
+            5262,
+            2634,
+            33345,
+            11505,
+            59326,
+            66,
+            14582
+          ],
+          "subject_token_positions": [
+            12,
+            13,
+            14
+          ],
+          "value_token_positions": [
+            17,
+            18
+          ],
+          "subject_lexical_l2": 1.7320525646209717,
+          "value_lexical_l2": 1.4142146110534668,
+          "initial": {
+            "source_tokens": 21,
+            "null_mass": 0.2042999416589737,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.1013026162981987,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.7428858528534572
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07075047492980957,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.7782552242279053
+            },
+            "read_l2": 21.364330291748047,
+            "content_delta_l2": 11.861350059509277,
+            "state_probabilities": [
+              0.00684623746201396,
+              0.937466025352478,
+              0.05568776652216911
+            ],
+            "predicted_state": 1
+          }
+        }
+      },
+      "initial_contrasts": {
+        "value": {
+          "encoded_mean": {
+            "relative_l2": 0.10422066328890121,
+            "cosine": 0.9946101877885258
+          },
+          "read": {
+            "relative_l2": 0.07357941264794172,
+            "cosine": 0.997313605607252
+          },
+          "projected": {
+            "relative_l2": 0.012654133363244224,
+            "cosine": 0.9999891014904312
+          },
+          "delta": {
+            "relative_l2": 0.012654132298575576,
+            "cosine": 0.9999891014810892
+          },
+          "supported_probability_difference": -0.004872262477874756
+        },
+        "subject": {
+          "encoded_mean": {
+            "relative_l2": 0.12324733052185309,
+            "cosine": 0.9924104896754683
+          },
+          "read": {
+            "relative_l2": 0.1311448629365099,
+            "cosine": 0.991601314428973
+          },
+          "projected": {
+            "relative_l2": 0.01112918672500737,
+            "cosine": 0.9999922811647638
+          },
+          "delta": {
+            "relative_l2": 0.011129185759129375,
+            "cosine": 0.999992281168104
+          },
+          "supported_probability_difference": -0.008790433406829834
+        }
+      },
+      "value_probe": {
+        "position": "first divergent reference value token, not a generated answer",
+        "common_prefix_ids": [
+          1,
+          59320,
+          73441,
+          8251,
+          5,
+          40165,
+          24494,
+          1377,
+          15135,
+          3180,
+          72,
+          4498,
+          1573,
+          1896,
+          6080,
+          72,
+          73440,
+          5,
+          73441,
+          1836,
+          5,
+          59440,
+          13576,
+          6755,
+          1885,
+          59324,
+          3602,
+          33345,
+          60129,
+          60348,
+          3522,
+          60088,
+          68,
+          73440,
+          5,
+          73441,
+          43686,
+          5,
+          6755,
+          1885,
+          59324,
+          2634,
+          33345
+        ],
+        "common_reply_prefix": "Tessa现在住在",
+        "offset": 5,
+        "target_values": [
+          "Linz",
+          "Porto"
+        ],
+        "target_token_ids": [
+          11602,
+          11505
+        ],
+        "target_pieces_hex": [
+          "4c696e",
+          "506f7274"
+        ],
+        "prefix_observed_in_free_generation": [
+          false,
+          false
+        ],
+        "base_target_stats": [
+          {
+            "token_id": 11602,
+            "rank": 3910,
+            "log_probability": -12.07227975573807,
+            "top1_correct": false
+          },
+          {
+            "token_id": 11505,
+            "rank": 484,
+            "log_probability": -8.870325271752169,
+            "top1_correct": false
+          }
+        ],
+        "own_source_target_stats": [
+          {
+            "token_id": 11602,
+            "rank": 2112,
+            "log_probability": -10.823590815725527,
+            "top1_correct": false
+          },
+          {
+            "token_id": 11505,
+            "rank": 308,
+            "log_probability": -7.767240974853433,
+            "top1_correct": false
+          }
+        ],
+        "two_choice_margins": {
+          "base": -3.2019543647766113,
+          "source_a": -3.041353464126587,
+          "source_b": -3.0476441383361816
+        },
+        "source_swap_effect": 0.0062906742095947266,
+        "source_swap_effect_float64": 0.006289167745161972,
+        "direction_correct": true,
+        "two_choice_pair_correct": false,
+        "full_vocab_next_token_pair_correct": false,
+        "attention": {
+          "source_a": {
+            "source_tokens": 21,
+            "null_mass": 0.044045589864254,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.11631790548563004,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.852997973561287
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.08343209326267242,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.9177530258893967
+            },
+            "read_l2": 24.32588005065918,
+            "content_delta_l2": 19.729440689086914
+          },
+          "source_b": {
+            "source_tokens": 21,
+            "null_mass": 0.04412637650966644,
+            "subject_attention": {
+              "token_count": 3,
+              "mass": 0.11690563708543777,
+              "uniform_mass": 0.13636363636363635,
+              "density_over_uniform": 0.8573080052932104
+            },
+            "value_attention": {
+              "token_count": 2,
+              "mass": 0.07821942120790482,
+              "uniform_mass": 0.09090909090909091,
+              "density_over_uniform": 0.860413633286953
+            },
+            "read_l2": 24.638050079345703,
+            "content_delta_l2": 20.01524543762207
+          }
+        },
+        "read_difference": {
+          "relative_l2": 0.05451070034851664,
+          "cosine": 0.9985955293198524
+        },
+        "delta_difference": {
+          "relative_l2": 0.014882573753390908,
+          "cosine": 0.9999926743663892
+        },
+        "own_target_token_present_in_source_value_span": [
+          true,
+          true
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "source_records": 48,
+    "value_pairs": 16,
+    "subject_pairs": 16,
+    "effect_direction_correct": 16,
+    "two_choice_pairs_correct": 0,
+    "full_vocab_next_tokens_correct": 0,
+    "value_token_positions": 32,
+    "target_token_present_in_source_span": 32,
+    "reference_prefix_also_seen_in_actual_generation": 2,
+    "median_target_rank_base": 2206.5,
+    "median_target_rank_conditioned": 895.5,
+    "median_value_point_read_relative_difference": 0.0413356181101404,
+    "median_value_point_delta_relative_difference": 0.002804835029162372,
+    "median_value_attention_density_over_uniform": 0.6971836593002081,
+    "effect_min_median_max": [
+      7.182775763969751e-05,
+      0.006000895452890953,
+      0.024923431455502243
+    ],
+    "effect_over_fixed_center_pair_flip_requirement_median": 0.001093981938134054,
+    "ratio_note": "Descriptive margin comparison only, NOT a proposed gain or evidence that uniform rescaling would work",
+    "predicted_supported_counts": {
+      "original": 16,
+      "swapped_values": 16,
+      "wrong_subject": 16
+    }
+  },
+  "optimizer_steps": 0,
+  "parameters_unchanged": true,
+  "numeric_replay_passed": true,
+  "source_records_verified": 48,
+  "value_pairs": 16,
+  "subject_pairs": 16,
+  "new_free_generated_answers": 0,
+  "memory_accuracy_measured": false,
+  "training_approved": false,
+  "deployment_approved": false,
+  "feature_package_digest": "8f5b2d2ae685a7995d45422e661a8f59811357186d0cff370211eb596d5f36a6",
+  "artifact_sha256": {
+    "experiment": "56dcf747afd591f9d37a4b9e1eeb7f181203ff9067647b917f969138bffad9b2",
+    "checkpoint": "eb6b9a551c616d08a2aa0e8d183a63233c87a3c10e296f290a7b48b99dea716d",
+    "gguf": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "tok_probe": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc"
+  },
+  "source_sha256": "abfdce4a63299e3ddb09d38687a0ae8a7c622bfa9bd970722818e0539c35677f",
+  "training_exposure_audit": {
+    "scope": "Exploratory exposure audit of existing logs; no change to registered probe denominators",
+    "source_sha256": "06db139902a02da064983b40aaf12a89da8b3ab663f97c3ee044640142ff22f3",
+    "sampled_rows": 200,
+    "scenario_draws": {
+      "paraphrase": 18,
+      "conflict": 8,
+      "negated": 12,
+      "hypothetical": 11,
+      "swapped_values": 20,
+      "update_current": 15,
+      "quoted": 17,
+      "historical_only": 17,
+      "ordinary_empty": 11,
+      "empty": 11,
+      "wrong_subject": 14,
+      "wrong_relation": 10,
+      "ordinary_conflict": 10,
+      "original": 10,
+      "ordinary_wrong_subject": 11,
+      "ordinary_original": 5
+    },
+    "supported_draws": 63,
+    "wrong_subject_draws": 14,
+    "nominal_state_weighted_exposures": [
+      126,
+      14
+    ],
+    "subject_control_training_pairs": 32,
+    "both_sides_seen_at_least_once": 8,
+    "limitations": "Exposure/nominal weights are not gradient magnitudes or proof of the sole cause; this does not authorize more steps"
+  }
+}

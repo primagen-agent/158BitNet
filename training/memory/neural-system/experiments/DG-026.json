@@ -1,0 +1,20 @@
+{
+  "id":"DG-026",
+  "status":"registered_jb002_zero_update_supervision",
+  "optimizer_steps":0,
+  "deployment_approved":false,
+  "environment":{"frozen_binary_root":"build/neural-memory-cg003-frozen-build","tok_probe_sha256":"f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc","prefix_probe_sha256":"2735729604b1a52d99d1a60f48234b96ce3683d63aeec6434879bbfe7753e302","reference_probe_sha256":"4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152","encoder_probe_sha256":"dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0","continuous_probe_sha256":"4ce9aa3f21ef95f589fb996f2a43c30a917e038f3fc4e1285bd60769691288ce"},
+  "selection":{"corpus":"JB-002","split":"train","world_id":"jb2-009",
+               "uncertainty_scenarios":["wrong_time","hypothetical","quoted"],
+               "supported_scenarios":["historical_stated","multi_fact"],
+               "languages":["en","zh"],"relations":["home_city","work_city"],
+               "expected_positions":{"wrong_time":[16,17,16,17],"hypothetical":[13,12,13,12],"quoted":[13,12,13,12],"historical_stated":[17,15,17,15],"multi_fact":[12,10,12,11]},
+               "uncertainty_records":12,"supported_records":8},
+  "scope":"DG-022-style zero-update supervision verification extended to the JB-002 counter-example panel: time-qualified refusals and hypothesis/relay refusals through the query-only branch, plus time-scoped-value and multi-fact-distractor trajectories through the FineSpanReader static/idle supervision. Zero optimizer steps, no free generation, no serving.",
+  "compile_gate":"All 20 panel trajectories compile via compile_teacher_time (delegation for route-2 incl. time-qualified refusals after the registered delegation fix; DG-025 time branch for historical_stated). Pinned per-record position counts must match exactly.",
+  "feature_gate":"Panel query and source texts are encoded by the frozen encoder probe into a NEW local bank (build/neural-memory-jb002-features) with its own manifest; the frozen CG-003 feature package is read-only and untouched. Texts, token ids and encoder identity are hash-recorded.",
+  "uncertainty_gate":"Per-token CE of the untrained query-only branch at every teacher position (fresh C prefix frames, batch extraction + first/middle/last reference bitwise checks per record); equal-weight aggregate backward reproduces the zero-init chain rule (Wout nonzero, encoder exactly zero); disabled identity at every position; zero residual bitwise base at every position; parameters unchanged.",
+  "supported_gate":"For each historical_stated/multi_fact trajectory: reader static fine_loss (route/span targets incl. the 2020 value span) and idle-mode CE backward at actual C idle prefixes; finite nonzero gradients with coarse/fine heads connected on positives; parameters unchanged. Reader weights re-initialized from the DG-020 seed and digest-checked.",
+  "limits":"Small smoke-level panel on one frozen world; passing numerical gates is not memory ability. No LoCoMo, no test split, no serving, no budget consumption.",
+  "stop":"Keep every failure; fix only the new modules; pinned files and prior reports must hash-verify unchanged before and after."
+}

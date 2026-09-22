@@ -1,0 +1,25 @@
+{
+  "id":"DG-024",
+  "status":"registered_expanded_worlds_supervision",
+  "optimizer_steps":0,
+  "deployment_approved":false,
+  "dataset":"JB-002",
+  "scope":"Expanded semantic-world and counter-example supervision pre-registration for the neural memory line: 24 new worlds (12 train / 6 dev / 6 test, world-level split) with fresh people/city inventories disjoint from JB-001, bilingual, 8 scenarios per (world, relation, language) group. Zero training, no model forward, no serving.",
+  "scenarios":{
+    "correct":{"state":"supported","facts":"target current + other-person other-relation distractor"},
+    "role_swap":{"state":"insufficient","facts":"roles swapped (JB-001 control)"},
+    "empty":{"state":"insufficient","facts":"no stored source"},
+    "wrong_time":{"state":"insufficient","facts":"target current + distractor; question asks unstated 2020 time"},
+    "historical_stated":{"state":"supported","facts":"wrong_time source plus exactly one explicit 2020 fact for the target"},
+    "multi_fact":{"state":"supported","facts":"target + other-person other-relation + same-person other-relation distractors"},
+    "hypothetical":{"state":"insufficient","facts":"supposition about target instead of fact, plus distractor"},
+    "quoted":{"state":"insufficient","facts":"second-hand relay about target instead of fact, plus distractor"}
+  },
+  "controls":"wrong_time/historical_stated share the identical time-qualified question and sources differ by exactly the one 2020 clause; hypothetical/quoted/correct share the current question with sources differing in fact status; role_swap/empty pair against correct as in JB-001. Labels and index are physically separate files; runtime inputs never contain state, response or claims.",
+  "expected":{"records":768,"train":384,"dev":192,"test":192,"supported_per_group":3,"insufficient_per_group":5,
+              "worlds":24,"languages":["en","zh"],"relations":["home_city","work_city"],
+              "seed":20261001,"disjoint_from":"JB-001 people/cities/worlds"},
+  "interface_limits":"compile_teacher/positive_bytes compatibility holds for current-time supported scenarios (correct, multi_fact) only; time-scoped value spans (historical_stated) need a time-aware span compiler and are registered as the next interface item, not silently approximated. Test split stays sealed: no tokenization, model forward or selection.",
+  "gates":"Regeneration is byte-identical (--verify); cross-split subject/value/world disjointness plus disjointness from JB-001 inventories; paired controls verified; state supervision internally consistent (joint-current-actual definition extended with query_time in the index only); no LoCoMo, no training, no weight updates.",
+  "stop":"If any counter-check fails, fix the generator and re-register; do not patch outputs by hand. This round freezes data and supervision only; any training on it requires a separately approved budget."
+}

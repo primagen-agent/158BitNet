@@ -1,0 +1,19 @@
+{
+  "format": "cg003-cuda-fixture-v1",
+  "source_package_digest": "d299ad9f59c5a8500d751ee71b4f9139232cec9f80a2607e14953442e883b6fb",
+  "world": "jb-000",
+  "records": 12,
+  "binding": "b7a39d05b2034646288f07c429bf23fe04ddb98daad2f63bb7437af06ed900f7",
+  "blocked_ids": [
+    1,
+    73440
+  ],
+  "scale": 4.0,
+  "head_sha256": "8a44471dd9502adcfaf8a04eceb4716e1fbfd228fbbb6832f06520a699b93cbd",
+  "gguf_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "data_sha256": "ed8ee9614f11caba78e7d12fbdb85948dbaef13d113efb1a47ad8d7ebfb72461",
+  "records_sha256": "3ae3fddea6bd752fdd9b84612645eebbbc2ec5c73aeada1ba6eb5d1a17bed48e",
+  "source_sha256": "189eec5bb8ee77921b591bf3d6bae81466005ac7f0a84df5ff79446c0982ab4e",
+  "optimizer_steps": 0,
+  "training_approved": false
+}

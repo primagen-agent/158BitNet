@@ -1,0 +1,15 @@
+{
+  "id": "DG-011",
+  "status": "registered_zero_step_supervision_and_composition",
+  "scope": "Post-forward factor/copy supervision and label-free four-branch composition; no trained candidate and no live generation certificate",
+  "coverage_panel": "All 512 training records of frozen CG-001 corpus, all scenarios and languages. Complete reply tokens retained, supported value tokens separately counted. No dev or LoCoMo selection.",
+  "factor_targets": "For memory questions only: independent subject-presence and relation-presence labels from synthetic source facts; normal questions unknown/unlabelled. Neither factor implies factual validity, temporal currency or support.",
+  "copy_targets": "Gold source/value byte spans only after forward. Supported value tokens supervise sum over every structurally eligible matching token within the annotated value span. Unavailable value tokens supervise NULL and stay in full-vocabulary CE. Other supported reply tokens have no position target. Negative/normal copy mass is penalized.",
+  "composition": "Single predicted initial route. normal=exact base; insufficient=source-independent uncertainty branch; supported=continuous content distribution mixed with neural token payload distribution. Subject/relation neural probabilities reduce support and transfer rejected mass to insufficient. No gold route in serving.",
+  "numeric_panel": "First train world, both languages, original/swapped_values/wrong_subject, reuse hash-verified DG-010 C token encodings. All teacher-forced reply positions and initial state only. Seed 1011. Existing CG-002 content/uncertainty weights, new untrained reader and factor heads; no checkpoint saved.",
+  "checks": "Full denominators and uncovered tokens, finite gradients without detaching content, normalized branches, exact disabled identity, state/parameter identity checks and synthetic route/negative supervision fixtures. No independent review or memory accuracy claim.",
+  "optimizer_steps": 0,
+  "new_free_generated_answers": 0,
+  "training_approved": false,
+  "deployment_approved": false
+}

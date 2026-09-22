@@ -1,0 +1,31 @@
+{
+  "id": "DG-009",
+  "status": "registered_zero_step_paired_objective_gradient_diagnostic",
+  "checkpoint_sha256": "eb6b9a551c616d08a2aa0e8d183a63233c87a3c10e296f290a7b48b99dea716d",
+  "feature_package_digest": "8f5b2d2ae685a7995d45422e661a8f59811357186d0cff370211eb596d5f36a6",
+  "selection": "First four lexicographically sorted TRAIN world IDs, both languages; original, swapped_values, wrong_subject. Eight value pairs and eight subject-only pairs. No development-set selection or LoCoMo.",
+  "value_objectives": {
+    "old": "Mean of the two original weighted role losses divided by mean sample weight; complete teacher-forced reply CE and initial state CE",
+    "focused": "Mean initial state CE plus mean full-vocabulary CE at the first differing reference value token, using the common reference prefix",
+    "paired": "focused + softplus(1 - d), where d = (zA[a]-zA[b]) - (zB[a]-zB[b]); contrast alone is NOT sufficient"
+  },
+  "subject_objectives": {
+    "old": "Original role losses of swapped_values and wrong_subject, weighted 2:1, divided by sum of weights",
+    "balanced": "Equal mean of both original unweighted state and branch losses; correct subject versus wrong subject at the SAME city",
+    "paired": "balanced + softplus(1 - d), where d = (supported-insufficient)_matched - (supported-insufficient)_wrong at initial prefill"
+  },
+  "observations": "Raw objective gradient norm and group norms; directional derivatives of d, common center c, both correct-side margins, and both full-vocabulary target-versus-current-best-other margins along NEGATIVE UNIT-L2 Euclidean objective gradient. Gradient cosine against old objective. No AdamW trajectory prediction, no learning-rate selection.",
+  "finite_difference": {
+    "selection": "First selected train world, both languages, all three objectives for value and subject",
+    "absolute_parameter_l2_epsilons": [0.001, 0.003],
+    "method": "Symmetric temporary parameter perturbations; rebuild forward each time and restore exact original tensors in finally; no optimizer, checkpoint save or best-perturbation selection",
+    "tolerance": {"atol": 0.01, "rtol": 0.05},
+    "scope": "Fixed verified frozen C features and frozen output head, Python neural branch only. Not a new live-C finite-difference certificate."
+  },
+  "constraints": {"labels_in_neural_forward": false, "kv_reuse": false, "lora": false, "svd": false, "nas_ng": false, "locomo": false},
+  "reporting": "All fixed pairs, objectives, numerical failures and both-sided failures retained. Target IDs and reference prefixes are diagnostic supervision, not serving inputs. Teacher forcing and existing train cities prohibit claims of free recall or unseen-value generalization.",
+  "optimizer_steps": 0,
+  "new_free_generated_answers": 0,
+  "training_approved": false,
+  "deployment_approved": false
+}

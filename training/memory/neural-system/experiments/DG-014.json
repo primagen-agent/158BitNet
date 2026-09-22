@@ -1,0 +1,23 @@
+{
+  "id": "DG-014",
+  "status": "registered_zero_update_replay",
+  "optimizer_steps": 0,
+  "new_generation": false,
+  "deployment_approved": false,
+  "scope": "Replay all 48 CG-003 initial decisions and all 32 supported-route trajectories across CG-003 and DG-013. Fixed first-dev-world panel; overlapping inputs are not independent examples.",
+  "questions": ["Does the model reject role-swapped facts despite both independent presence factors being true?", "Where does pointer probability go during actual value emission, and does it transport complete ordered values?"],
+  "method": "Frozen checkpoint and exact saved C inputs/actual prefixes. Run neural forward without metadata. Afterwards annotate byte-aligned source fact/value spans. Preserve NULL, structural tokens and ambiguous boundaries separately. Record raw position and duplicate-token aggregated contribution; attention is attribution, not proof of semantic binding. No forced gold route/span or alternative generation.",
+  "limits": "No training, new seeds, LoCoMo, oracle decoding, source text in reply prompt or serving change. Exact value byte inclusion is a diagnostic, not semantic accuracy. Decoder base can complete correct or incorrect names independently of memory.",
+  "inputs": {
+    "training/memory/neural-system/data/JB-001/dev.index.jsonl": "77db64734b6e13da71c4d26cd7deabc451ce9007c686fef31cc6b89524d320e3",
+    "training/memory/neural-system/checks/CG-003-data.json": "f191a6aa27c5f6420d8fb8e0f318b562986ec9d1298eda766a1092ff51b8601f",
+    "training/memory/neural-system/reviews/CG-003/aux-generation.json": "f959ff00389385cb5edae2535ce6f1f56e7f95ecc14628523ff88fa09ed5d6d9",
+    "training/memory/neural-system/reviews/CG-003/aux-native-audit.json": "013c4347a4d927b17f23e6e4da6f19f90da16d72bc372df20a3c9cf6b928060b",
+    "training/memory/neural-system/reviews/CG-003/product-generation.json": "742414f1903fa8b737175cdf25aa610af8bb7518af3662a67b74b30e0afbf240",
+    "training/memory/neural-system/reviews/CG-003/product-native-audit.json": "f26b18844ea3d5681f12a4c52d865ad9e7e6f5fb48ffad2eff401c86983fa46c",
+    "training/memory/neural-system/reviews/DG-013/aux-generation.json": "ec27d535664d38ce3255defe932265fb06f8748e27a60a9b7a1c8604930d34da",
+    "training/memory/neural-system/reviews/DG-013/aux-native-audit.json": "c0e2d7e0534cf7e7c8833a4c3e6c34612f6fc6c3800800b0d2cef9ff1d8b1945",
+    "training/memory/neural-system/reviews/DG-013/product-generation.json": "0097934fcced14d6c6f14d9f518e0916d47fffef634e09fe64141a31b45c9e61",
+    "training/memory/neural-system/reviews/DG-013/product-native-audit.json": "e095462f110b0be2f86283849acaac617e2fea36a11b60756f2df27acf39e899"
+  }
+}

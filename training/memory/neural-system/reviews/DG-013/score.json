@@ -1,0 +1,662 @@
+{
+  "format": "dg013-reviewed-content-ablation-v1",
+  "runs": {
+    "joint_aux_original_selected": {
+      "total": 4,
+      "pass": 1,
+      "fail": 3,
+      "needs_review": 0,
+      "evaluation_level": "predicted_component",
+      "producer_id": "dg013-joint_aux_original_selected",
+      "confirmed_success_fraction": 0.25,
+      "adjudication_complete": true,
+      "promotion_eligible": false,
+      "promotion_note": "Software workflow only; calibration and stage gates still required",
+      "independent_worlds": 1,
+      "groups": {
+        "correct/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "value_swap/zh": {
+          "total": 2,
+          "pass": 1,
+          "fail": 1,
+          "needs_review": 0
+        }
+      },
+      "worlds": {
+        "jb-008": {
+          "total": 4,
+          "pass": 1,
+          "fail": 3,
+          "needs_review": 0
+        }
+      },
+      "cases": [
+        {
+          "id": "joint-1298dd37f224157a8f76",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-48795bbfa39e0bbb7c18",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "zh",
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "id": "joint-285dd32d6f509d59b087",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "not_natural_reply",
+            "incomplete_or_repetitive_generation"
+          ]
+        },
+        {
+          "id": "joint-5d9f011142cadea7ca56",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        }
+      ],
+      "grounded": {
+        "total": 4,
+        "pass": 1,
+        "fail": 3,
+        "needs_review": 0
+      },
+      "role_swap_negative": {
+        "total": 0,
+        "pass": 0,
+        "fail": 0,
+        "needs_review": 0
+      },
+      "truncated": 1
+    },
+    "joint_aux_content_off": {
+      "total": 4,
+      "pass": 0,
+      "fail": 4,
+      "needs_review": 0,
+      "evaluation_level": "predicted_component",
+      "producer_id": "dg013-joint_aux_content_off",
+      "confirmed_success_fraction": 0.0,
+      "adjudication_complete": true,
+      "promotion_eligible": false,
+      "promotion_note": "Software workflow only; calibration and stage gates still required",
+      "independent_worlds": 1,
+      "groups": {
+        "correct/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "value_swap/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        }
+      },
+      "worlds": {
+        "jb-008": {
+          "total": 4,
+          "pass": 0,
+          "fail": 4,
+          "needs_review": 0
+        }
+      },
+      "cases": [
+        {
+          "id": "joint-1298dd37f224157a8f76",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim",
+            "not_natural_reply",
+            "incomplete_or_repetitive_generation"
+          ]
+        },
+        {
+          "id": "joint-48795bbfa39e0bbb7c18",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-285dd32d6f509d59b087",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-5d9f011142cadea7ca56",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        }
+      ],
+      "grounded": {
+        "total": 4,
+        "pass": 0,
+        "fail": 4,
+        "needs_review": 0
+      },
+      "role_swap_negative": {
+        "total": 0,
+        "pass": 0,
+        "fail": 0,
+        "needs_review": 0
+      },
+      "truncated": 1
+    },
+    "joint_product_original_selected": {
+      "total": 12,
+      "pass": 1,
+      "fail": 11,
+      "needs_review": 0,
+      "evaluation_level": "predicted_component",
+      "producer_id": "dg013-joint_product_original_selected",
+      "confirmed_success_fraction": 0.08333333333333333,
+      "adjudication_complete": true,
+      "promotion_eligible": false,
+      "promotion_note": "Software workflow only; calibration and stage gates still required",
+      "independent_worlds": 1,
+      "groups": {
+        "correct/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "correct/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "role_swap/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "role_swap/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "value_swap/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "value_swap/zh": {
+          "total": 2,
+          "pass": 1,
+          "fail": 1,
+          "needs_review": 0
+        }
+      },
+      "worlds": {
+        "jb-008": {
+          "total": 12,
+          "pass": 1,
+          "fail": 11,
+          "needs_review": 0
+        }
+      },
+      "cases": [
+        {
+          "id": "joint-663653f43a8b231bf0f8",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "not_natural_reply",
+            "incomplete_or_repetitive_generation"
+          ]
+        },
+        {
+          "id": "joint-b1a596ab210a303eef2b",
+          "world_id": "jb-008",
+          "scenario": "role_swap",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "unjustified_certainty",
+            "not_natural_reply",
+            "incomplete_or_repetitive_generation"
+          ]
+        },
+        {
+          "id": "joint-dc5a52b237be6ce999e6",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "not_natural_reply",
+            "incomplete_or_repetitive_generation"
+          ]
+        },
+        {
+          "id": "joint-bfb110d5a7d357d12712",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "not_natural_reply"
+          ]
+        },
+        {
+          "id": "joint-390fe8a95032c25999fb",
+          "world_id": "jb-008",
+          "scenario": "role_swap",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "unjustified_certainty",
+            "not_natural_reply"
+          ]
+        },
+        {
+          "id": "joint-7e9180785cb56f532152",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "not_natural_reply"
+          ]
+        },
+        {
+          "id": "joint-1298dd37f224157a8f76",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-d9879156842513c1ca1a",
+          "world_id": "jb-008",
+          "scenario": "role_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "joint-48795bbfa39e0bbb7c18",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "zh",
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "id": "joint-285dd32d6f509d59b087",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "not_natural_reply",
+            "incomplete_or_repetitive_generation"
+          ]
+        },
+        {
+          "id": "joint-0c8035ce7bda956751d7",
+          "world_id": "jb-008",
+          "scenario": "role_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "unjustified_certainty",
+            "not_natural_reply",
+            "incomplete_or_repetitive_generation"
+          ]
+        },
+        {
+          "id": "joint-5d9f011142cadea7ca56",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "not_natural_reply",
+            "incomplete_or_repetitive_generation"
+          ]
+        }
+      ],
+      "grounded": {
+        "total": 8,
+        "pass": 1,
+        "fail": 7,
+        "needs_review": 0
+      },
+      "role_swap_negative": {
+        "total": 4,
+        "pass": 0,
+        "fail": 4,
+        "needs_review": 0
+      },
+      "truncated": 6
+    },
+    "joint_product_content_off": {
+      "total": 12,
+      "pass": 0,
+      "fail": 12,
+      "needs_review": 0,
+      "evaluation_level": "predicted_component",
+      "producer_id": "dg013-joint_product_content_off",
+      "confirmed_success_fraction": 0.0,
+      "adjudication_complete": true,
+      "promotion_eligible": false,
+      "promotion_note": "Software workflow only; calibration and stage gates still required",
+      "independent_worlds": 1,
+      "groups": {
+        "correct/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "correct/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "role_swap/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "role_swap/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "value_swap/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "value_swap/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        }
+      },
+      "worlds": {
+        "jb-008": {
+          "total": 12,
+          "pass": 0,
+          "fail": 12,
+          "needs_review": 0
+        }
+      },
+      "cases": [
+        {
+          "id": "joint-663653f43a8b231bf0f8",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-b1a596ab210a303eef2b",
+          "world_id": "jb-008",
+          "scenario": "role_swap",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "joint-dc5a52b237be6ce999e6",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-bfb110d5a7d357d12712",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-390fe8a95032c25999fb",
+          "world_id": "jb-008",
+          "scenario": "role_swap",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "joint-7e9180785cb56f532152",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-1298dd37f224157a8f76",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-d9879156842513c1ca1a",
+          "world_id": "jb-008",
+          "scenario": "role_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty",
+            "not_natural_reply",
+            "incomplete_or_repetitive_generation"
+          ]
+        },
+        {
+          "id": "joint-48795bbfa39e0bbb7c18",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-285dd32d6f509d59b087",
+          "world_id": "jb-008",
+          "scenario": "correct",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "joint-0c8035ce7bda956751d7",
+          "world_id": "jb-008",
+          "scenario": "role_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "joint-5d9f011142cadea7ca56",
+          "world_id": "jb-008",
+          "scenario": "value_swap",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        }
+      ],
+      "grounded": {
+        "total": 8,
+        "pass": 0,
+        "fail": 8,
+        "needs_review": 0
+      },
+      "role_swap_negative": {
+        "total": 4,
+        "pass": 0,
+        "fail": 4,
+        "needs_review": 0
+      },
+      "truncated": 1
+    }
+  },
+  "provenance": {
+    "joint_aux": {
+      "original_sha256": "f959ff00389385cb5edae2535ce6f1f56e7f95ecc14628523ff88fa09ed5d6d9",
+      "fresh_report_sha256": "ec27d535664d38ce3255defe932265fb06f8748e27a60a9b7a1c8604930d34da",
+      "audit_sha256": "c0e2d7e0534cf7e7c8833a4c3e6c34612f6fc6c3800800b0d2cef9ff1d8b1945",
+      "fresh_indices": [
+        12,
+        14,
+        18,
+        20
+      ],
+      "historical_unchanged_controls_not_rerun": 20
+    },
+    "joint_product": {
+      "original_sha256": "742414f1903fa8b737175cdf25aa610af8bb7518af3662a67b74b30e0afbf240",
+      "fresh_report_sha256": "0097934fcced14d6c6f14d9f518e0916d47fffef634e09fe64141a31b45c9e61",
+      "audit_sha256": "e095462f110b0be2f86283849acaac617e2fea36a11b60756f2df27acf39e899",
+      "fresh_indices": [
+        0,
+        1,
+        2,
+        6,
+        7,
+        8,
+        12,
+        13,
+        14,
+        18,
+        19,
+        20
+      ],
+      "historical_unchanged_controls_not_rerun": 12
+    }
+  },
+  "fresh_case_uses": 16,
+  "old_case_uses": 16,
+  "unchanged_controls_not_rerun": 32,
+  "unique_blind_packets": 26,
+  "scope": "Predicted-supported subset of one development world, not a full-panel rerun or general accuracy estimate",
+  "reviewers": [
+    "dg013-blind-a",
+    "dg013-blind-b"
+  ],
+  "review_sha256": {
+    "build/neural-memory-dg013-review-a.jsonl": "b1751d9991585b89d1f6b835a80afa59fd52474f45a5be229265a19af4f9e3c0",
+    "build/neural-memory-dg013-review-b.jsonl": "076837ba2099fce199b293e1af77a15f6d2994f91a08331ffc26a537e1a0cf61"
+  },
+  "independence_limit": "Two isolated contexts of the same model family; not human or cross-family validation",
+  "optimizer_steps": 0,
+  "deployment_approved": false,
+  "additional_training_approved": false,
+  "source_sha256": "2624d647c1437e306f602ba9e63f9ec986b18d4f83b8b4d7a482ec074d23ee82"
+}

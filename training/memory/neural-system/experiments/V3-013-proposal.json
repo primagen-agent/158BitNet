@@ -1,0 +1,20 @@
+{
+ "id": "V3-013",
+ "status": "trained_value_timing_fixed_quality_partial",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "hypothesis": "Verified: encode_value canonical variants end with a lone space token (59320) that free generation never produces (\"in\" then \" New\") - mode waits for a prefix shape that never occurs, START fires late, base already emitted a wrong value before the copy appends. Rebuilding canonical variants on rstripped pre-value text (matching real base prefixes) plus full branch canonical coverage should time START correctly.",
+ "changes": {
+  "canon_text": "rstrip() pre-value text before canonical encode (ends at \"in\", no space token)",
+  "branch_canon": "all route-2 items x 4 positions",
+  "value_weight": "back to 2x (4x showed no benefit)",
+  "base": "V3-011 ckpt-420"
+ },
+ "evaluation": "EV-009 same panel/gates",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-20",
+  "via": "user reply 继续"
+ },
+ "result": "EV-009: START timing FIXED - \"Brenna lives in\" + immediate copy \"Aarhus\" (no base value emitted first; the rstripped canonical prefix matches real base prefixes). Truncation 2/24 (best). Remaining: value SELECTION picks adjacent-source values (Aarhus is the OTHER city in the world, not Riga; \"Aarhus, Texas\" hallucinated suffix from base after copy ends), zh branch contamination persists. mode canonical 261/268, teacher 268/268."
+}

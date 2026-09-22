@@ -1,0 +1,17 @@
+{
+  "format": "cg003-baseline-audit-v1",
+  "baseline_sha256": "4389fc1c29a28f81353dac9ecc52bec8bb024fd54c658ceecc8485db5874433d",
+  "cases": 24,
+  "positions": 252,
+  "raw_steps": 12,
+  "stop_token_cases": 24,
+  "utf8_complete_cases": 24,
+  "actual_prefixes_verified": true,
+  "raw_artifacts_verified": true,
+  "cached_tokens": 0,
+  "reused_tokens": 0,
+  "memory_accuracy_measured": false,
+  "semantic_review_complete": false,
+  "optimizer_steps": 0,
+  "auditor_sha256": "a185fc7bfd80615561b338987f9983a1024e4ed06e3c10195d156ab2f2376c41"
+}

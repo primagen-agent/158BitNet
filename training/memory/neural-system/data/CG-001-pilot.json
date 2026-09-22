@@ -1,0 +1,10 @@
+{
+  "format": "availability-curriculum-v1",
+  "seed": 3180928,
+  "train_worlds": 16,
+  "dev_worlds": 8,
+  "people": ["Adela", "Boris", "Celia", "Damian", "Estelle", "Fabian", "Greta", "Henrik", "Idris", "Joelle", "Kaia", "Lucian", "Milena", "Nestor", "Odelia", "Pascal", "Rosalie", "Stefan", "Tahlia", "Ulric", "Valeria", "Wesley", "Yvette", "Zane", "Amalia", "Bram", "Clarice", "Desmond", "Emilia", "Floyd", "Georgina", "Hadrian", "Ilona", "Jasper", "Kezia", "Lorcan", "Maribel", "Nolan", "Ottilie", "Pierce", "Rowena", "Silvan", "Tessa", "Ursula", "Viggo", "Winona", "Yvonne", "Zoran"],
+  "cities": ["Rennes", "Turin", "Graz", "Utrecht", "Bergen", "Linz", "Porto", "Basel"],
+  "excluded_subjects": ["Mara", "Basil", "Cleo", "Dorian", "Elin", "Farid", "Gita", "Hugo", "Inez", "Jules", "Kira", "Leif", "Mina", "Nabil", "Orla", "Pavel", "Quinn", "Ravi", "Sora", "Tomas", "Uma", "Viktor", "Willa", "Xavi", "Yara", "Zubin", "Anika", "Benoit", "Corin", "Dev", "Esme", "Felix", "Nora", "Cleos", "小安", "小林"],
+  "state_weights": {"no_memory_needed": 2.0, "supported": 2.0, "insufficient": 1.0}
+}

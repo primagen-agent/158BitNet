@@ -1,0 +1,20 @@
+{
+ "id": "V3-015",
+ "status": "trained_regression_mode_diluted",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "hypothesis": "P2B: V3-011..014 trained fine_loss only at the canonical START prefix (1 position/item). Span selection may need supervision at EVERY canonical trajectory position (the full teacher cursor replay in canonical segmentation) - denser signal for fact/value ranking on the natural-prefix domain. This is the registered P2B per-position copy supervision.",
+ "changes": {
+  "canon_positions": "ALL idle positions of supported trajectories get canonical-segmentation prefixes with full fine_loss (not just START)",
+  "canon_construction": "same rstrip canonical encode per position",
+  "base": "V3-013 ckpt-440 frozen trunk",
+  "value_weight": "2x (back from 8x which showed no trend)"
+ },
+ "evaluation": "EV-011 same panel/gates",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-21",
+  "via": "stop-hook goal directive"
+ },
+ "result": "Per-position canonical supervision REGRESSED mode: canonical_start 391/2448 (from 268/268 in V3-013) - the many generate-labeled canonical positions diluted the start signal. V3-015 checkpoint is WORSE; V3-013 ckpt-440 remains the best candidate. Per-position supervision needs mode labels only at START positions (as V3-013 did) while span supervision at all positions."
+}

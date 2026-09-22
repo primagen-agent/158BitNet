@@ -1,0 +1,6 @@
+{
+ "id": "DG-030",
+ "status": "completed_route_dynamics_trace",
+ "finding": "route logits of different-class fixed items are near-identical at every step and drift class-independently; boundaries-head gradient is 5-20x the route gradient, so trunk drift under other heads swamps the route readout discriminative updates; only mode input was detached in V3-006, route input was not",
+ "artifact": "checks/DG-030-dynamics.json"
+}

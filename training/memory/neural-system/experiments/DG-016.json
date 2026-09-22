@@ -1,0 +1,18 @@
+{
+  "id": "DG-016",
+  "status": "registered_zero_update_boundary_transport",
+  "optimizer_steps": 0,
+  "deployment_approved": false,
+  "origin": "oracle_fixture",
+  "contract_change": "Keep DG-015 and its failed fixture unchanged. New version appends a separately C-tokenized exact-byte suffix to the actual immutable token prefix; the concatenation need not equal canonical whole-string BPE. No prefix rewriting or Python tokenizer approximation.",
+  "method": "Use <|im_end|> ONLY as a tokenizer boundary anchor. Encode anchor and anchor+value with the bound C tokenizer, require unchanged anchor token prefix, remove that exact prefix, and require suffix byte equality. Anchor is never passed to backbone or emitted. Reject all special/control tokens in suffix. Validate actual prefix by its decoded bytes, not re-encoding canonicality.",
+  "fixtures": "All 11 DG-015 inputs unchanged. Under this NEW contract prefix-space-merge and prefix-letter-merge must now succeed; control-marker and over-budget must still reject. Add three fixtures below. Preserve original DG-015 expected labels/report separately.",
+  "extra_fixtures": [
+    {"id":"noncanonical-prefix","prefix":"Riga","prefix_parts":["R","iga"],"value":"!","expected":"accept"},
+    {"id":"multiline-value","prefix":"Value:","value":"Riga\nQuimper","expected":"accept"},
+    {"id":"whitespace-value","prefix":"Value:","value":"  Riga  ","expected":"accept"}
+  ],
+  "native_forward_gate": "For every accepted fixture, before each forced value token and at value completion, run fresh ordinary C reference and zero-increment continuous probe on the exact actual prefix. Require bitwise equal hidden/logits, finite values, fresh-context trace and unchanged prefix bytes. At completion return base argmax; do not claim it is a correct natural continuation. No cross-step KV reuse; internal one-prefill K/V work buffers remain.",
+  "semantic_limits": "Artificial span choice, not neural activation, not full reply generation or recall accuracy. Different valid segmentations may produce different hidden/logits; do not assert canonical/noncanonical numerical equivalence. No source episode or tokenizer anchor in decoder prefix.",
+  "stop": "No training, seed search, new model, deployment, LoCoMo, prefix rewriting, whitespace stripping, partial-value fallback or changing old evaluation labels. Retain failures and raw C evidence."
+}

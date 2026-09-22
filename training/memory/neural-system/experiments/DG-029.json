@@ -1,0 +1,10 @@
+{
+  "id":"DG-029",
+  "status":"registered_balanced_mode_and_structural_probe",
+  "optimizer_steps":0,
+  "deployment_approved":false,
+  "scope":"Two zero-update probes on the frozen V3-002 reader: (1) mode start-vs-generate separability with BALANCED sampling on supported items' idle frames (fixes the DG-028 sampling defect); (2) route probe augmented with explicit structural scalars (has_source, span count, allowed-token fraction) to pre-test whether the V3-003 direction (a) existence-injection lifts r1/r2 separation. No certified weight changes.",
+  "gates":"5-fold CV with fixed folds/seed; balanced class counts reported with denominators; frozen reader digest verified; DG-028's skewed mode result kept as-is (not overwritten).",
+  "decision_inputs":{"mode_probe":"if balanced start recall is high, the mode head failure is also a readout/optimization issue; if low, mode needs its own structural input","route_structural_probe":"if r2 recall with structural scalars rises materially (>=0.7), V3-003 direction (a) is evidence-supported; otherwise direction (b)/feature redesign dominates"},
+  "stop":"Report both results as measured; no gate relaxation; no budget consumption."
+}

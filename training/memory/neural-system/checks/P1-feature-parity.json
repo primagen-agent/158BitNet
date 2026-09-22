@@ -1,0 +1,1094 @@
+{
+  "status": "feature_domain_gate_failed",
+  "memory_accuracy_measured": false,
+  "unique_texts": 5,
+  "case_count_per_run": 6,
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "runs": [
+    {
+      "run": "baseline",
+      "report_path": "build/neural-memory-p1-parity-baseline/summary.json",
+      "report_sha256": "bcd09eff849e7354617ae7db3e03774feb109fc40de2e931651a556a2fd16f28",
+      "atol": 1e-05,
+      "rtol": 0.0001,
+      "token_ids_exact": true,
+      "lexical_exact": true,
+      "c_repeated_input_exact": true,
+      "all_features_within_tolerance": false,
+      "layer_count": 24,
+      "source_sha256": {
+        "python/diagnose_neural_memory_features.py": "b33e29e3be448313cc6db614e60e0e8e36dfc6fdeb21f4e26a1b021d58127119",
+        "python/torch_backbone.py": "7f90d02047171adcb1a843db269b172257b65400e933d934ea9ba78cfa9e8330",
+        "python/ggw.py": "e0b18c4af9e9de922bc0f6c9d10b0c64d3c906634db401f2b012974b16f8f208",
+        "python/ggwshim.c": "b9f88f305322206160b29c9888308f47aa4b8d6af25936a40243e1b38e51cba6",
+        "python/c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8",
+        "tools/memory_feature_probe.c": "68deb07f7e13d79c6711e0f039a82667d2bbe1b835e8af12551a4453d54daad9",
+        "src/bitnet.c": "eec0f1676c9039c674bc09b44887054db417e5817367129decc9922bb1827340",
+        "src/tokenizer.c": "09b3c09729091f7d4f02d16379cbe2003cfb68773eec1da7e618a8c7ef580607",
+        "src/quant_tq2_0.c": "cc1f098671db22f112039bf947c27f110aad380a470877e423e6734cba499423",
+        "CMakeLists.txt": "3ce3e8093c105e6a9ffef09a4703b757b945ff945ea15d8697d6e91a388f2d8e"
+      },
+      "raw_sha256": {
+        "inputs.bin": "98bc3c59b35b9f229dfe4b18a061b5c53fb67866b38f298c22d3913f993e8870",
+        "native.bin": "42a8843e2d76031bad071ec25df01150c0e9b79a04bba23e4c886b4c4f626662",
+        "torch_features.npz": "df274d727377e28a31e8c5dc51807bc8b2698fe663a28e11b6c23eae64dcb241"
+      },
+      "cases": [
+        {
+          "id": "plain_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 1.7014150619506836,
+            "mean_abs": 0.1473227492378193,
+            "relative_l2": 0.03821374473927756,
+            "minimum_row_cosine": 0.9983442963394632,
+            "outside_tolerance": 8189,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.16737580299377441,
+            "mean_abs": 0.013401420044045653,
+            "relative_l2": 0.018664191260835804,
+            "minimum_row_cosine": 0.9996235683806894,
+            "outside_tolerance": 8174,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.009946614503860474,
+            "mean_abs": 0.000495737252395775,
+            "relative_l2": 0.029571192206636232,
+            "minimum_row_cosine": 0.9991721482177953,
+            "outside_tolerance": 7101,
+            "elements": 14336,
+            "allclose": false
+          }
+        },
+        {
+          "id": "plain_zh",
+          "token_count": 7,
+          "output_hidden": {
+            "max_abs": 2.4858665466308594,
+            "mean_abs": 0.13813043998912025,
+            "relative_l2": 0.04059395775472314,
+            "minimum_row_cosine": 0.9975420842002471,
+            "outside_tolerance": 7161,
+            "elements": 7168,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.17023825645446777,
+            "mean_abs": 0.015129093321260254,
+            "relative_l2": 0.021957802313518047,
+            "minimum_row_cosine": 0.999383167047184,
+            "outside_tolerance": 7145,
+            "elements": 7168,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.018841847777366638,
+            "mean_abs": 0.0005089559169319154,
+            "relative_l2": 0.03217679866278521,
+            "minimum_row_cosine": 0.9987710422530139,
+            "outside_tolerance": 6084,
+            "elements": 12288,
+            "allclose": false
+          }
+        },
+        {
+          "id": "roles",
+          "token_count": 14,
+          "output_hidden": {
+            "max_abs": 3.1016387939453125,
+            "mean_abs": 0.1835845347342953,
+            "relative_l2": 0.045378241998143304,
+            "minimum_row_cosine": 0.9981014343020168,
+            "outside_tolerance": 14322,
+            "elements": 14336,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.1250081998296082,
+            "mean_abs": 0.011135450933176916,
+            "relative_l2": 0.015870623089271108,
+            "minimum_row_cosine": 0.9996227168405829,
+            "outside_tolerance": 14273,
+            "elements": 14336,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.011628508567810059,
+            "mean_abs": 0.0005596822503481161,
+            "relative_l2": 0.033039228778927274,
+            "minimum_row_cosine": 0.9990507172208518,
+            "outside_tolerance": 13197,
+            "elements": 26624,
+            "allclose": false
+          }
+        },
+        {
+          "id": "chatml",
+          "token_count": 16,
+          "output_hidden": {
+            "max_abs": 2.1618194580078125,
+            "mean_abs": 0.11949640305376932,
+            "relative_l2": 0.03379988495149845,
+            "minimum_row_cosine": 0.9985131043311408,
+            "outside_tolerance": 16364,
+            "elements": 16384,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.1533883810043335,
+            "mean_abs": 0.010383980295794806,
+            "relative_l2": 0.01564953378882492,
+            "minimum_row_cosine": 0.9993385320490844,
+            "outside_tolerance": 16314,
+            "elements": 16384,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.017407357692718506,
+            "mean_abs": 0.000404692799842594,
+            "relative_l2": 0.025990208219269846,
+            "minimum_row_cosine": 0.999256552325249,
+            "outside_tolerance": 15136,
+            "elements": 30720,
+            "allclose": false
+          }
+        },
+        {
+          "id": "message_frame",
+          "token_count": 20,
+          "output_hidden": {
+            "max_abs": 3.1948165893554688,
+            "mean_abs": 0.1883232356063389,
+            "relative_l2": 0.05011768394829274,
+            "minimum_row_cosine": 0.9968315168611357,
+            "outside_tolerance": 20466,
+            "elements": 20480,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.1735030710697174,
+            "mean_abs": 0.015231121230810917,
+            "relative_l2": 0.02120333749884154,
+            "minimum_row_cosine": 0.9992995347213212,
+            "outside_tolerance": 20397,
+            "elements": 20480,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.01682010293006897,
+            "mean_abs": 0.0006091825718236412,
+            "relative_l2": 0.03629019988985408,
+            "minimum_row_cosine": 0.9984157587129894,
+            "outside_tolerance": 19294,
+            "elements": 38912,
+            "allclose": false
+          }
+        },
+        {
+          "id": "repeat_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 1.7014150619506836,
+            "mean_abs": 0.1473227492378193,
+            "relative_l2": 0.03821374473927756,
+            "minimum_row_cosine": 0.9983442963394632,
+            "outside_tolerance": 8189,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.16737580299377441,
+            "mean_abs": 0.013401420044045653,
+            "relative_l2": 0.018664191260835804,
+            "minimum_row_cosine": 0.9996235683806894,
+            "outside_tolerance": 8174,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.009946614503860474,
+            "mean_abs": 0.000495737252395775,
+            "relative_l2": 0.029571192206636232,
+            "minimum_row_cosine": 0.9991721482177953,
+            "outside_tolerance": 7101,
+            "elements": 14336,
+            "allclose": false
+          }
+        }
+      ]
+    },
+    {
+      "run": "rope",
+      "report_path": "build/neural-memory-p1-parity-rope/summary.json",
+      "report_sha256": "eef65df3d12de6b97eb87b0a25e92a2e12bbf904573228e52f3142d843efa153",
+      "atol": 1e-05,
+      "rtol": 0.0001,
+      "token_ids_exact": true,
+      "lexical_exact": true,
+      "c_repeated_input_exact": true,
+      "all_features_within_tolerance": false,
+      "layer_count": 24,
+      "source_sha256": {
+        "python/diagnose_neural_memory_features.py": "dda3bba72f6a14f90c187506b366aa20db1a357bb6b8c7199a2d4f66ce3b01b9",
+        "python/torch_backbone.py": "7f90d02047171adcb1a843db269b172257b65400e933d934ea9ba78cfa9e8330",
+        "python/ggw.py": "e0b18c4af9e9de922bc0f6c9d10b0c64d3c906634db401f2b012974b16f8f208",
+        "python/ggwshim.c": "b9f88f305322206160b29c9888308f47aa4b8d6af25936a40243e1b38e51cba6",
+        "python/c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8",
+        "tools/memory_feature_probe.c": "68deb07f7e13d79c6711e0f039a82667d2bbe1b835e8af12551a4453d54daad9",
+        "src/bitnet.c": "eec0f1676c9039c674bc09b44887054db417e5817367129decc9922bb1827340",
+        "src/tokenizer.c": "09b3c09729091f7d4f02d16379cbe2003cfb68773eec1da7e618a8c7ef580607",
+        "src/quant_tq2_0.c": "cc1f098671db22f112039bf947c27f110aad380a470877e423e6734cba499423",
+        "CMakeLists.txt": "3ce3e8093c105e6a9ffef09a4703b757b945ff945ea15d8697d6e91a388f2d8e"
+      },
+      "raw_sha256": {
+        "inputs.bin": "98bc3c59b35b9f229dfe4b18a061b5c53fb67866b38f298c22d3913f993e8870",
+        "native.bin": "42a8843e2d76031bad071ec25df01150c0e9b79a04bba23e4c886b4c4f626662",
+        "torch_features.npz": "a577c36e22257bf4dc9490ff973b6d6cf39978f35dde454138967e61941310ff"
+      },
+      "cases": [
+        {
+          "id": "plain_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 1.6869449615478516,
+            "mean_abs": 0.1474171893362186,
+            "relative_l2": 0.03823262102107278,
+            "minimum_row_cosine": 0.9983451471533525,
+            "outside_tolerance": 8188,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.16786110401153564,
+            "mean_abs": 0.013410085140308947,
+            "relative_l2": 0.01867529813596754,
+            "minimum_row_cosine": 0.9996227703043746,
+            "outside_tolerance": 8177,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.009865783154964447,
+            "mean_abs": 0.0004962020229612452,
+            "relative_l2": 0.029598048778237594,
+            "minimum_row_cosine": 0.9991725736621256,
+            "outside_tolerance": 7107,
+            "elements": 14336,
+            "allclose": false
+          }
+        },
+        {
+          "id": "plain_zh",
+          "token_count": 7,
+          "output_hidden": {
+            "max_abs": 2.5651931762695312,
+            "mean_abs": 0.1382581066415014,
+            "relative_l2": 0.04067084654025141,
+            "minimum_row_cosine": 0.9975381645933674,
+            "outside_tolerance": 7163,
+            "elements": 7168,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.1701977252960205,
+            "mean_abs": 0.015133832567291299,
+            "relative_l2": 0.02195723273033256,
+            "minimum_row_cosine": 0.9993833931242323,
+            "outside_tolerance": 7146,
+            "elements": 7168,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.019261986017227173,
+            "mean_abs": 0.0005095136700672779,
+            "relative_l2": 0.032256973411829294,
+            "minimum_row_cosine": 0.9987690824814609,
+            "outside_tolerance": 6087,
+            "elements": 12288,
+            "allclose": false
+          }
+        },
+        {
+          "id": "roles",
+          "token_count": 14,
+          "output_hidden": {
+            "max_abs": 3.1143951416015625,
+            "mean_abs": 0.1837290542833029,
+            "relative_l2": 0.04541272234572165,
+            "minimum_row_cosine": 0.9980989926825666,
+            "outside_tolerance": 14320,
+            "elements": 14336,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.1250311667099595,
+            "mean_abs": 0.011142013036988807,
+            "relative_l2": 0.01587835576337811,
+            "minimum_row_cosine": 0.9996224615960561,
+            "outside_tolerance": 14275,
+            "elements": 14336,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.011594951152801514,
+            "mean_abs": 0.0005601468370387963,
+            "relative_l2": 0.033062620991731115,
+            "minimum_row_cosine": 0.9990494964791554,
+            "outside_tolerance": 13206,
+            "elements": 26624,
+            "allclose": false
+          }
+        },
+        {
+          "id": "chatml",
+          "token_count": 16,
+          "output_hidden": {
+            "max_abs": 2.2021560668945312,
+            "mean_abs": 0.11938969885438103,
+            "relative_l2": 0.033766423355602926,
+            "minimum_row_cosine": 0.9984598620165825,
+            "outside_tolerance": 16365,
+            "elements": 16384,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.1541891098022461,
+            "mean_abs": 0.010374828831542185,
+            "relative_l2": 0.015643870433294814,
+            "minimum_row_cosine": 0.9993392491896598,
+            "outside_tolerance": 16294,
+            "elements": 16384,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.01809316873550415,
+            "mean_abs": 0.0004045592978994553,
+            "relative_l2": 0.02599574051663101,
+            "minimum_row_cosine": 0.9992299310850047,
+            "outside_tolerance": 15132,
+            "elements": 30720,
+            "allclose": false
+          }
+        },
+        {
+          "id": "message_frame",
+          "token_count": 20,
+          "output_hidden": {
+            "max_abs": 3.1477203369140625,
+            "mean_abs": 0.187889208759863,
+            "relative_l2": 0.04997597764092638,
+            "minimum_row_cosine": 0.9969035449969783,
+            "outside_tolerance": 20459,
+            "elements": 20480,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.17474544048309326,
+            "mean_abs": 0.015234397574259905,
+            "relative_l2": 0.021209673293360418,
+            "minimum_row_cosine": 0.9992990696926219,
+            "outside_tolerance": 20411,
+            "elements": 20480,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.016716718673706055,
+            "mean_abs": 0.0006076547050165724,
+            "relative_l2": 0.03618064252142829,
+            "minimum_row_cosine": 0.9984517728869949,
+            "outside_tolerance": 19306,
+            "elements": 38912,
+            "allclose": false
+          }
+        },
+        {
+          "id": "repeat_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 1.6869449615478516,
+            "mean_abs": 0.1474171893362186,
+            "relative_l2": 0.03823262102107278,
+            "minimum_row_cosine": 0.9983451471533525,
+            "outside_tolerance": 8188,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.16786110401153564,
+            "mean_abs": 0.013410085140308947,
+            "relative_l2": 0.01867529813596754,
+            "minimum_row_cosine": 0.9996227703043746,
+            "outside_tolerance": 8177,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.009865783154964447,
+            "mean_abs": 0.0004962020229612452,
+            "relative_l2": 0.029598048778237594,
+            "minimum_row_cosine": 0.9991725736621256,
+            "outside_tolerance": 7107,
+            "elements": 14336,
+            "allclose": false
+          }
+        }
+      ]
+    },
+    {
+      "run": "q8",
+      "report_path": "build/neural-memory-p1-parity-q8/summary.json",
+      "report_sha256": "7dbf0c689c846295d665115a6b638454ae62fe395386869d4ed803c8c470ef5f",
+      "atol": 1e-05,
+      "rtol": 0.0001,
+      "token_ids_exact": true,
+      "lexical_exact": true,
+      "c_repeated_input_exact": true,
+      "all_features_within_tolerance": false,
+      "layer_count": 24,
+      "source_sha256": {
+        "python/diagnose_neural_memory_features.py": "dda3bba72f6a14f90c187506b366aa20db1a357bb6b8c7199a2d4f66ce3b01b9",
+        "python/torch_backbone.py": "7f90d02047171adcb1a843db269b172257b65400e933d934ea9ba78cfa9e8330",
+        "python/ggw.py": "e0b18c4af9e9de922bc0f6c9d10b0c64d3c906634db401f2b012974b16f8f208",
+        "python/ggwshim.c": "b9f88f305322206160b29c9888308f47aa4b8d6af25936a40243e1b38e51cba6",
+        "python/c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8",
+        "tools/memory_feature_probe.c": "68deb07f7e13d79c6711e0f039a82667d2bbe1b835e8af12551a4453d54daad9",
+        "src/bitnet.c": "eec0f1676c9039c674bc09b44887054db417e5817367129decc9922bb1827340",
+        "src/tokenizer.c": "09b3c09729091f7d4f02d16379cbe2003cfb68773eec1da7e618a8c7ef580607",
+        "src/quant_tq2_0.c": "cc1f098671db22f112039bf947c27f110aad380a470877e423e6734cba499423",
+        "CMakeLists.txt": "3ce3e8093c105e6a9ffef09a4703b757b945ff945ea15d8697d6e91a388f2d8e"
+      },
+      "raw_sha256": {
+        "inputs.bin": "98bc3c59b35b9f229dfe4b18a061b5c53fb67866b38f298c22d3913f993e8870",
+        "native.bin": "42a8843e2d76031bad071ec25df01150c0e9b79a04bba23e4c886b4c4f626662",
+        "torch_features.npz": "0324a735a65424a530253e737eb4008488fb6cc9c8b68cdb37197d6eca0b7cbc"
+      },
+      "cases": [
+        {
+          "id": "plain_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 1.7320032119750977,
+            "mean_abs": 0.14661922618866008,
+            "relative_l2": 0.038238944215143976,
+            "minimum_row_cosine": 0.9984405607357262,
+            "outside_tolerance": 8184,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.06284570693969727,
+            "mean_abs": 0.00653161746426667,
+            "relative_l2": 0.008945272515506706,
+            "minimum_row_cosine": 0.9999390517282136,
+            "outside_tolerance": 8136,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.010005183517932892,
+            "mean_abs": 0.000501547875906965,
+            "relative_l2": 0.029739204698629236,
+            "minimum_row_cosine": 0.999220280305129,
+            "outside_tolerance": 7111,
+            "elements": 14336,
+            "allclose": false
+          }
+        },
+        {
+          "id": "plain_zh",
+          "token_count": 7,
+          "output_hidden": {
+            "max_abs": 4.600910186767578,
+            "mean_abs": 0.12798192068264921,
+            "relative_l2": 0.03894094236000515,
+            "minimum_row_cosine": 0.9973244899050521,
+            "outside_tolerance": 7155,
+            "elements": 7168,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.06325006484985352,
+            "mean_abs": 0.006611575413357583,
+            "relative_l2": 0.009117469172164858,
+            "minimum_row_cosine": 0.9999191895939454,
+            "outside_tolerance": 7111,
+            "elements": 7168,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.03259176015853882,
+            "mean_abs": 0.0004899705641097651,
+            "relative_l2": 0.03227556475740549,
+            "minimum_row_cosine": 0.9986622450793734,
+            "outside_tolerance": 6080,
+            "elements": 12288,
+            "allclose": false
+          }
+        },
+        {
+          "id": "roles",
+          "token_count": 14,
+          "output_hidden": {
+            "max_abs": 3.772998809814453,
+            "mean_abs": 0.16140092764161892,
+            "relative_l2": 0.040565384041795396,
+            "minimum_row_cosine": 0.9984113081659161,
+            "outside_tolerance": 14321,
+            "elements": 14336,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.049051523208618164,
+            "mean_abs": 0.005603040544150443,
+            "relative_l2": 0.007812855400348016,
+            "minimum_row_cosine": 0.9999292659054054,
+            "outside_tolerance": 14227,
+            "elements": 14336,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.021254684776067734,
+            "mean_abs": 0.0004977011613611023,
+            "relative_l2": 0.0299137778925233,
+            "minimum_row_cosine": 0.9992056541853341,
+            "outside_tolerance": 13172,
+            "elements": 26624,
+            "allclose": false
+          }
+        },
+        {
+          "id": "chatml",
+          "token_count": 16,
+          "output_hidden": {
+            "max_abs": 4.21771240234375,
+            "mean_abs": 0.12211698626822673,
+            "relative_l2": 0.03723747618298685,
+            "minimum_row_cosine": 0.9974842135247692,
+            "outside_tolerance": 16363,
+            "elements": 16384,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.06426232308149338,
+            "mean_abs": 0.005067465561518172,
+            "relative_l2": 0.007509871746957641,
+            "minimum_row_cosine": 0.9999072333211665,
+            "outside_tolerance": 16223,
+            "elements": 16384,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.022878527641296387,
+            "mean_abs": 0.00042085958348406086,
+            "relative_l2": 0.028563774377750005,
+            "minimum_row_cosine": 0.9987421065365273,
+            "outside_tolerance": 15075,
+            "elements": 30720,
+            "allclose": false
+          }
+        },
+        {
+          "id": "message_frame",
+          "token_count": 20,
+          "output_hidden": {
+            "max_abs": 4.26202392578125,
+            "mean_abs": 0.18445456209052974,
+            "relative_l2": 0.049523542386841604,
+            "minimum_row_cosine": 0.997746578034535,
+            "outside_tolerance": 20462,
+            "elements": 20480,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.08043313026428223,
+            "mean_abs": 0.007728473036748151,
+            "relative_l2": 0.010661231057670287,
+            "minimum_row_cosine": 0.999891816680581,
+            "outside_tolerance": 20354,
+            "elements": 20480,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.022974222898483276,
+            "mean_abs": 0.0005964739113811132,
+            "relative_l2": 0.03543403381207109,
+            "minimum_row_cosine": 0.998873289314542,
+            "outside_tolerance": 19290,
+            "elements": 38912,
+            "allclose": false
+          }
+        },
+        {
+          "id": "repeat_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 1.7320032119750977,
+            "mean_abs": 0.14661922618866008,
+            "relative_l2": 0.038238944215143976,
+            "minimum_row_cosine": 0.9984405607357262,
+            "outside_tolerance": 8184,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.06284570693969727,
+            "mean_abs": 0.00653161746426667,
+            "relative_l2": 0.008945272515506706,
+            "minimum_row_cosine": 0.9999390517282136,
+            "outside_tolerance": 8136,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.010005183517932892,
+            "mean_abs": 0.000501547875906965,
+            "relative_l2": 0.029739204698629236,
+            "minimum_row_cosine": 0.999220280305129,
+            "outside_tolerance": 7111,
+            "elements": 14336,
+            "allclose": false
+          }
+        }
+      ]
+    },
+    {
+      "run": "q8-rope",
+      "report_path": "build/neural-memory-p1-parity-q8-rope/summary.json",
+      "report_sha256": "53824181000de163abdbe49d79b3221ae7edf46d4523c479f5bb96ec3a0f5f0a",
+      "atol": 1e-05,
+      "rtol": 0.0001,
+      "token_ids_exact": true,
+      "lexical_exact": true,
+      "c_repeated_input_exact": true,
+      "all_features_within_tolerance": false,
+      "layer_count": 24,
+      "source_sha256": {
+        "python/diagnose_neural_memory_features.py": "dda3bba72f6a14f90c187506b366aa20db1a357bb6b8c7199a2d4f66ce3b01b9",
+        "python/torch_backbone.py": "7f90d02047171adcb1a843db269b172257b65400e933d934ea9ba78cfa9e8330",
+        "python/ggw.py": "e0b18c4af9e9de922bc0f6c9d10b0c64d3c906634db401f2b012974b16f8f208",
+        "python/ggwshim.c": "b9f88f305322206160b29c9888308f47aa4b8d6af25936a40243e1b38e51cba6",
+        "python/c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8",
+        "tools/memory_feature_probe.c": "68deb07f7e13d79c6711e0f039a82667d2bbe1b835e8af12551a4453d54daad9",
+        "src/bitnet.c": "eec0f1676c9039c674bc09b44887054db417e5817367129decc9922bb1827340",
+        "src/tokenizer.c": "09b3c09729091f7d4f02d16379cbe2003cfb68773eec1da7e618a8c7ef580607",
+        "src/quant_tq2_0.c": "cc1f098671db22f112039bf947c27f110aad380a470877e423e6734cba499423",
+        "CMakeLists.txt": "3ce3e8093c105e6a9ffef09a4703b757b945ff945ea15d8697d6e91a388f2d8e"
+      },
+      "raw_sha256": {
+        "inputs.bin": "98bc3c59b35b9f229dfe4b18a061b5c53fb67866b38f298c22d3913f993e8870",
+        "native.bin": "42a8843e2d76031bad071ec25df01150c0e9b79a04bba23e4c886b4c4f626662",
+        "torch_features.npz": "53ebb9da0856f99f44d9d9013caabfdc553982deb92b1119cd2abbbbbc127d86"
+      },
+      "cases": [
+        {
+          "id": "plain_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 2.6845054626464844,
+            "mean_abs": 0.14332719325935095,
+            "relative_l2": 0.03762790548275282,
+            "minimum_row_cosine": 0.9986410237607627,
+            "outside_tolerance": 8184,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.05235767364501953,
+            "mean_abs": 0.005176863498072226,
+            "relative_l2": 0.007151761079572699,
+            "minimum_row_cosine": 0.9999506692501183,
+            "outside_tolerance": 8113,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.013837963342666626,
+            "mean_abs": 0.0004917753526054407,
+            "relative_l2": 0.02937385327074118,
+            "minimum_row_cosine": 0.9993205119230733,
+            "outside_tolerance": 7118,
+            "elements": 14336,
+            "allclose": false
+          }
+        },
+        {
+          "id": "plain_zh",
+          "token_count": 7,
+          "output_hidden": {
+            "max_abs": 1.9882431030273438,
+            "mean_abs": 0.127143277403921,
+            "relative_l2": 0.03664909674531508,
+            "minimum_row_cosine": 0.9983480913921412,
+            "outside_tolerance": 7158,
+            "elements": 7168,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.050051331520080566,
+            "mean_abs": 0.005183795189436172,
+            "relative_l2": 0.0070898284274190605,
+            "minimum_row_cosine": 0.9999601149021818,
+            "outside_tolerance": 7109,
+            "elements": 7168,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.01278001070022583,
+            "mean_abs": 0.0004817253969354914,
+            "relative_l2": 0.029499694877758366,
+            "minimum_row_cosine": 0.9991740459352069,
+            "outside_tolerance": 6066,
+            "elements": 12288,
+            "allclose": false
+          }
+        },
+        {
+          "id": "roles",
+          "token_count": 14,
+          "output_hidden": {
+            "max_abs": 3.44378662109375,
+            "mean_abs": 0.162277110367762,
+            "relative_l2": 0.04146471237266399,
+            "minimum_row_cosine": 0.9977188230554896,
+            "outside_tolerance": 14311,
+            "elements": 14336,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.04022550582885742,
+            "mean_abs": 0.004368698231219754,
+            "relative_l2": 0.006097456495843201,
+            "minimum_row_cosine": 0.9999554012924068,
+            "outside_tolerance": 14186,
+            "elements": 14336,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.015515699982643127,
+            "mean_abs": 0.0004988428219138915,
+            "relative_l2": 0.03015220579910893,
+            "minimum_row_cosine": 0.9988594114438437,
+            "outside_tolerance": 13162,
+            "elements": 26624,
+            "allclose": false
+          }
+        },
+        {
+          "id": "chatml",
+          "token_count": 16,
+          "output_hidden": {
+            "max_abs": 2.324345588684082,
+            "mean_abs": 0.1187794989139683,
+            "relative_l2": 0.03490592609091907,
+            "minimum_row_cosine": 0.9981665245190503,
+            "outside_tolerance": 16359,
+            "elements": 16384,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.06183147430419922,
+            "mean_abs": 0.003981845289725797,
+            "relative_l2": 0.005879125322035421,
+            "minimum_row_cosine": 0.9999383446743022,
+            "outside_tolerance": 16204,
+            "elements": 16384,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.01641840487718582,
+            "mean_abs": 0.00040806408443783555,
+            "relative_l2": 0.026968339566468238,
+            "minimum_row_cosine": 0.9990832623608583,
+            "outside_tolerance": 15075,
+            "elements": 30720,
+            "allclose": false
+          }
+        },
+        {
+          "id": "message_frame",
+          "token_count": 20,
+          "output_hidden": {
+            "max_abs": 3.7558059692382812,
+            "mean_abs": 0.1959255550942351,
+            "relative_l2": 0.05251212571051755,
+            "minimum_row_cosine": 0.9975816661991856,
+            "outside_tolerance": 20465,
+            "elements": 20480,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.05911064147949219,
+            "mean_abs": 0.006068252010400665,
+            "relative_l2": 0.008289370784621834,
+            "minimum_row_cosine": 0.9999203998400893,
+            "outside_tolerance": 20306,
+            "elements": 20480,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.02382843941450119,
+            "mean_abs": 0.0006289649805305015,
+            "relative_l2": 0.03757754479218774,
+            "minimum_row_cosine": 0.9987908332038392,
+            "outside_tolerance": 19298,
+            "elements": 38912,
+            "allclose": false
+          }
+        },
+        {
+          "id": "repeat_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 2.6845054626464844,
+            "mean_abs": 0.14332719325935095,
+            "relative_l2": 0.03762790548275282,
+            "minimum_row_cosine": 0.9986410237607627,
+            "outside_tolerance": 8184,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.05235767364501953,
+            "mean_abs": 0.005176863498072226,
+            "relative_l2": 0.007151761079572699,
+            "minimum_row_cosine": 0.9999506692501183,
+            "outside_tolerance": 8113,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.013837963342666626,
+            "mean_abs": 0.0004917753526054407,
+            "relative_l2": 0.02937385327074118,
+            "minimum_row_cosine": 0.9993205119230733,
+            "outside_tolerance": 7118,
+            "elements": 14336,
+            "allclose": false
+          }
+        }
+      ]
+    },
+    {
+      "run": "rope-fixed",
+      "report_path": "build/neural-memory-p1-parity-rope-fixed/summary.json",
+      "report_sha256": "5f2dfd95a617a717b6ab727fb15cc26ab89638ff9bef19a978f25e9789a494c2",
+      "atol": 1e-05,
+      "rtol": 0.0001,
+      "token_ids_exact": true,
+      "lexical_exact": true,
+      "c_repeated_input_exact": true,
+      "all_features_within_tolerance": false,
+      "layer_count": 24,
+      "source_sha256": {
+        "python/diagnose_neural_memory_features.py": "dda3bba72f6a14f90c187506b366aa20db1a357bb6b8c7199a2d4f66ce3b01b9",
+        "python/torch_backbone.py": "25ebea3b0e2ee4d4f1bab60bd2638c3aa1a5bea757cc81fbd6c210d1d9896ac6",
+        "python/ggw.py": "e0b18c4af9e9de922bc0f6c9d10b0c64d3c906634db401f2b012974b16f8f208",
+        "python/ggwshim.c": "b9f88f305322206160b29c9888308f47aa4b8d6af25936a40243e1b38e51cba6",
+        "python/c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8",
+        "tools/memory_feature_probe.c": "68deb07f7e13d79c6711e0f039a82667d2bbe1b835e8af12551a4453d54daad9",
+        "src/bitnet.c": "eec0f1676c9039c674bc09b44887054db417e5817367129decc9922bb1827340",
+        "src/tokenizer.c": "09b3c09729091f7d4f02d16379cbe2003cfb68773eec1da7e618a8c7ef580607",
+        "src/quant_tq2_0.c": "cc1f098671db22f112039bf947c27f110aad380a470877e423e6734cba499423",
+        "CMakeLists.txt": "3ce3e8093c105e6a9ffef09a4703b757b945ff945ea15d8697d6e91a388f2d8e"
+      },
+      "raw_sha256": {
+        "inputs.bin": "98bc3c59b35b9f229dfe4b18a061b5c53fb67866b38f298c22d3913f993e8870",
+        "native.bin": "42a8843e2d76031bad071ec25df01150c0e9b79a04bba23e4c886b4c4f626662",
+        "torch_features.npz": "a577c36e22257bf4dc9490ff973b6d6cf39978f35dde454138967e61941310ff"
+      },
+      "cases": [
+        {
+          "id": "plain_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 1.6869449615478516,
+            "mean_abs": 0.1474171893362186,
+            "relative_l2": 0.03823262102107278,
+            "minimum_row_cosine": 0.9983451471533525,
+            "outside_tolerance": 8188,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.16786110401153564,
+            "mean_abs": 0.013410085140308947,
+            "relative_l2": 0.01867529813596754,
+            "minimum_row_cosine": 0.9996227703043746,
+            "outside_tolerance": 8177,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.009865783154964447,
+            "mean_abs": 0.0004962020229612452,
+            "relative_l2": 0.029598048778237594,
+            "minimum_row_cosine": 0.9991725736621256,
+            "outside_tolerance": 7107,
+            "elements": 14336,
+            "allclose": false
+          }
+        },
+        {
+          "id": "plain_zh",
+          "token_count": 7,
+          "output_hidden": {
+            "max_abs": 2.5651931762695312,
+            "mean_abs": 0.1382581066415014,
+            "relative_l2": 0.04067084654025141,
+            "minimum_row_cosine": 0.9975381645933674,
+            "outside_tolerance": 7163,
+            "elements": 7168,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.1701977252960205,
+            "mean_abs": 0.015133832567291299,
+            "relative_l2": 0.02195723273033256,
+            "minimum_row_cosine": 0.9993833931242323,
+            "outside_tolerance": 7146,
+            "elements": 7168,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.019261986017227173,
+            "mean_abs": 0.0005095136700672779,
+            "relative_l2": 0.032256973411829294,
+            "minimum_row_cosine": 0.9987690824814609,
+            "outside_tolerance": 6087,
+            "elements": 12288,
+            "allclose": false
+          }
+        },
+        {
+          "id": "roles",
+          "token_count": 14,
+          "output_hidden": {
+            "max_abs": 3.1143951416015625,
+            "mean_abs": 0.1837290542833029,
+            "relative_l2": 0.04541272234572165,
+            "minimum_row_cosine": 0.9980989926825666,
+            "outside_tolerance": 14320,
+            "elements": 14336,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.1250311667099595,
+            "mean_abs": 0.011142013036988807,
+            "relative_l2": 0.01587835576337811,
+            "minimum_row_cosine": 0.9996224615960561,
+            "outside_tolerance": 14275,
+            "elements": 14336,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.011594951152801514,
+            "mean_abs": 0.0005601468370387963,
+            "relative_l2": 0.033062620991731115,
+            "minimum_row_cosine": 0.9990494964791554,
+            "outside_tolerance": 13206,
+            "elements": 26624,
+            "allclose": false
+          }
+        },
+        {
+          "id": "chatml",
+          "token_count": 16,
+          "output_hidden": {
+            "max_abs": 2.2021560668945312,
+            "mean_abs": 0.11938969885438103,
+            "relative_l2": 0.033766423355602926,
+            "minimum_row_cosine": 0.9984598620165825,
+            "outside_tolerance": 16365,
+            "elements": 16384,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.1541891098022461,
+            "mean_abs": 0.010374828831542185,
+            "relative_l2": 0.015643870433294814,
+            "minimum_row_cosine": 0.9993392491896598,
+            "outside_tolerance": 16294,
+            "elements": 16384,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.01809316873550415,
+            "mean_abs": 0.0004045592978994553,
+            "relative_l2": 0.02599574051663101,
+            "minimum_row_cosine": 0.9992299310850047,
+            "outside_tolerance": 15132,
+            "elements": 30720,
+            "allclose": false
+          }
+        },
+        {
+          "id": "message_frame",
+          "token_count": 20,
+          "output_hidden": {
+            "max_abs": 3.1477203369140625,
+            "mean_abs": 0.187889208759863,
+            "relative_l2": 0.04997597764092638,
+            "minimum_row_cosine": 0.9969035449969783,
+            "outside_tolerance": 20459,
+            "elements": 20480,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.17474544048309326,
+            "mean_abs": 0.015234397574259905,
+            "relative_l2": 0.021209673293360418,
+            "minimum_row_cosine": 0.9992990696926219,
+            "outside_tolerance": 20411,
+            "elements": 20480,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.016716718673706055,
+            "mean_abs": 0.0006076547050165724,
+            "relative_l2": 0.03618064252142829,
+            "minimum_row_cosine": 0.9984517728869949,
+            "outside_tolerance": 19306,
+            "elements": 38912,
+            "allclose": false
+          }
+        },
+        {
+          "id": "repeat_en",
+          "token_count": 8,
+          "output_hidden": {
+            "max_abs": 1.6869449615478516,
+            "mean_abs": 0.1474171893362186,
+            "relative_l2": 0.03823262102107278,
+            "minimum_row_cosine": 0.9983451471533525,
+            "outside_tolerance": 8188,
+            "elements": 8192,
+            "allclose": false
+          },
+          "first_layer": {
+            "max_abs": 0.16786110401153564,
+            "mean_abs": 0.013410085140308947,
+            "relative_l2": 0.01867529813596754,
+            "minimum_row_cosine": 0.9996227703043746,
+            "outside_tolerance": 8177,
+            "elements": 8192,
+            "allclose": false
+          },
+          "memory_features_without_bos": {
+            "max_abs": 0.009865783154964447,
+            "mean_abs": 0.0004962020229612452,
+            "relative_l2": 0.029598048778237594,
+            "minimum_row_cosine": 0.9991725736621256,
+            "outside_tolerance": 7107,
+            "elements": 14336,
+            "allclose": false
+          }
+        }
+      ]
+    }
+  ]
+}

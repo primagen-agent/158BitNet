@@ -1,0 +1,4651 @@
+{
+  "format": "cg003-native-generation-audit-v1",
+  "arm": "joint_product",
+  "expected_cases": 24,
+  "complete": true,
+  "passed": true,
+  "cases": [
+    {
+      "id": "joint-663653f43a8b231bf0f8",
+      "positions": 64,
+      "selected_route": 1,
+      "copy_positions": 64,
+      "max_error": 1.52587890625e-05,
+      "normal_baseline_equal": null,
+      "truncated": true,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 4686,
+          "base_top1": 59352,
+          "content_only_top1": 4686,
+          "copy_mass": 0.1348971426486969,
+          "selected_token_content_contribution": 0.5912729142427781,
+          "selected_token_copy_contribution": 0.0046057638061270745,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 4686,
+          "base_top1": 5503,
+          "content_only_top1": 4686,
+          "copy_mass": 0.08754636347293854,
+          "selected_token_content_contribution": 0.3951080281970674,
+          "selected_token_copy_contribution": 0.0004160309224371749,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 4686,
+          "base_top1": 59342,
+          "content_only_top1": 4686,
+          "copy_mass": 0.07051345705986023,
+          "selected_token_content_contribution": 0.8701266269121533,
+          "selected_token_copy_contribution": 0.00036252509650811556,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 4686,
+          "base_top1": 73440,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06221785768866539,
+          "selected_token_content_contribution": 0.9019566916958068,
+          "selected_token_copy_contribution": 0.0004502771174809365,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 4686,
+          "base_top1": 73440,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06517817825078964,
+          "selected_token_content_contribution": 0.8883802107944627,
+          "selected_token_copy_contribution": 0.0005074897331772192,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 4686,
+          "base_top1": 73440,
+          "content_only_top1": 4686,
+          "copy_mass": 0.07259626686573029,
+          "selected_token_content_contribution": 0.9012416901043552,
+          "selected_token_copy_contribution": 0.0005744518221886305,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.07483311742544174,
+          "selected_token_content_contribution": 0.9125937307507413,
+          "selected_token_copy_contribution": 0.0006206348413561868,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 7,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.08106810599565506,
+          "selected_token_content_contribution": 0.9110476622767636,
+          "selected_token_copy_contribution": 0.0006510418640250776,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 8,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.08159205317497253,
+          "selected_token_content_contribution": 0.9144800417264541,
+          "selected_token_copy_contribution": 0.0006902316886887667,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 9,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.07810819894075394,
+          "selected_token_content_contribution": 0.9190809990517013,
+          "selected_token_copy_contribution": 0.0007228995220814542,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 10,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0772964134812355,
+          "selected_token_content_contribution": 0.9206230080540622,
+          "selected_token_copy_contribution": 0.0007278956992791293,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 11,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.07208272814750671,
+          "selected_token_content_contribution": 0.9267077214436631,
+          "selected_token_copy_contribution": 0.0007579637257298936,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 12,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06863228976726532,
+          "selected_token_content_contribution": 0.930068217983221,
+          "selected_token_copy_contribution": 0.0007863040306571025,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 13,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06736300885677338,
+          "selected_token_content_contribution": 0.9316030306465459,
+          "selected_token_copy_contribution": 0.0007891219984803355,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 14,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0657004565000534,
+          "selected_token_content_contribution": 0.9333142634999341,
+          "selected_token_copy_contribution": 0.0008237696824550176,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 15,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.062044091522693634,
+          "selected_token_content_contribution": 0.9369068803115572,
+          "selected_token_copy_contribution": 0.0008371295547754959,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 16,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.058447085320949554,
+          "selected_token_content_contribution": 0.9407540391424188,
+          "selected_token_copy_contribution": 0.0008689976452566042,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 17,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.05646993964910507,
+          "selected_token_content_contribution": 0.9427171679838978,
+          "selected_token_copy_contribution": 0.0008713899001746198,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 18,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.05311734601855278,
+          "selected_token_content_contribution": 0.9461748280525656,
+          "selected_token_copy_contribution": 0.0009032076051347661,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 19,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.05218210816383362,
+          "selected_token_content_contribution": 0.9472343477227777,
+          "selected_token_copy_contribution": 0.0009232300565349335,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 20,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.049959246069192886,
+          "selected_token_content_contribution": 0.9495135476891974,
+          "selected_token_copy_contribution": 0.0009306973943586465,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 21,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04784451797604561,
+          "selected_token_content_contribution": 0.9517612356425375,
+          "selected_token_copy_contribution": 0.0009216091199118351,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 22,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.047452524304389954,
+          "selected_token_content_contribution": 0.952254239997638,
+          "selected_token_copy_contribution": 0.0009255487439899022,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 23,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04463716596364975,
+          "selected_token_content_contribution": 0.9549452406537468,
+          "selected_token_copy_contribution": 0.0009387078570565057,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 24,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04295431822538376,
+          "selected_token_content_contribution": 0.9567020505217275,
+          "selected_token_copy_contribution": 0.0008926912526288677,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 25,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.043332409113645554,
+          "selected_token_content_contribution": 0.956275021722229,
+          "selected_token_copy_contribution": 0.0008924097582031959,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 26,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04369150847196579,
+          "selected_token_content_contribution": 0.9559840284537398,
+          "selected_token_copy_contribution": 0.0008927623796454037,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 27,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04472661018371582,
+          "selected_token_content_contribution": 0.9550583034557604,
+          "selected_token_copy_contribution": 0.0008987209870638661,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 28,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04431697726249695,
+          "selected_token_content_contribution": 0.9554521587721144,
+          "selected_token_copy_contribution": 0.0009232416526760871,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 29,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.042884714901447296,
+          "selected_token_content_contribution": 0.9568927378718725,
+          "selected_token_copy_contribution": 0.0009302390604205807,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 30,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04146686568856239,
+          "selected_token_content_contribution": 0.9583568836470707,
+          "selected_token_copy_contribution": 0.0009197028505671917,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 31,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04192342981696129,
+          "selected_token_content_contribution": 0.9579326619063171,
+          "selected_token_copy_contribution": 0.0009121756803238682,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 32,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0428379625082016,
+          "selected_token_content_contribution": 0.9569635208720251,
+          "selected_token_copy_contribution": 0.0009319292210275851,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 33,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04238719120621681,
+          "selected_token_content_contribution": 0.9574767712045529,
+          "selected_token_copy_contribution": 0.000942735410978909,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 34,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.042385149747133255,
+          "selected_token_content_contribution": 0.957513608977008,
+          "selected_token_copy_contribution": 0.0009426925354902327,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 35,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04244765266776085,
+          "selected_token_content_contribution": 0.9574680369884514,
+          "selected_token_copy_contribution": 0.0009546910187870393,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 36,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04190465062856674,
+          "selected_token_content_contribution": 0.9579756834775932,
+          "selected_token_copy_contribution": 0.0009505509363036648,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 37,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04175293818116188,
+          "selected_token_content_contribution": 0.9580981206152187,
+          "selected_token_copy_contribution": 0.0009543868007512919,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 38,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04141988232731819,
+          "selected_token_content_contribution": 0.95846776361766,
+          "selected_token_copy_contribution": 0.0009620923678087342,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 39,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.042899053543806076,
+          "selected_token_content_contribution": 0.9569692444783214,
+          "selected_token_copy_contribution": 0.0009740181951189904,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 40,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.042198725044727325,
+          "selected_token_content_contribution": 0.9576687086502377,
+          "selected_token_copy_contribution": 0.0009550872874622168,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 41,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.042346708476543427,
+          "selected_token_content_contribution": 0.957529393704677,
+          "selected_token_copy_contribution": 0.0009570690500717404,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 42,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.041311752051115036,
+          "selected_token_content_contribution": 0.9585875337192001,
+          "selected_token_copy_contribution": 0.0009253798700733894,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 43,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04052487388253212,
+          "selected_token_content_contribution": 0.9593606802668094,
+          "selected_token_copy_contribution": 0.0009337246237740589,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 44,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04135604947805405,
+          "selected_token_content_contribution": 0.9585231594872384,
+          "selected_token_copy_contribution": 0.0009310010837591838,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 45,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04116469994187355,
+          "selected_token_content_contribution": 0.9587214637284608,
+          "selected_token_copy_contribution": 0.0009196032396624123,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 46,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04099730774760246,
+          "selected_token_content_contribution": 0.958888837128561,
+          "selected_token_copy_contribution": 0.0009366115829728657,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 47,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03988861292600632,
+          "selected_token_content_contribution": 0.9600016621713824,
+          "selected_token_copy_contribution": 0.0009302295081237625,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 48,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03985931724309921,
+          "selected_token_content_contribution": 0.9600482395441838,
+          "selected_token_copy_contribution": 0.0009514613138751286,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 49,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.040556225925683975,
+          "selected_token_content_contribution": 0.9593570439431416,
+          "selected_token_copy_contribution": 0.0009598448490997724,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 50,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.040299877524375916,
+          "selected_token_content_contribution": 0.9596293965880435,
+          "selected_token_copy_contribution": 0.0009513500565427969,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 51,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04150685295462608,
+          "selected_token_content_contribution": 0.958430679391162,
+          "selected_token_copy_contribution": 0.0009560017576934225,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 52,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04156571999192238,
+          "selected_token_content_contribution": 0.9583695097084277,
+          "selected_token_copy_contribution": 0.0009771256472482456,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 53,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04182127118110657,
+          "selected_token_content_contribution": 0.9581214349019411,
+          "selected_token_copy_contribution": 0.0009646609731813314,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 54,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.040474701672792435,
+          "selected_token_content_contribution": 0.9594593487850215,
+          "selected_token_copy_contribution": 0.0009677189305392468,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 55,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.039274200797080994,
+          "selected_token_content_contribution": 0.9606727445611679,
+          "selected_token_copy_contribution": 0.0009311784369487821,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 56,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.040840994566679,
+          "selected_token_content_contribution": 0.959109968655352,
+          "selected_token_copy_contribution": 0.000949137053479835,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 57,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04119307920336723,
+          "selected_token_content_contribution": 0.9587659191291652,
+          "selected_token_copy_contribution": 0.0009662612586634978,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 58,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04178209975361824,
+          "selected_token_content_contribution": 0.958155444214808,
+          "selected_token_copy_contribution": 0.000976104708637301,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 59,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04091890901327133,
+          "selected_token_content_contribution": 0.9590413911641422,
+          "selected_token_copy_contribution": 0.0009879056055555823,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 60,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03972389176487923,
+          "selected_token_content_contribution": 0.9602410854621217,
+          "selected_token_copy_contribution": 0.0009847358297454354,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 61,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.039869919419288635,
+          "selected_token_content_contribution": 0.9600891994950111,
+          "selected_token_copy_contribution": 0.0009652399668124261,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 62,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.039731334894895554,
+          "selected_token_content_contribution": 0.960234906361234,
+          "selected_token_copy_contribution": 0.0009661423723877642,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 63,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.040069933980703354,
+          "selected_token_content_contribution": 0.959892294247569,
+          "selected_token_copy_contribution": 0.000966202683510076,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-b1a596ab210a303eef2b",
+      "positions": 64,
+      "selected_route": 1,
+      "copy_positions": 64,
+      "max_error": 1.621246337890625e-05,
+      "normal_baseline_equal": null,
+      "truncated": true,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 4686,
+          "base_top1": 59352,
+          "content_only_top1": 4686,
+          "copy_mass": 0.1294434815645218,
+          "selected_token_content_contribution": 0.5930905135932696,
+          "selected_token_copy_contribution": 0.0044680620191097425,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 4686,
+          "base_top1": 5503,
+          "content_only_top1": 4686,
+          "copy_mass": 0.07929220050573349,
+          "selected_token_content_contribution": 0.3961913024684115,
+          "selected_token_copy_contribution": 0.0003770253593575847,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 4686,
+          "base_top1": 59342,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06411656737327576,
+          "selected_token_content_contribution": 0.8756230313790154,
+          "selected_token_copy_contribution": 0.00032638040557603535,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 4686,
+          "base_top1": 73440,
+          "content_only_top1": 4686,
+          "copy_mass": 0.056417062878608704,
+          "selected_token_content_contribution": 0.907273883472227,
+          "selected_token_copy_contribution": 0.00040590441779616334,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 4686,
+          "base_top1": 73440,
+          "content_only_top1": 4686,
+          "copy_mass": 0.05880016088485718,
+          "selected_token_content_contribution": 0.8940718983040683,
+          "selected_token_copy_contribution": 0.0004581333389587834,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 4686,
+          "base_top1": 73440,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06558162719011307,
+          "selected_token_content_contribution": 0.9078426004042053,
+          "selected_token_copy_contribution": 0.0005213412866245115,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06797414273023605,
+          "selected_token_content_contribution": 0.9192542725017925,
+          "selected_token_copy_contribution": 0.000566195379219916,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 7,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.07412147521972656,
+          "selected_token_content_contribution": 0.9178721390368809,
+          "selected_token_copy_contribution": 0.0005977746627522179,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 8,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.07539255172014236,
+          "selected_token_content_contribution": 0.9206221896278072,
+          "selected_token_copy_contribution": 0.0006351888177373484,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 9,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.07267283648252487,
+          "selected_token_content_contribution": 0.9244776311305168,
+          "selected_token_copy_contribution": 0.0006657876753564992,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 10,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0719975084066391,
+          "selected_token_content_contribution": 0.9258931110656728,
+          "selected_token_copy_contribution": 0.0006690929640514402,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 11,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06776327639818192,
+          "selected_token_content_contribution": 0.9310113412318584,
+          "selected_token_copy_contribution": 0.0006977233930642176,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 12,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06450937688350677,
+          "selected_token_content_contribution": 0.9341742348200346,
+          "selected_token_copy_contribution": 0.0007245865494223577,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 13,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06336158514022827,
+          "selected_token_content_contribution": 0.9355910500301553,
+          "selected_token_copy_contribution": 0.0007276395300585345,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 14,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06189504265785217,
+          "selected_token_content_contribution": 0.9371066598257386,
+          "selected_token_copy_contribution": 0.0007600650354637788,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 15,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.058609601110219955,
+          "selected_token_content_contribution": 0.9403279555264337,
+          "selected_token_copy_contribution": 0.0007742630342618587,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 16,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.055415403097867966,
+          "selected_token_content_contribution": 0.9437759132706107,
+          "selected_token_copy_contribution": 0.0008053079727646147,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 17,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.05364816263318062,
+          "selected_token_content_contribution": 0.9455292032591908,
+          "selected_token_copy_contribution": 0.0008081917560607866,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 18,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.050748396664857864,
+          "selected_token_content_contribution": 0.9485355867486917,
+          "selected_token_copy_contribution": 0.0008394891938047111,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 19,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.050063952803611755,
+          "selected_token_content_contribution": 0.9493460266222682,
+          "selected_token_copy_contribution": 0.0008587997796194717,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 20,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.048127204179763794,
+          "selected_token_content_contribution": 0.9513398393105242,
+          "selected_token_copy_contribution": 0.0008656132611521279,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 21,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04611826688051224,
+          "selected_token_content_contribution": 0.9534832903242708,
+          "selected_token_copy_contribution": 0.0008588577299861327,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 22,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.045888036489486694,
+          "selected_token_content_contribution": 0.9538156985216834,
+          "selected_token_copy_contribution": 0.0008629148195009448,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 23,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.043304167687892914,
+          "selected_token_content_contribution": 0.9562741706827989,
+          "selected_token_copy_contribution": 0.0008771903310622498,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 24,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.041728321462869644,
+          "selected_token_content_contribution": 0.9579247627324698,
+          "selected_token_copy_contribution": 0.0008354607283575251,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 25,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04195069149136543,
+          "selected_token_content_contribution": 0.9576529401522504,
+          "selected_token_copy_contribution": 0.0008360197001551064,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 26,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04235614836215973,
+          "selected_token_content_contribution": 0.9573163807301636,
+          "selected_token_copy_contribution": 0.0008376684713053427,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 27,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.043519724160432816,
+          "selected_token_content_contribution": 0.9562632126504745,
+          "selected_token_copy_contribution": 0.0008446145525281748,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 28,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0431581549346447,
+          "selected_token_content_contribution": 0.9566089330552595,
+          "selected_token_copy_contribution": 0.0008678454123709162,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 29,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.041720569133758545,
+          "selected_token_content_contribution": 0.9580549197221131,
+          "selected_token_copy_contribution": 0.0008746173279382199,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 30,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04035326838493347,
+          "selected_token_content_contribution": 0.9594689696261886,
+          "selected_token_copy_contribution": 0.0008649491413399495,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 31,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04088060185313225,
+          "selected_token_content_contribution": 0.9589742694363432,
+          "selected_token_copy_contribution": 0.0008601722664304763,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 32,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04179137200117111,
+          "selected_token_content_contribution": 0.9580084459229432,
+          "selected_token_copy_contribution": 0.0008782751750561829,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 33,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04138678312301636,
+          "selected_token_content_contribution": 0.9584760430449065,
+          "selected_token_copy_contribution": 0.0008890169068795622,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 34,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04144349321722984,
+          "selected_token_content_contribution": 0.9584544290690671,
+          "selected_token_copy_contribution": 0.0008894164231613242,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 35,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04165070503950119,
+          "selected_token_content_contribution": 0.9582642939943595,
+          "selected_token_copy_contribution": 0.0009012477382620306,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 36,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04104771092534065,
+          "selected_token_content_contribution": 0.9588316689824559,
+          "selected_token_copy_contribution": 0.0008965968221471847,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 37,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0408647358417511,
+          "selected_token_content_contribution": 0.9589851455939322,
+          "selected_token_copy_contribution": 0.0009004629459404327,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 38,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04055599123239517,
+          "selected_token_content_contribution": 0.9593307750823945,
+          "selected_token_copy_contribution": 0.0009082185162385294,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 39,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04200059175491333,
+          "selected_token_content_contribution": 0.9578666774190495,
+          "selected_token_copy_contribution": 0.0009196744838220771,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 40,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04128067567944527,
+          "selected_token_content_contribution": 0.9585857405978631,
+          "selected_token_copy_contribution": 0.0009013438518655572,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 41,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0414542630314827,
+          "selected_token_content_contribution": 0.9584208758074336,
+          "selected_token_copy_contribution": 0.0009023116156582651,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 42,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04044830799102783,
+          "selected_token_content_contribution": 0.9594501863559608,
+          "selected_token_copy_contribution": 0.0008738137640251426,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 43,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.039771534502506256,
+          "selected_token_content_contribution": 0.9601131642805076,
+          "selected_token_copy_contribution": 0.0008820765982289616,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 44,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04056541249155998,
+          "selected_token_content_contribution": 0.9593128752082246,
+          "selected_token_copy_contribution": 0.0008803610012598898,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 45,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04035356268286705,
+          "selected_token_content_contribution": 0.9595317290150802,
+          "selected_token_copy_contribution": 0.0008692152377792606,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 46,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04016822203993797,
+          "selected_token_content_contribution": 0.9597170648571383,
+          "selected_token_copy_contribution": 0.0008844208057164207,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 47,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.039131857454776764,
+          "selected_token_content_contribution": 0.9607576006917647,
+          "selected_token_copy_contribution": 0.0008774429182734886,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 48,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.039244718849658966,
+          "selected_token_content_contribution": 0.9606621873024952,
+          "selected_token_copy_contribution": 0.0009001348481360636,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 49,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03987230360507965,
+          "selected_token_content_contribution": 0.9600403508518,
+          "selected_token_copy_contribution": 0.0009075340506653612,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 50,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03964655101299286,
+          "selected_token_content_contribution": 0.9602822294411159,
+          "selected_token_copy_contribution": 0.0009004675083986201,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 51,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04087357595562935,
+          "selected_token_content_contribution": 0.9590635248052373,
+          "selected_token_copy_contribution": 0.0009048379603869528,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 52,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04098989814519882,
+          "selected_token_content_contribution": 0.9589448776042984,
+          "selected_token_copy_contribution": 0.0009255282359313139,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 53,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04124496877193451,
+          "selected_token_content_contribution": 0.958697342453451,
+          "selected_token_copy_contribution": 0.0009133482035166027,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 54,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03994793817400932,
+          "selected_token_content_contribution": 0.9599856783883006,
+          "selected_token_copy_contribution": 0.0009158856240851536,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 55,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03864583000540733,
+          "selected_token_content_contribution": 0.961300755626463,
+          "selected_token_copy_contribution": 0.0008806454830002895,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 56,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.040203310549259186,
+          "selected_token_content_contribution": 0.9597473218474564,
+          "selected_token_copy_contribution": 0.0008987593757047119,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 57,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04065421223640442,
+          "selected_token_content_contribution": 0.9593045251280061,
+          "selected_token_copy_contribution": 0.0009151728559297921,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 58,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0413496159017086,
+          "selected_token_content_contribution": 0.9585875375564091,
+          "selected_token_copy_contribution": 0.0009252428443062835,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 59,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04054794833064079,
+          "selected_token_content_contribution": 0.9594121064481179,
+          "selected_token_copy_contribution": 0.000936181904028776,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 60,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03945837914943695,
+          "selected_token_content_contribution": 0.9605063879275695,
+          "selected_token_copy_contribution": 0.0009331967520114783,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 61,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03948748856782913,
+          "selected_token_content_contribution": 0.9604713806943999,
+          "selected_token_copy_contribution": 0.0009134623776780571,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 62,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03931396082043648,
+          "selected_token_content_contribution": 0.9606520700265064,
+          "selected_token_copy_contribution": 0.0009147563033107262,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 63,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03962017223238945,
+          "selected_token_content_contribution": 0.960341822278562,
+          "selected_token_copy_contribution": 0.0009145955379098335,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-dc5a52b237be6ce999e6",
+      "positions": 64,
+      "selected_route": 1,
+      "copy_positions": 64,
+      "max_error": 1.811981201171875e-05,
+      "normal_baseline_equal": null,
+      "truncated": true,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 4686,
+          "base_top1": 59352,
+          "content_only_top1": 4686,
+          "copy_mass": 0.10303419828414917,
+          "selected_token_content_contribution": 0.6129143513240383,
+          "selected_token_copy_contribution": 0.0043667913810130346,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 4686,
+          "base_top1": 5503,
+          "content_only_top1": 4686,
+          "copy_mass": 0.022888148203492165,
+          "selected_token_content_contribution": 0.423204835998276,
+          "selected_token_copy_contribution": 0.00032139988139308584,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 4686,
+          "base_top1": 59342,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019146133214235306,
+          "selected_token_content_contribution": 0.9182609726423681,
+          "selected_token_copy_contribution": 0.00027500209268625206,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 4686,
+          "base_top1": 73440,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01950092986226082,
+          "selected_token_content_contribution": 0.9430796099936352,
+          "selected_token_copy_contribution": 0.0003471835997063679,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 4686,
+          "base_top1": 73440,
+          "content_only_top1": 4686,
+          "copy_mass": 0.021161993965506554,
+          "selected_token_content_contribution": 0.9302577598775034,
+          "selected_token_copy_contribution": 0.00039587036091812816,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 4686,
+          "base_top1": 73440,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02404637448489666,
+          "selected_token_content_contribution": 0.9484479476147019,
+          "selected_token_copy_contribution": 0.00045553746364128904,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025401685386896133,
+          "selected_token_content_contribution": 0.961364569955302,
+          "selected_token_copy_contribution": 0.0004972621258423508,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 7,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.027970708906650543,
+          "selected_token_content_contribution": 0.9636965398857144,
+          "selected_token_copy_contribution": 0.000528344076571709,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 8,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02892833575606346,
+          "selected_token_content_contribution": 0.9669224118616527,
+          "selected_token_copy_contribution": 0.000564250126889957,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 9,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.028122596442699432,
+          "selected_token_content_contribution": 0.9689173682006699,
+          "selected_token_copy_contribution": 0.0005891649950655228,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 10,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02792736142873764,
+          "selected_token_content_contribution": 0.9698831270031589,
+          "selected_token_copy_contribution": 0.0005942205054616214,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 11,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02685842476785183,
+          "selected_token_content_contribution": 0.9718744668273264,
+          "selected_token_copy_contribution": 0.00061904991822523,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 12,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026097318157553673,
+          "selected_token_content_contribution": 0.9725452213147596,
+          "selected_token_copy_contribution": 0.0006410513155831882,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 13,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025878047570586205,
+          "selected_token_content_contribution": 0.9730429657736194,
+          "selected_token_copy_contribution": 0.0006453430159658912,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 14,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025438427925109863,
+          "selected_token_content_contribution": 0.9735346755229115,
+          "selected_token_copy_contribution": 0.0006739467366128321,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 15,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02467210404574871,
+          "selected_token_content_contribution": 0.9742378116128324,
+          "selected_token_copy_contribution": 0.000685923208295246,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 16,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02407512068748474,
+          "selected_token_content_contribution": 0.9750972724427234,
+          "selected_token_copy_contribution": 0.0007149225029064038,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 17,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02370452880859375,
+          "selected_token_content_contribution": 0.975454627247199,
+          "selected_token_copy_contribution": 0.0007187533813981956,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 18,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02322274260222912,
+          "selected_token_content_contribution": 0.976047208917841,
+          "selected_token_copy_contribution": 0.000749802482884385,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 19,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.023193925619125366,
+          "selected_token_content_contribution": 0.9762047181749505,
+          "selected_token_copy_contribution": 0.0007675195952923262,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 20,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.022441454231739044,
+          "selected_token_content_contribution": 0.9770159539864208,
+          "selected_token_copy_contribution": 0.0007731809989346345,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 21,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.021595701575279236,
+          "selected_token_content_contribution": 0.9779990517716778,
+          "selected_token_copy_contribution": 0.000764738350267962,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 22,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.021431514993309975,
+          "selected_token_content_contribution": 0.9782671161255654,
+          "selected_token_copy_contribution": 0.0007686379636648791,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 23,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020624004304409027,
+          "selected_token_content_contribution": 0.978947646359345,
+          "selected_token_copy_contribution": 0.0007815177665778507,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 24,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019918888807296753,
+          "selected_token_content_contribution": 0.9797289799955855,
+          "selected_token_copy_contribution": 0.00074409461485813,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 25,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020084403455257416,
+          "selected_token_content_contribution": 0.9795131174127559,
+          "selected_token_copy_contribution": 0.0007445940074947291,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 26,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020438775420188904,
+          "selected_token_content_contribution": 0.9792286439920838,
+          "selected_token_copy_contribution": 0.0007464861428352942,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 27,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020852312445640564,
+          "selected_token_content_contribution": 0.9789270491645682,
+          "selected_token_copy_contribution": 0.0007523404363098835,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 28,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020871473476290703,
+          "selected_token_content_contribution": 0.9788917955747778,
+          "selected_token_copy_contribution": 0.0007734306221077532,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 29,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02037155255675316,
+          "selected_token_content_contribution": 0.979400465228667,
+          "selected_token_copy_contribution": 0.0007801703718900714,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 30,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019808216020464897,
+          "selected_token_content_contribution": 0.9800113752061114,
+          "selected_token_copy_contribution": 0.0007725464937560041,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 31,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019857628270983696,
+          "selected_token_content_contribution": 0.979995002844906,
+          "selected_token_copy_contribution": 0.0007646211069588658,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 32,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02047082781791687,
+          "selected_token_content_contribution": 0.9793257772297875,
+          "selected_token_copy_contribution": 0.0007834386215442977,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 33,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020341666415333748,
+          "selected_token_content_contribution": 0.9795190037987749,
+          "selected_token_copy_contribution": 0.000793012382412053,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 34,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020484812557697296,
+          "selected_token_content_contribution": 0.9794115124997117,
+          "selected_token_copy_contribution": 0.0007948310742580721,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 35,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02070819027721882,
+          "selected_token_content_contribution": 0.9792055069125438,
+          "selected_token_copy_contribution": 0.0008064897785909655,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 36,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020438481122255325,
+          "selected_token_content_contribution": 0.9794390431921268,
+          "selected_token_copy_contribution": 0.0008023411871296354,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 37,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02035730704665184,
+          "selected_token_content_contribution": 0.9794902395756634,
+          "selected_token_copy_contribution": 0.0008058604604560436,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 38,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02035142481327057,
+          "selected_token_content_contribution": 0.9795336149159275,
+          "selected_token_copy_contribution": 0.000813726436896146,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 39,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02093774452805519,
+          "selected_token_content_contribution": 0.9789273684506484,
+          "selected_token_copy_contribution": 0.0008235998054102044,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 40,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02053116075694561,
+          "selected_token_content_contribution": 0.9793331029172793,
+          "selected_token_copy_contribution": 0.000806818032026908,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 41,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020738201215863228,
+          "selected_token_content_contribution": 0.9791349546953567,
+          "selected_token_copy_contribution": 0.0008101039937778916,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 42,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019968422129750252,
+          "selected_token_content_contribution": 0.9799284895479027,
+          "selected_token_copy_contribution": 0.0007803736350521543,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 43,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019841188564896584,
+          "selected_token_content_contribution": 0.9800417184937894,
+          "selected_token_copy_contribution": 0.000789516082556736,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 44,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02016151323914528,
+          "selected_token_content_contribution": 0.9797148435167073,
+          "selected_token_copy_contribution": 0.0007875292085747337,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 45,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020001394674181938,
+          "selected_token_content_contribution": 0.9798820940844231,
+          "selected_token_copy_contribution": 0.0007773322909157107,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 46,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020096389576792717,
+          "selected_token_content_contribution": 0.9797870910225743,
+          "selected_token_copy_contribution": 0.0007926327840143771,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 47,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019673742353916168,
+          "selected_token_content_contribution": 0.980214057161454,
+          "selected_token_copy_contribution": 0.000787142442753854,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 48,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019672051072120667,
+          "selected_token_content_contribution": 0.9802334211925118,
+          "selected_token_copy_contribution": 0.0008051414350877604,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 49,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0200530793517828,
+          "selected_token_content_contribution": 0.9798581992493772,
+          "selected_token_copy_contribution": 0.0008135039184525322,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 50,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01984388753771782,
+          "selected_token_content_contribution": 0.9800837558471553,
+          "selected_token_copy_contribution": 0.0008057308011420321,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 51,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020326808094978333,
+          "selected_token_content_contribution": 0.979609236781652,
+          "selected_token_copy_contribution": 0.0008095061181377332,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 52,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020647849887609482,
+          "selected_token_content_contribution": 0.9792858651927849,
+          "selected_token_copy_contribution": 0.0008297520728590474,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 53,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02062601037323475,
+          "selected_token_content_contribution": 0.9793153288600921,
+          "selected_token_copy_contribution": 0.000818979990297231,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 54,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02003662846982479,
+          "selected_token_content_contribution": 0.9798958979161135,
+          "selected_token_copy_contribution": 0.0008204334289368143,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 55,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019510416314005852,
+          "selected_token_content_contribution": 0.9804353498645283,
+          "selected_token_copy_contribution": 0.0007894769022827359,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 56,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02010319195687771,
+          "selected_token_content_contribution": 0.9798466246670328,
+          "selected_token_copy_contribution": 0.0008045382590055195,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 57,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02030044049024582,
+          "selected_token_content_contribution": 0.979657588611414,
+          "selected_token_copy_contribution": 0.0008192235879234903,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 58,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020599931478500366,
+          "selected_token_content_contribution": 0.9793361227695107,
+          "selected_token_copy_contribution": 0.0008275843602507521,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 59,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020495392382144928,
+          "selected_token_content_contribution": 0.9794639858525499,
+          "selected_token_copy_contribution": 0.0008399043564888538,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 60,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019985981285572052,
+          "selected_token_content_contribution": 0.9799782067398777,
+          "selected_token_copy_contribution": 0.0008368716331064117,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 61,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019852474331855774,
+          "selected_token_content_contribution": 0.9801057116964803,
+          "selected_token_copy_contribution": 0.000819551993780816,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 62,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019884195178747177,
+          "selected_token_content_contribution": 0.9800812838061039,
+          "selected_token_copy_contribution": 0.000820662042143311,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 63,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02005339413881302,
+          "selected_token_content_contribution": 0.9799079700779723,
+          "selected_token_copy_contribution": 0.0008219851583815074,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-591068d2575878842ab9",
+      "positions": 13,
+      "selected_route": 2,
+      "copy_positions": 0,
+      "max_error": 6.67572021484375e-06,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-03e545f484f3b75740e4",
+      "positions": 12,
+      "selected_route": 0,
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "normal_baseline_equal": true,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-c8bb0fb44331c8835d95",
+      "positions": 12,
+      "selected_route": 0,
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "normal_baseline_equal": true,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-bfb110d5a7d357d12712",
+      "positions": 7,
+      "selected_route": 1,
+      "copy_positions": 7,
+      "max_error": 1.33514404296875e-05,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 4686,
+          "base_top1": 59352,
+          "content_only_top1": 4686,
+          "copy_mass": 0.09460831433534622,
+          "selected_token_content_contribution": 0.4918111285668542,
+          "selected_token_copy_contribution": 0.004387028428124765,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 3429,
+          "base_top1": 3429,
+          "content_only_top1": 3429,
+          "copy_mass": 0.02615569345653057,
+          "selected_token_content_contribution": 0.871074135296275,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 1377,
+          "base_top1": 1377,
+          "content_only_top1": 1377,
+          "copy_mass": 0.0236650500446558,
+          "selected_token_content_contribution": 0.8464842199576933,
+          "selected_token_copy_contribution": 0.00038181774207671806,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 4686,
+          "base_top1": 1358,
+          "content_only_top1": 4686,
+          "copy_mass": 0.2383337765932083,
+          "selected_token_content_contribution": 0.4472636153281875,
+          "selected_token_copy_contribution": 0.00011949499646759407,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 3429,
+          "base_top1": 3429,
+          "content_only_top1": 3429,
+          "copy_mass": 0.03025616705417633,
+          "selected_token_content_contribution": 0.8523938266543938,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 72,
+          "base_top1": 4342,
+          "content_only_top1": 72,
+          "copy_mass": 0.0407290905714035,
+          "selected_token_content_contribution": 0.5835266369823517,
+          "selected_token_copy_contribution": 0.0008230333602508306,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 73440,
+          "base_top1": 73440,
+          "content_only_top1": 73440,
+          "copy_mass": 0.02871169149875641,
+          "selected_token_content_contribution": 0.9505321777004774,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-390fe8a95032c25999fb",
+      "positions": 7,
+      "selected_route": 1,
+      "copy_positions": 7,
+      "max_error": 1.1444091796875e-05,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 4686,
+          "base_top1": 59352,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0915759950876236,
+          "selected_token_content_contribution": 0.4900540561470291,
+          "selected_token_copy_contribution": 0.004545491512136308,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 3429,
+          "base_top1": 3429,
+          "content_only_top1": 3429,
+          "copy_mass": 0.02905435860157013,
+          "selected_token_content_contribution": 0.8687826495016491,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 1377,
+          "base_top1": 1377,
+          "content_only_top1": 1377,
+          "copy_mass": 0.0259247999638319,
+          "selected_token_content_contribution": 0.8445591414756572,
+          "selected_token_copy_contribution": 0.00036662112761155893,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 4686,
+          "base_top1": 1358,
+          "content_only_top1": 4686,
+          "copy_mass": 0.2494867742061615,
+          "selected_token_content_contribution": 0.4399897208872166,
+          "selected_token_copy_contribution": 0.00011200151211837951,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 3429,
+          "base_top1": 3429,
+          "content_only_top1": 3429,
+          "copy_mass": 0.034454792737960815,
+          "selected_token_content_contribution": 0.849083385842453,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 72,
+          "base_top1": 4342,
+          "content_only_top1": 72,
+          "copy_mass": 0.04554295912384987,
+          "selected_token_content_contribution": 0.5804881462410115,
+          "selected_token_copy_contribution": 0.0008744878879158076,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 73440,
+          "base_top1": 73440,
+          "content_only_top1": 73440,
+          "copy_mass": 0.030170751735568047,
+          "selected_token_content_contribution": 0.9491356519930707,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-7e9180785cb56f532152",
+      "positions": 7,
+      "selected_route": 1,
+      "copy_positions": 7,
+      "max_error": 1.33514404296875e-05,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 4686,
+          "base_top1": 59352,
+          "content_only_top1": 4686,
+          "copy_mass": 0.12341628968715668,
+          "selected_token_content_contribution": 0.47617719874975034,
+          "selected_token_copy_contribution": 0.004497240586143696,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 3429,
+          "base_top1": 3429,
+          "content_only_top1": 3429,
+          "copy_mass": 0.0784473717212677,
+          "selected_token_content_contribution": 0.8244309657778749,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 1377,
+          "base_top1": 1377,
+          "content_only_top1": 1377,
+          "copy_mass": 0.07399274408817291,
+          "selected_token_content_contribution": 0.8028816089733166,
+          "selected_token_copy_contribution": 0.0004743364769357141,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 4686,
+          "base_top1": 1358,
+          "content_only_top1": 4686,
+          "copy_mass": 0.3709279000759125,
+          "selected_token_content_contribution": 0.3689577765081593,
+          "selected_token_copy_contribution": 4.455998399420472e-05,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 3429,
+          "base_top1": 3429,
+          "content_only_top1": 3429,
+          "copy_mass": 0.08284291625022888,
+          "selected_token_content_contribution": 0.8062558039600521,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 72,
+          "base_top1": 4342,
+          "content_only_top1": 72,
+          "copy_mass": 0.1264617145061493,
+          "selected_token_content_contribution": 0.5312989059279494,
+          "selected_token_copy_contribution": 0.000959885264820863,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 73440,
+          "base_top1": 73440,
+          "content_only_top1": 73440,
+          "copy_mass": 0.05479903891682625,
+          "selected_token_content_contribution": 0.9250109014397134,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-73d9b85138386d3eecd2",
+      "positions": 13,
+      "selected_route": 2,
+      "copy_positions": 0,
+      "max_error": 9.5367431640625e-06,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-7cda17f85e128b10062c",
+      "positions": 12,
+      "selected_route": 0,
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "normal_baseline_equal": true,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-e0462989593caaaed832",
+      "positions": 12,
+      "selected_route": 0,
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "normal_baseline_equal": true,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-1298dd37f224157a8f76",
+      "positions": 11,
+      "selected_route": 1,
+      "copy_positions": 11,
+      "max_error": 1.33514404296875e-05,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 5283,
+          "base_top1": 5283,
+          "content_only_top1": 5283,
+          "copy_mass": 0.081263467669487,
+          "selected_token_content_contribution": 0.8732210224511785,
+          "selected_token_copy_contribution": 0.03970156155849073,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 1996,
+          "base_top1": 1996,
+          "content_only_top1": 1996,
+          "copy_mass": 0.3860100209712982,
+          "selected_token_content_contribution": 0.5632468348076604,
+          "selected_token_copy_contribution": 0.03400660960434209,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 2634,
+          "base_top1": 3602,
+          "content_only_top1": 2634,
+          "copy_mass": 0.014227330684661865,
+          "selected_token_content_contribution": 0.4563639497967531,
+          "selected_token_copy_contribution": 0.0005242365405334083,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 10408,
+          "base_top1": 10408,
+          "content_only_top1": 10408,
+          "copy_mass": 0.01710003986954689,
+          "selected_token_content_contribution": 0.8756670522753124,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 59403,
+          "base_top1": 30354,
+          "content_only_top1": 59403,
+          "copy_mass": 0.1581847220659256,
+          "selected_token_content_contribution": 0.8092408533690773,
+          "selected_token_copy_contribution": 0.0001590001321219183,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 2208,
+          "base_top1": 8318,
+          "content_only_top1": 20681,
+          "copy_mass": 0.4825012981891632,
+          "selected_token_content_contribution": 1.4975309893345593e-05,
+          "selected_token_copy_contribution": 0.4262086950614867,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 1349,
+          "base_top1": 3357,
+          "content_only_top1": 9715,
+          "copy_mass": 0.6043610572814941,
+          "selected_token_content_contribution": 0.00437410761168035,
+          "selected_token_copy_contribution": 0.47778793208174825,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 7,
+          "selected_token": 1349,
+          "base_top1": 1440,
+          "content_only_top1": 1765,
+          "copy_mass": 0.7130956649780273,
+          "selected_token_content_contribution": 0.0017328469147887232,
+          "selected_token_copy_contribution": 0.6024511979495931,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 8,
+          "selected_token": 1349,
+          "base_top1": 59342,
+          "content_only_top1": 66,
+          "copy_mass": 0.6062813401222229,
+          "selected_token_content_contribution": 7.794006611971276e-06,
+          "selected_token_copy_contribution": 0.5026704373671725,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 9,
+          "selected_token": 66,
+          "base_top1": 66,
+          "content_only_top1": 66,
+          "copy_mass": 0.3863550126552582,
+          "selected_token_content_contribution": 0.564499082230977,
+          "selected_token_copy_contribution": 0.002613534700199018,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 10,
+          "selected_token": 73440,
+          "base_top1": 73440,
+          "content_only_top1": 73440,
+          "copy_mass": 0.026705792173743248,
+          "selected_token_content_contribution": 0.9629721457795765,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-d9879156842513c1ca1a",
+      "positions": 11,
+      "selected_route": 1,
+      "copy_positions": 11,
+      "max_error": 1.5735626220703125e-05,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 5283,
+          "base_top1": 5283,
+          "content_only_top1": 5283,
+          "copy_mass": 0.08091600239276886,
+          "selected_token_content_contribution": 0.873683001363195,
+          "selected_token_copy_contribution": 0.013940213545297297,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 1996,
+          "base_top1": 1996,
+          "content_only_top1": 1996,
+          "copy_mass": 0.40720781683921814,
+          "selected_token_content_contribution": 0.5438150101957395,
+          "selected_token_copy_contribution": 0.01009204841153062,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 2634,
+          "base_top1": 3602,
+          "content_only_top1": 2634,
+          "copy_mass": 0.014771857298910618,
+          "selected_token_content_contribution": 0.4605827175401106,
+          "selected_token_copy_contribution": 0.0005995087023139486,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 10408,
+          "base_top1": 10408,
+          "content_only_top1": 10408,
+          "copy_mass": 0.01597762666642666,
+          "selected_token_content_contribution": 0.8787102773102412,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 59403,
+          "base_top1": 30354,
+          "content_only_top1": 59403,
+          "copy_mass": 0.1542007178068161,
+          "selected_token_content_contribution": 0.8125208366738301,
+          "selected_token_copy_contribution": 0.00021281791339142022,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 2208,
+          "base_top1": 8318,
+          "content_only_top1": 20681,
+          "copy_mass": 0.46716710925102234,
+          "selected_token_content_contribution": 1.5449967026045273e-05,
+          "selected_token_copy_contribution": 0.39735596813782065,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 1349,
+          "base_top1": 3357,
+          "content_only_top1": 9715,
+          "copy_mass": 0.6188070774078369,
+          "selected_token_content_contribution": 0.004217449365866389,
+          "selected_token_copy_contribution": 0.5102362735153889,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 7,
+          "selected_token": 1349,
+          "base_top1": 1440,
+          "content_only_top1": 1765,
+          "copy_mass": 0.7322615385055542,
+          "selected_token_content_contribution": 0.0016204163281474371,
+          "selected_token_copy_contribution": 0.6481747463110261,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 8,
+          "selected_token": 1349,
+          "base_top1": 59342,
+          "content_only_top1": 66,
+          "copy_mass": 0.6444350481033325,
+          "selected_token_content_contribution": 7.095255327924886e-06,
+          "selected_token_copy_contribution": 0.5557862556824499,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 9,
+          "selected_token": 66,
+          "base_top1": 66,
+          "content_only_top1": 66,
+          "copy_mass": 0.44461768865585327,
+          "selected_token_content_contribution": 0.5108174845608797,
+          "selected_token_copy_contribution": 0.0021917617966282824,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 10,
+          "selected_token": 73440,
+          "base_top1": 73440,
+          "content_only_top1": 73440,
+          "copy_mass": 0.025907790288329124,
+          "selected_token_content_contribution": 0.9636957529470856,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-48795bbfa39e0bbb7c18",
+      "positions": 9,
+      "selected_route": 1,
+      "copy_positions": 9,
+      "max_error": 1.049041748046875e-05,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 5283,
+          "base_top1": 5283,
+          "content_only_top1": 5283,
+          "copy_mass": 0.06610918045043945,
+          "selected_token_content_contribution": 0.8877797081584329,
+          "selected_token_copy_contribution": 0.037444947256715516,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 1996,
+          "base_top1": 1996,
+          "content_only_top1": 1996,
+          "copy_mass": 0.23393870890140533,
+          "selected_token_content_contribution": 0.7027753131767689,
+          "selected_token_copy_contribution": 0.03629162311870248,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 2634,
+          "base_top1": 3602,
+          "content_only_top1": 2634,
+          "copy_mass": 0.011141430586576462,
+          "selected_token_content_contribution": 0.45911390990051176,
+          "selected_token_copy_contribution": 0.00046538825319319185,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 10408,
+          "base_top1": 10408,
+          "content_only_top1": 10408,
+          "copy_mass": 0.013785003684461117,
+          "selected_token_content_contribution": 0.8820333516787244,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 59403,
+          "base_top1": 30354,
+          "content_only_top1": 59403,
+          "copy_mass": 0.09307519346475601,
+          "selected_token_content_contribution": 0.8699691221179234,
+          "selected_token_copy_contribution": 0.0001945879143192458,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 59366,
+          "base_top1": 8318,
+          "content_only_top1": 20681,
+          "copy_mass": 0.34446319937705994,
+          "selected_token_content_contribution": 0.0001744114128952791,
+          "selected_token_copy_contribution": 0.19839277280136924,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 15008,
+          "base_top1": 1839,
+          "content_only_top1": 72,
+          "copy_mass": 0.3282996416091919,
+          "selected_token_content_contribution": 0.007317900104345716,
+          "selected_token_copy_contribution": 0.1317272648673227,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 7,
+          "selected_token": 72,
+          "base_top1": 59342,
+          "content_only_top1": 72,
+          "copy_mass": 0.05794698745012283,
+          "selected_token_content_contribution": 0.7966990088907435,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 8,
+          "selected_token": 73440,
+          "base_top1": 16747,
+          "content_only_top1": 73440,
+          "copy_mass": 0.0725444108247757,
+          "selected_token_content_contribution": 0.4934237940573425,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-a0f983766cc86e3ce2db",
+      "positions": 9,
+      "selected_route": 2,
+      "copy_positions": 0,
+      "max_error": 1.1444091796875e-05,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-5716af73c5e8dfa5ec57",
+      "positions": 9,
+      "selected_route": 0,
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "normal_baseline_equal": true,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-8a34c9570cfe601fa274",
+      "positions": 9,
+      "selected_route": 0,
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "normal_baseline_equal": true,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-285dd32d6f509d59b087",
+      "positions": 64,
+      "selected_route": 1,
+      "copy_positions": 64,
+      "max_error": 1.52587890625e-05,
+      "normal_baseline_equal": null,
+      "truncated": true,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 5283,
+          "base_top1": 5283,
+          "content_only_top1": 5283,
+          "copy_mass": 0.06622466444969177,
+          "selected_token_content_contribution": 0.9037280057700469,
+          "selected_token_copy_contribution": 0.036957315150080244,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 1996,
+          "base_top1": 1996,
+          "content_only_top1": 1996,
+          "copy_mass": 0.2078256607055664,
+          "selected_token_content_contribution": 0.7421544319838728,
+          "selected_token_copy_contribution": 0.031763532486111266,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 4686,
+          "base_top1": 3602,
+          "content_only_top1": 4686,
+          "copy_mass": 0.010109854862093925,
+          "selected_token_content_contribution": 0.3629668186222522,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 4157,
+          "base_top1": 4157,
+          "content_only_top1": 4157,
+          "copy_mass": 0.01275306660681963,
+          "selected_token_content_contribution": 0.6411532233841046,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 1377,
+          "base_top1": 1377,
+          "content_only_top1": 1377,
+          "copy_mass": 0.05289958044886589,
+          "selected_token_content_contribution": 0.9433025704759902,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 4686,
+          "base_top1": 1358,
+          "content_only_top1": 4686,
+          "copy_mass": 0.16494953632354736,
+          "selected_token_content_contribution": 0.23620431051746466,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 4686,
+          "base_top1": 1694,
+          "content_only_top1": 4686,
+          "copy_mass": 0.05701692774891853,
+          "selected_token_content_contribution": 0.3370036532791761,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 7,
+          "selected_token": 4686,
+          "base_top1": 1377,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04152286797761917,
+          "selected_token_content_contribution": 0.6104665533277671,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 8,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03463742509484291,
+          "selected_token_content_contribution": 0.9431744037388223,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 9,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.027059050276875496,
+          "selected_token_content_contribution": 0.9549904631600656,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 10,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.030071396380662918,
+          "selected_token_content_contribution": 0.9595175851796651,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 11,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03227855637669563,
+          "selected_token_content_contribution": 0.9631085577830725,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 12,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03427143022418022,
+          "selected_token_content_contribution": 0.9621312972071263,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 13,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03252079710364342,
+          "selected_token_content_contribution": 0.9644776435111485,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 14,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.030997207388281822,
+          "selected_token_content_contribution": 0.9663617192671244,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 15,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0274436604231596,
+          "selected_token_content_contribution": 0.9705256641909432,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 16,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.024965042248368263,
+          "selected_token_content_contribution": 0.9734065664073331,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 17,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.024380391463637352,
+          "selected_token_content_contribution": 0.9741822499540996,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 18,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.023926418274641037,
+          "selected_token_content_contribution": 0.9745455805075363,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 19,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.022935982793569565,
+          "selected_token_content_contribution": 0.9743739087845057,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 20,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02327663078904152,
+          "selected_token_content_contribution": 0.9745233292144019,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 21,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02339950017631054,
+          "selected_token_content_contribution": 0.9745028271814097,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 22,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.021885087713599205,
+          "selected_token_content_contribution": 0.9758967307646939,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 23,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02092549577355385,
+          "selected_token_content_contribution": 0.9770705389041541,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 24,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.020579036325216293,
+          "selected_token_content_contribution": 0.9773935834592097,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 25,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019786851480603218,
+          "selected_token_content_contribution": 0.9780898948314669,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 26,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01961260847747326,
+          "selected_token_content_contribution": 0.9785178544986644,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 27,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018510740250349045,
+          "selected_token_content_contribution": 0.9795857029163137,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 28,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018479885533452034,
+          "selected_token_content_contribution": 0.9793629884758774,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 29,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018203794956207275,
+          "selected_token_content_contribution": 0.9805369764998068,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 30,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017959948629140854,
+          "selected_token_content_contribution": 0.980112861486204,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 31,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01712965965270996,
+          "selected_token_content_contribution": 0.9812117646949188,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 32,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01744997128844261,
+          "selected_token_content_contribution": 0.9816049300548261,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 33,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017465049400925636,
+          "selected_token_content_contribution": 0.9814047338505899,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 34,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017977509647607803,
+          "selected_token_content_contribution": 0.9809901812223514,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 35,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01762334257364273,
+          "selected_token_content_contribution": 0.9811684627380692,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 36,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01764029823243618,
+          "selected_token_content_contribution": 0.981605991212886,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 37,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017868880182504654,
+          "selected_token_content_contribution": 0.9815148720427037,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 38,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017912324517965317,
+          "selected_token_content_contribution": 0.9816147739650236,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 39,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01837776228785515,
+          "selected_token_content_contribution": 0.9810843771014016,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 40,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018502261489629745,
+          "selected_token_content_contribution": 0.9810634815831794,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 41,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018585525453090668,
+          "selected_token_content_contribution": 0.9811058817530497,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 42,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018483465537428856,
+          "selected_token_content_contribution": 0.9811783611058106,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 43,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017900541424751282,
+          "selected_token_content_contribution": 0.981781230073742,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 44,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01815870776772499,
+          "selected_token_content_contribution": 0.9815306408645396,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 45,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018513290211558342,
+          "selected_token_content_contribution": 0.981208047592187,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 46,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01810639724135399,
+          "selected_token_content_contribution": 0.9816182199115926,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 47,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018592944368720055,
+          "selected_token_content_contribution": 0.9811716084986438,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 48,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018617339432239532,
+          "selected_token_content_contribution": 0.9811642158850328,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 49,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018461771309375763,
+          "selected_token_content_contribution": 0.981283400860248,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 50,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018743975088000298,
+          "selected_token_content_contribution": 0.9811244942394506,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 51,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018879130482673645,
+          "selected_token_content_contribution": 0.9809647702645452,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 52,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018627632409334183,
+          "selected_token_content_contribution": 0.9812308639188627,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 53,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018945341929793358,
+          "selected_token_content_contribution": 0.9808745064904048,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 54,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01891229674220085,
+          "selected_token_content_contribution": 0.9808955126890639,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 55,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018480364233255386,
+          "selected_token_content_contribution": 0.9813644197597013,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 56,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01827392354607582,
+          "selected_token_content_contribution": 0.981544931418367,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 57,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018397407606244087,
+          "selected_token_content_contribution": 0.9814847286951762,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 58,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01906559057533741,
+          "selected_token_content_contribution": 0.9808228120282652,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 59,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01872040517628193,
+          "selected_token_content_contribution": 0.9811392663473387,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 60,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018957175314426422,
+          "selected_token_content_contribution": 0.9809310365086176,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 61,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01865995302796364,
+          "selected_token_content_contribution": 0.9812235678229083,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 62,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018805591389536858,
+          "selected_token_content_contribution": 0.9810902372002128,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 63,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0190108735114336,
+          "selected_token_content_contribution": 0.9808646289468111,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-0c8035ce7bda956751d7",
+      "positions": 64,
+      "selected_route": 1,
+      "copy_positions": 64,
+      "max_error": 1.52587890625e-05,
+      "normal_baseline_equal": null,
+      "truncated": true,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 5283,
+          "base_top1": 5283,
+          "content_only_top1": 5283,
+          "copy_mass": 0.06284288316965103,
+          "selected_token_content_contribution": 0.9070814019515485,
+          "selected_token_copy_contribution": 0.009411851014343331,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 1996,
+          "base_top1": 1996,
+          "content_only_top1": 1996,
+          "copy_mass": 0.19751162827014923,
+          "selected_token_content_contribution": 0.7518422385259906,
+          "selected_token_copy_contribution": 0.005407552722756467,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 4686,
+          "base_top1": 3602,
+          "content_only_top1": 4686,
+          "copy_mass": 0.010486138984560966,
+          "selected_token_content_contribution": 0.360593094424812,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 4157,
+          "base_top1": 4157,
+          "content_only_top1": 4157,
+          "copy_mass": 0.013694405555725098,
+          "selected_token_content_contribution": 0.6434307681318393,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 1377,
+          "base_top1": 1377,
+          "content_only_top1": 1377,
+          "copy_mass": 0.05929994210600853,
+          "selected_token_content_contribution": 0.9369423968462433,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 4686,
+          "base_top1": 1358,
+          "content_only_top1": 4686,
+          "copy_mass": 0.18260551989078522,
+          "selected_token_content_contribution": 0.23026150256658873,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 4686,
+          "base_top1": 1694,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06518933176994324,
+          "selected_token_content_contribution": 0.332742302404053,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 7,
+          "selected_token": 4686,
+          "base_top1": 1377,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04681874439120293,
+          "selected_token_content_contribution": 0.6062299513320053,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 8,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03772306814789772,
+          "selected_token_content_contribution": 0.9401000080656506,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 9,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.028788955882191658,
+          "selected_token_content_contribution": 0.9532360886991877,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 10,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03167365491390228,
+          "selected_token_content_contribution": 0.9578973194398589,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 11,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03392138332128525,
+          "selected_token_content_contribution": 0.9614573762378631,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 12,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03603213280439377,
+          "selected_token_content_contribution": 0.9603654312608791,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 13,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03412386029958725,
+          "selected_token_content_contribution": 0.9628692674446481,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 14,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03241381049156189,
+          "selected_token_content_contribution": 0.9649410872234195,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 15,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.028495440259575844,
+          "selected_token_content_contribution": 0.9694702939993701,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 16,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02576643042266369,
+          "selected_token_content_contribution": 0.9726026311409539,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 17,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025084132328629494,
+          "selected_token_content_contribution": 0.9734763606714396,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 18,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.024586515501141548,
+          "selected_token_content_contribution": 0.9738825820853347,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 19,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.023463236168026924,
+          "selected_token_content_contribution": 0.9738393586080148,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 20,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.023778047412633896,
+          "selected_token_content_contribution": 0.9740152591722956,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 21,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.023874731734395027,
+          "selected_token_content_contribution": 0.9740202049916312,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 22,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02220546267926693,
+          "selected_token_content_contribution": 0.9755661625444575,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 23,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02124641463160515,
+          "selected_token_content_contribution": 0.9767402771863459,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 24,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02083238959312439,
+          "selected_token_content_contribution": 0.9771293587689966,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 25,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01999099925160408,
+          "selected_token_content_contribution": 0.9778718670031821,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 26,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019798604771494865,
+          "selected_token_content_contribution": 0.9783173768003011,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 27,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018652888014912605,
+          "selected_token_content_contribution": 0.9794265048716001,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 28,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018565064296126366,
+          "selected_token_content_contribution": 0.9792562160056479,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 29,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01831270195543766,
+          "selected_token_content_contribution": 0.9804158926734259,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 30,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018059834837913513,
+          "selected_token_content_contribution": 0.9799931866406554,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 31,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017209282144904137,
+          "selected_token_content_contribution": 0.9811154204581276,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 32,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017529211938381195,
+          "selected_token_content_contribution": 0.9815163850654977,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 33,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0175328329205513,
+          "selected_token_content_contribution": 0.9813264599388002,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 34,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01802518405020237,
+          "selected_token_content_contribution": 0.9809320537041553,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 35,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01767129637300968,
+          "selected_token_content_contribution": 0.9811083180537892,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 36,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017732402309775352,
+          "selected_token_content_contribution": 0.9815065745018206,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 37,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.017981315031647682,
+          "selected_token_content_contribution": 0.9813964511595316,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 38,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018045557662844658,
+          "selected_token_content_contribution": 0.9814773474705691,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 39,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01853242889046669,
+          "selected_token_content_contribution": 0.9809250680119767,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 40,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01865260675549507,
+          "selected_token_content_contribution": 0.9809094766162978,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 41,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018739301711320877,
+          "selected_token_content_contribution": 0.9809497849833304,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 42,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018638528883457184,
+          "selected_token_content_contribution": 0.9810203869570711,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 43,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01803695410490036,
+          "selected_token_content_contribution": 0.9816421574290592,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 44,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01830487884581089,
+          "selected_token_content_contribution": 0.9813818965832359,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 45,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018698953092098236,
+          "selected_token_content_contribution": 0.9810202221518544,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 46,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018260419368743896,
+          "selected_token_content_contribution": 0.9814619763700153,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 47,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018737299367785454,
+          "selected_token_content_contribution": 0.9810254213601711,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 48,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018787292763590813,
+          "selected_token_content_contribution": 0.9809927068620355,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 49,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018623530864715576,
+          "selected_token_content_contribution": 0.9811198516094569,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 50,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018922055140137672,
+          "selected_token_content_contribution": 0.9809455599627027,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 51,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019022101536393166,
+          "selected_token_content_contribution": 0.9808207927695706,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 52,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018768569454550743,
+          "selected_token_content_contribution": 0.9810888900404455,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 53,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019030803814530373,
+          "selected_token_content_contribution": 0.9807877071150098,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 54,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018982622772455215,
+          "selected_token_content_contribution": 0.9808234005716763,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 55,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018557222560048103,
+          "selected_token_content_contribution": 0.9812860414740308,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 56,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018362605944275856,
+          "selected_token_content_contribution": 0.9814544899318137,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 57,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01851985603570938,
+          "selected_token_content_contribution": 0.9813612574034166,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 58,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01921135187149048,
+          "selected_token_content_contribution": 0.9806761002520831,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 59,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01882917620241642,
+          "selected_token_content_contribution": 0.981029320207546,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 60,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01905517838895321,
+          "selected_token_content_contribution": 0.9808321479856462,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 61,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018749713897705078,
+          "selected_token_content_contribution": 0.9811328029399581,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 62,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.018886925652623177,
+          "selected_token_content_contribution": 0.98100796390173,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 63,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.019103433936834335,
+          "selected_token_content_contribution": 0.9807708915624829,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-5d9f011142cadea7ca56",
+      "positions": 64,
+      "selected_route": 1,
+      "copy_positions": 64,
+      "max_error": 1.621246337890625e-05,
+      "normal_baseline_equal": null,
+      "truncated": true,
+      "passed": true,
+      "copy_effect": [
+        {
+          "position": 0,
+          "selected_token": 5283,
+          "base_top1": 5283,
+          "content_only_top1": 5283,
+          "copy_mass": 0.08690847456455231,
+          "selected_token_content_contribution": 0.8836250150327838,
+          "selected_token_copy_contribution": 0.03744144021904649,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 1,
+          "selected_token": 1996,
+          "base_top1": 1996,
+          "content_only_top1": 1996,
+          "copy_mass": 0.34103962779045105,
+          "selected_token_content_contribution": 0.6173596034084409,
+          "selected_token_copy_contribution": 0.025408739449391923,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 2,
+          "selected_token": 4686,
+          "base_top1": 3602,
+          "content_only_top1": 4686,
+          "copy_mass": 0.01654990017414093,
+          "selected_token_content_contribution": 0.35459347189968315,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 3,
+          "selected_token": 4157,
+          "base_top1": 4157,
+          "content_only_top1": 4157,
+          "copy_mass": 0.019407276064157486,
+          "selected_token_content_contribution": 0.6418512563784966,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 4,
+          "selected_token": 1377,
+          "base_top1": 1377,
+          "content_only_top1": 1377,
+          "copy_mass": 0.09587766230106354,
+          "selected_token_content_contribution": 0.9005713605086625,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 5,
+          "selected_token": 4686,
+          "base_top1": 1358,
+          "content_only_top1": 4686,
+          "copy_mass": 0.25877705216407776,
+          "selected_token_content_contribution": 0.2051643263375422,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 6,
+          "selected_token": 4686,
+          "base_top1": 1694,
+          "content_only_top1": 4686,
+          "copy_mass": 0.09253960102796555,
+          "selected_token_content_contribution": 0.31930249739883254,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 7,
+          "selected_token": 4686,
+          "base_top1": 1377,
+          "content_only_top1": 4686,
+          "copy_mass": 0.06284497678279877,
+          "selected_token_content_contribution": 0.5920651871080931,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 8,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.050830550491809845,
+          "selected_token_content_contribution": 0.9268859476001399,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 9,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.039739497005939484,
+          "selected_token_content_contribution": 0.9421209957775314,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 10,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04506480321288109,
+          "selected_token_content_contribution": 0.9444213186003597,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 11,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04797305166721344,
+          "selected_token_content_contribution": 0.9473701173052475,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 12,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.051374271512031555,
+          "selected_token_content_contribution": 0.9450018235193375,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 13,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04824227839708328,
+          "selected_token_content_contribution": 0.9487282285887066,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 14,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04575689136981964,
+          "selected_token_content_contribution": 0.9515750741658835,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 15,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.04062516614794731,
+          "selected_token_content_contribution": 0.957321375392298,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 16,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03695423901081085,
+          "selected_token_content_contribution": 0.9613990461187163,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 17,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.036008358001708984,
+          "selected_token_content_contribution": 0.9625382749239213,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 18,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03516795486211777,
+          "selected_token_content_contribution": 0.9632877996050009,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 19,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03332611545920372,
+          "selected_token_content_contribution": 0.9639559089045402,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 20,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.03364267572760582,
+          "selected_token_content_contribution": 0.9641360034325889,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 21,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.033442918211221695,
+          "selected_token_content_contribution": 0.9644422256206974,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 22,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.031202327460050583,
+          "selected_token_content_contribution": 0.9665652972109484,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 23,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.029737889766693115,
+          "selected_token_content_contribution": 0.9682447921637202,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 24,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02905234508216381,
+          "selected_token_content_contribution": 0.9689111189381733,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 25,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.027969328686594963,
+          "selected_token_content_contribution": 0.9699010378543297,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 26,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.027783548459410667,
+          "selected_token_content_contribution": 0.9703467081461181,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 27,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025941120460629463,
+          "selected_token_content_contribution": 0.9721589298173086,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 28,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025960486382246017,
+          "selected_token_content_contribution": 0.971891986944508,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 29,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025606149807572365,
+          "selected_token_content_contribution": 0.973141015824862,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 30,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025187768042087555,
+          "selected_token_content_contribution": 0.9728958663301837,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 31,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.023960690945386887,
+          "selected_token_content_contribution": 0.9743897054140476,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 32,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0243954099714756,
+          "selected_token_content_contribution": 0.9746640063997787,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 33,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02445894666016102,
+          "selected_token_content_contribution": 0.9744155292290865,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 34,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025373302400112152,
+          "selected_token_content_contribution": 0.973600843340475,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 35,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0248348880559206,
+          "selected_token_content_contribution": 0.9739642743120143,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 36,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02493048459291458,
+          "selected_token_content_contribution": 0.9743208082870684,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 37,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025297144427895546,
+          "selected_token_content_contribution": 0.9740908189194653,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 38,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025457186624407768,
+          "selected_token_content_contribution": 0.9740727871867592,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 39,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02600874938070774,
+          "selected_token_content_contribution": 0.973456489888125,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 40,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026380402967333794,
+          "selected_token_content_contribution": 0.9731878295393385,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 41,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026453662663698196,
+          "selected_token_content_contribution": 0.9732389964593989,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 42,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02613958530128002,
+          "selected_token_content_contribution": 0.9735243377966135,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 43,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025439750403165817,
+          "selected_token_content_contribution": 0.9742439476757313,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 44,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025742264464497566,
+          "selected_token_content_contribution": 0.9739490296852509,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 45,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026406535878777504,
+          "selected_token_content_contribution": 0.9733164392108944,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 46,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025679361075162888,
+          "selected_token_content_contribution": 0.9740468313803425,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 47,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02637156844139099,
+          "selected_token_content_contribution": 0.9733944458583184,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 48,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026527635753154755,
+          "selected_token_content_contribution": 0.9732550057000596,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 49,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026198536157608032,
+          "selected_token_content_contribution": 0.9735478777716965,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 50,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026697421446442604,
+          "selected_token_content_contribution": 0.9731716351678807,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 51,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026965515688061714,
+          "selected_token_content_contribution": 0.9728791074897862,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 52,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02659822627902031,
+          "selected_token_content_contribution": 0.9732611524955516,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 53,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026914076879620552,
+          "selected_token_content_contribution": 0.972906995958963,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 54,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026789603754878044,
+          "selected_token_content_contribution": 0.973020159651101,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 55,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02614806592464447,
+          "selected_token_content_contribution": 0.9736983917077807,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 56,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.025837264955043793,
+          "selected_token_content_contribution": 0.9739834945573252,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 57,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026040904223918915,
+          "selected_token_content_contribution": 0.9738423348243371,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 58,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.0268186554312706,
+          "selected_token_content_contribution": 0.9730707388972495,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 59,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02643006294965744,
+          "selected_token_content_contribution": 0.9734307872198579,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 60,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026791708543896675,
+          "selected_token_content_contribution": 0.9730973602443338,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 61,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026323920115828514,
+          "selected_token_content_contribution": 0.9735606492440719,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 62,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.026525354012846947,
+          "selected_token_content_contribution": 0.9733715348620283,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        },
+        {
+          "position": 63,
+          "selected_token": 4686,
+          "base_top1": 4686,
+          "content_only_top1": 4686,
+          "copy_mass": 0.02682601474225521,
+          "selected_token_content_contribution": 0.9730508323161962,
+          "selected_token_copy_contribution": 0.0,
+          "scope": "same actual prefix, not an alternative full reply or accuracy score"
+        }
+      ]
+    },
+    {
+      "id": "joint-f97cb40850ae99026fb8",
+      "positions": 9,
+      "selected_route": 2,
+      "copy_positions": 0,
+      "max_error": 9.5367431640625e-06,
+      "normal_baseline_equal": null,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-c213440e7ec9562bc985",
+      "positions": 9,
+      "selected_route": 0,
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "normal_baseline_equal": true,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    },
+    {
+      "id": "joint-151d996139f9247e0b85",
+      "positions": 9,
+      "selected_route": 0,
+      "copy_positions": 0,
+      "max_error": 0.0,
+      "normal_baseline_equal": true,
+      "truncated": false,
+      "passed": true,
+      "copy_effect": []
+    }
+  ],
+  "positions": 564,
+  "status_sha256": "c818f8c99b6eab452a57259db1cc4accbdc9d9c637a025172a8770500aa8a593",
+  "checkpoint_sha256": "d40a254c82aa1602b5e1c2bfa63dc971f7079666539bf1fb9550e3a43f7cff8a",
+  "generation_sha256": "742414f1903fa8b737175cdf25aa610af8bb7518af3662a67b74b30e0afbf240",
+  "semantic_accuracy_measured": false,
+  "source_sha256": "ad85a66fdc90ca2ed261b41fcc116b8d657d86ebbdc91959a5a12bb9c2a4b7fa"
+}

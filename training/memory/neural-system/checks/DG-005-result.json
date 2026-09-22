@@ -1,0 +1,223 @@
+{
+  "experiment_id": "DG-005",
+  "actual_gguf_template": "{% for message in messages %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}",
+  "cases": [
+    {
+      "id": "english",
+      "variant": "research_no_think",
+      "generation": {
+        "text": "<tool>\n\n",
+        "generated_token_ids": [
+          59396,
+          12605,
+          59388,
+          5,
+          5,
+          73440
+        ],
+        "visible_token_ids": [
+          59396,
+          12605,
+          59388,
+          5,
+          5
+        ],
+        "raw_text_hex": "3c746f6f6c3e0a0a",
+        "utf8_complete": true,
+        "finish_reason": "stop_token",
+        "truncated": false,
+        "memory_enabled": false,
+        "forward_calls": 6,
+        "backend_cache_policy_verified": false
+      }
+    },
+    {
+      "id": "english",
+      "variant": "gguf_declared",
+      "generation": {
+        "text": "Nora lives in the small town of Nora.",
+        "generated_token_ids": [
+          59374,
+          8390,
+          7344,
+          1377,
+          1358,
+          2718,
+          5688,
+          1379,
+          6485,
+          59324,
+          72,
+          73440
+        ],
+        "visible_token_ids": [
+          59374,
+          8390,
+          7344,
+          1377,
+          1358,
+          2718,
+          5688,
+          1379,
+          6485,
+          59324,
+          72
+        ],
+        "raw_text_hex": "4e6f7261206c6976657320696e2074686520736d616c6c20746f776e206f66204e6f72612e",
+        "utf8_complete": true,
+        "finish_reason": "stop_token",
+        "truncated": false,
+        "memory_enabled": false,
+        "forward_calls": 12,
+        "backend_cache_policy_verified": false
+      }
+    },
+    {
+      "id": "chinese",
+      "variant": "research_no_think",
+      "generation": {
+        "text": "<tool>\n\n",
+        "generated_token_ids": [
+          59396,
+          12605,
+          59388,
+          5,
+          5,
+          73440
+        ],
+        "visible_token_ids": [
+          59396,
+          12605,
+          59388,
+          5,
+          5
+        ],
+        "raw_text_hex": "3c746f6f6c3e0a0a",
+        "utf8_complete": true,
+        "finish_reason": "stop_token",
+        "truncated": false,
+        "memory_enabled": false,
+        "forward_calls": 6,
+        "backend_cache_policy_verified": false
+      }
+    },
+    {
+      "id": "chinese",
+      "variant": "gguf_declared",
+      "generation": {
+        "text": "小安住在上海。",
+        "generated_token_ids": [
+          59472,
+          59578,
+          33345,
+          3354,
+          66,
+          73440
+        ],
+        "visible_token_ids": [
+          59472,
+          59578,
+          33345,
+          3354,
+          66
+        ],
+        "raw_text_hex": "e5b08fe5ae89e4bd8fe59ca8e4b88ae6b5b7e38082",
+        "utf8_complete": true,
+        "finish_reason": "stop_token",
+        "truncated": false,
+        "memory_enabled": false,
+        "forward_calls": 6,
+        "backend_cache_policy_verified": false
+      }
+    },
+    {
+      "id": "ordinary_arithmetic",
+      "variant": "research_no_think",
+      "generation": {
+        "text": "<answer>\n2+2=4",
+        "generated_token_ids": [
+          59396,
+          15454,
+          59388,
+          5,
+          59349,
+          62,
+          59349,
+          64,
+          59370,
+          73440
+        ],
+        "visible_token_ids": [
+          59396,
+          15454,
+          59388,
+          5,
+          59349,
+          62,
+          59349,
+          64,
+          59370
+        ],
+        "raw_text_hex": "3c616e737765723e0a322b323d34",
+        "utf8_complete": true,
+        "finish_reason": "stop_token",
+        "truncated": false,
+        "memory_enabled": false,
+        "forward_calls": 10,
+        "backend_cache_policy_verified": false
+      }
+    },
+    {
+      "id": "ordinary_arithmetic",
+      "variant": "gguf_declared",
+      "generation": {
+        "text": "Two plus two is equal to four.",
+        "generated_token_ids": [
+          19289,
+          7971,
+          1939,
+          1410,
+          6179,
+          1385,
+          3151,
+          72,
+          73440
+        ],
+        "visible_token_ids": [
+          19289,
+          7971,
+          1939,
+          1410,
+          6179,
+          1385,
+          3151,
+          72
+        ],
+        "raw_text_hex": "54776f20706c75732074776f20697320657175616c20746f20666f75722e",
+        "utf8_complete": true,
+        "finish_reason": "stop_token",
+        "truncated": false,
+        "memory_enabled": false,
+        "forward_calls": 9,
+        "backend_cache_policy_verified": false
+      }
+    }
+  ],
+  "memory_accuracy_measured": false,
+  "optimizer_steps": 0,
+  "training_approved": false,
+  "artifact_sha256": {
+    "models/bitcpm4-0.5b-tq2_0.gguf": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "build/memory_gradient_reference": "4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152",
+    "build/tok_probe": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+    "build/gguf_inspect": "61bd3c46f10baa2ab5c1b3ca84557ae527569926884f75d65404a3e5233cd23f",
+    "training/memory/neural-system/experiments/DG-005.json": "0b1d1fe5117c5db12333683eac9ed27af977859d8c8cf4a03e4ba16bbd8a2750"
+  },
+  "full_report": "build/neural-memory-dg005-multiline/summary.json",
+  "full_report_sha256": "23cce84635c93b2af57f7fed6e3675f31cc7491c786e33f70be865c9ac490991",
+  "software_tests": {
+    "python_passed": 111,
+    "c_passed": 21
+  },
+  "note": "Bound to the source hashes in the original report. Subsequent template versioning does not retroactively qualify v2 continuous fusion."
+}

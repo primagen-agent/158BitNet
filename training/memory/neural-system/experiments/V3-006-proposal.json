@@ -1,0 +1,34 @@
+{
+ "id": "V3-006",
+ "status": "trained_route_still_collapsed",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "proposal_date": "2026-09-20",
+ "hypothesis": "DG-028/029 proved both blockers are readout failures with separable inputs: route r2 becomes 0.875-recall separable when 3 structural scalars (has_source, span count, allowed fraction) join the route input; mode start is 0.996 separable on its existing input. Extending the route input with those scalars and training the mode head on a detached input should unlock routing without touching the backbone or data.",
+ "changes": {
+  "implementation": "new subclass module (pinned FineSpanReader untouched; its construction path and digests stay identical)",
+  "route_input": "concat(q, evidence, structural[3]) with standardized scalars",
+  "mode_training": "stop-gradient on the mode head input during loss backward (readout-only learning); everything else identical"
+ },
+ "training": {
+  "init": "from scratch, seeds 1018/1021",
+  "steps_requested": 200,
+  "batch": 16,
+  "lr": 0.0001,
+  "data": "same 892-item v3 feature package",
+  "hardware": "local Mac arm64, ~10 minutes"
+ },
+ "evaluation": "EV-005: identical panel/protocol/gates with fresh dual review",
+ "decision": "route fixed but mode still gating -> mode-only follow-up; both fixed but semantic gates fail -> attribution to span/copy stages; route still collapsed -> deeper representation issue, stop and report",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-20",
+  "via": "user reply 继续 in direct response to the V3-006 approval request",
+  "hardware": "local Mac arm64",
+  "steps": 200
+ },
+ "loss_note": "unweighted losses identical to V3-001 (single-factor control: only the two structural changes differ from V3-001)",
+ "note": "run under the V3-trainer supervision defect (route-2 items received no reader static loss); structural changes untested as a result; superseded by V3-004",
+ "fix": "combines the V3-004 supervision fix (route-2 static loss) with the V3-003 structural changes that were never validly tested (factory model: structural-scalars route input per DG-029 r2=0.875 probe + detached mode input per 0.996 separability)",
+ "result": "200 steps with structural-scalars route input + detached mode + correct supervision: loss 5.9->1.6 but route still all->p2, mode start 0/268. The DG-029 probe separability (0.875) was measured on the V3-002 defective-trained representation and does NOT transfer to representations formed during correct training - probe-guided fixes are insufficient without understanding training dynamics of the route head."
+}

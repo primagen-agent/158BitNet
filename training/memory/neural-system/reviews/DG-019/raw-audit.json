@@ -1,0 +1,85 @@
+{
+  "format": "dg019-independent-raw-audit-v1",
+  "report_sha256": "5da3ffa91a74d5d5bfbefb0a7571adb7e4366b46d8e5e24083814466e697b533",
+  "source_sha256": "0d31e25c1994074c86543c7bc15e8c28c6c7c314fa088123cd2bc73456138b0b",
+  "passed": true,
+  "records": [
+    {
+      "id": "joint-cff41e673284fbf1c6d9",
+      "positions": 12,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-a327d6559d03d72cb623",
+      "positions": 11,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-3415d75b34a68cb08833",
+      "positions": 13,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-52b4b20ec52ee431532e",
+      "positions": 13,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-c42056354c0b69813970",
+      "positions": 8,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-aaefd8e262566e4a2353",
+      "positions": 8,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-f417c9409407bcb8e962",
+      "positions": 10,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-d52d5721c8e37ed4372f",
+      "positions": 9,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-00358fb1f7c2b30e2c7d",
+      "positions": 12,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-4ff45be3a97c231edc81",
+      "positions": 12,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-5620a2bfcfca17ae14ce",
+      "positions": 5,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    },
+    {
+      "id": "joint-f2c8b739dffa4af42202",
+      "positions": 5,
+      "full_reply_bytes_exact": true,
+      "phases_valid": true
+    }
+  ],
+  "positions": 118,
+  "unique_prefixes": 64,
+  "direct_references": 31,
+  "origin": "teacher_forcing_oracle",
+  "autonomous_accuracy_measured": false
+}

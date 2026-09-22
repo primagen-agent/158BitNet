@@ -1,0 +1,19 @@
+{
+ "id": "V3-016",
+ "status": "frozen_trunk_ceiling_reached",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "hypothesis": "V3-015 showed per-position canonical span supervision regresses mode (generate labels dilute start). V3-016 decouples: mode CE only at START-position canonical variants (V3-013 pattern), span supervision (fine_loss fact/value/boundary) at ALL canonical positions.",
+ "changes": {
+  "mode_supervision": "canonical mode CE only where label==1 (START positions)",
+  "span_supervision": "fine_loss fact+value+boundary at all canonical positions (weight 2x)",
+  "base": "V3-013 ckpt-440"
+ },
+ "evaluation": "EV-011 same panel/gates",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-21",
+  "via": "goal directive"
+ },
+ "result": "Six rounds of readout training on frozen trunk (V3-008..016: weighting 2x/4x/8x, per-position, decoupled) consistently fail value selection - always copies the distractor city (Aarhus/Breda). The frozen trunk span/fact representations cannot distinguish the asked-about fact from the distractor at canonical prefixes. Frozen-trunk approach ceiling reached."
+}

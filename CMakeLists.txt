@@ -78,6 +78,8 @@ add_library(bitnet STATIC
     src/quant_tq2_0.c
     src/quant_q4k.c
     src/quant_q6k.c
+    src/quant_q8k.c
+    src/neural_memory.c
     src/ops.c
     src/sampler.c
     src/thread_config.c
@@ -137,6 +139,23 @@ add_executable(openai_server
 target_include_directories(openai_server PRIVATE src)
 target_link_libraries(openai_server PRIVATE bitnet)
 
+add_executable(inference_probe tools/inference_probe.c)
+add_executable(c_neural_server tools/c_neural_server.c)
+target_include_directories(c_neural_server PRIVATE src include)
+target_link_libraries(c_neural_server PRIVATE bitnet m)
+target_include_directories(inference_probe PRIVATE src)
+target_link_libraries(inference_probe PRIVATE bitnet)
+
+# Optional independent oracle, never a dependency of the C runtime.
+option(BITNET_BUILD_LLAMA_REFERENCE "Build the external llama.cpp test oracle" OFF)
+if(BITNET_BUILD_LLAMA_REFERENCE)
+    enable_language(CXX)
+    find_package(llama CONFIG REQUIRED)
+    add_executable(llama_reference_probe tools/llama_reference_probe.cpp)
+    target_compile_features(llama_reference_probe PRIVATE cxx_std_17)
+    target_link_libraries(llama_reference_probe PRIVATE llama)
+endif()
+
 if(BITNET_BUILD_TESTS)
 enable_testing()
 
@@ -150,6 +169,11 @@ add_executable(test_quant_tq2_0 tests/test_quant_tq2_0.c)
 target_include_directories(test_quant_tq2_0 PRIVATE src)
 target_link_libraries(test_quant_tq2_0 PRIVATE bitnet)
 add_test(NAME test_quant_tq2_0 COMMAND test_quant_tq2_0)
+
+add_executable(test_quant_q8k tests/test_quant_q8k.c)
+target_include_directories(test_quant_q8k PRIVATE src)
+target_link_libraries(test_quant_q8k PRIVATE bitnet)
+add_test(NAME test_quant_q8k COMMAND test_quant_q8k)
 
 add_executable(test_tokenizer tests/test_tokenizer.c)
 target_include_directories(test_tokenizer PRIVATE src)
@@ -320,6 +344,22 @@ add_test(NAME test_memory_snapshot COMMAND test_memory_snapshot)
 
 add_executable(test_resident_identity_parity tests/test_resident_identity_parity.c)
 add_executable(resident_probe tools/resident_probe.c)
+add_executable(memory_feature_probe tools/memory_feature_probe.c)
+target_link_libraries(memory_feature_probe PRIVATE bitnet m)
+add_executable(memory_operator_probe tools/memory_operator_probe.c)
+target_include_directories(memory_operator_probe PRIVATE src)
+target_link_libraries(memory_operator_probe PRIVATE bitnet m)
+add_executable(memory_gradient_probe tools/memory_gradient_probe.c)
+target_include_directories(memory_gradient_probe PRIVATE src)
+target_link_libraries(memory_gradient_probe PRIVATE bitnet m)
+add_executable(memory_gradient_reference tools/memory_gradient_probe.c)
+target_compile_definitions(memory_gradient_reference PRIVATE BITNET_GRADIENT_REFERENCE=1)
+target_link_libraries(memory_gradient_reference PRIVATE bitnet m)
+add_executable(memory_continuous_probe tools/memory_continuous_probe.c)
+target_include_directories(memory_continuous_probe PRIVATE src)
+target_link_libraries(memory_continuous_probe PRIVATE bitnet m)
+add_executable(memory_prefix_probe tools/memory_prefix_probe.c)
+target_link_libraries(memory_prefix_probe PRIVATE bitnet m)
 target_include_directories(resident_probe PRIVATE src)
 target_link_libraries(resident_probe PRIVATE bitnet m)
 target_include_directories(test_resident_identity_parity PRIVATE src)

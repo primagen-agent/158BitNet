@@ -1,0 +1,21 @@
+{
+  "id": "CG-001-step50-generation",
+  "purpose": "Evaluate the completed first interval before any further training",
+  "checkpoint_sha256": "a8976841239f18520842e75551dfbc8681c27f6d25e0784fed03c1efcb5585d9",
+  "baseline_sha256": "cb6b2f6292352797b9e33ca4326a6836d9fed8eb8b37ed1423227bf4d36491ef",
+  "panel": "Exact ordered 16 baseline IDs; first two sorted development worlds, both languages, original/swapped_values/empty/ordinary_original",
+  "selection_after_generation": false,
+  "max_new_tokens": 32,
+  "decode": "greedy",
+  "template": "gguf-chatml-v2",
+  "neural_fusion": "Python FP32 loaded from checkpoint; source independently encoded by bound C encoder",
+  "generation": "Fresh ordinary C reference, fresh C base, fresh C continuous projection at every predicted token",
+  "source_text_in_decoder_prompt": false,
+  "teacher_forced_generation": false,
+  "kv_reuse": false,
+  "internal_prefill_kv_buffers": true,
+  "zero_trained_residual": "Allowed and recorded; unlike the untrained perturbation diagnostic it is not an error",
+  "review": "Two independent blind model reviewers; retain disagreement, missing, truncation and all denominators",
+  "scope": "Single supplied episode component; not automatic write, full C fusion, HTTP or LoCoMo",
+  "stop": "No additional optimizer steps or deployment before reviewing raw answers and paired controls"
+}

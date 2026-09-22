@@ -1,0 +1,51 @@
+{
+  "id": "CG-002",
+  "status": "first_50_failed_grounded_recall_no_expansion",
+  "phase": "P2B_single_supplied_episode_pilot",
+  "prerequisites_complete": false,
+  "launch_command": "/home/ubuntu/miniforge3/envs/metis/bin/python /home/ubuntu/158bitnet-locomo/build/cg002-stage-3c02eb07/source/python/train_role_separated_memory.py --experiment /home/ubuntu/158bitnet-locomo/build/cg002-stage-3c02eb07/source/training/memory/neural-system/experiments/CG-002.json --features /home/ubuntu/158bitnet-locomo/build/cg001-stage-4f0a5ccd/features --output /home/ubuntu/158bitnet-locomo/build/cg002-stage-3c02eb07/run-first50 --device cuda --baseline /home/ubuntu/158bitnet-locomo/build/cg001-stage-4f0a5ccd/baseline.json --authorization /home/ubuntu/158bitnet-locomo/build/cg002-stage-3c02eb07/source/training/memory/neural-system/checks/CG-002-launch.json",
+  "training_approved": false,
+  "approval_scope": "The first 50 steps and fixed-panel native generation/review completed. Grounded recall and value-swap pairs remain 0/8 and 0/4. No expansion or deployment; the two-candidate screening budget is exhausted. Retained launch evidence describes the completed interval only.",
+  "source_manifest": "checks/CG-002-launch.json",
+  "native_backend_certificate": "checks/CG-002-native.json",
+  "cuda_preflight": "checks/CG-002-cuda-preflight.json",
+  "loss_version": "role-supervision-v1",
+  "deployment_approved": false,
+  "evidence": ["reviews/CG-001/PROCESS.md", "checks/DG-007-result.json", "CONTROLLED_READ.md"],
+  "hypothesis": "Explicitly separating task control, grounded content generation and uncertainty generation can prevent uncertainty/ordinary-language shortcuts from replacing memory learning.",
+  "intervention_scope": "Combined engineering correction, not a single-factor attribution experiment. No evidence of improved memory accuracy yet.",
+  "variant_budget": "Second candidate in the existing two-variant CG pilot budget; do not silently add a third variant or parameter sweep",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "data_manifest": "data/CG-001-pilot.manifest.json",
+  "initial_seed": 3180923,
+  "initialization": "Fresh weights, not resumed from failed step50. Zero output matrices; nonzero content gain as qualified in DG-007. Separate full-rank uncertainty feature encoder from the current normalized query hidden, without source-value or classifier-hidden inputs.",
+  "forward": {
+    "control": "Predict three state logits only from initial user-prefill hidden and neural source features. Bind one decision to the reply; learned argmax, not gold state or keyword rules.",
+    "normal": "Exact frozen C base logits",
+    "supported": "Frozen C base plus neural content residual through the frozen output head",
+    "insufficient": "Frozen C base plus a separate query-conditioned uncertainty residual through the frozen output head",
+    "training_outputs": "Compute state logits and both branch distributions without labels; select supervised loss terms only after forward. Semantic evaluation always uses predicted state, never the reference state."
+  },
+  "loss": {
+    "state": "Initial-prefix state CE with coefficient 1",
+    "supported": "Complete reply CE including EOS on the content distribution; no uncertainty-branch answer CE",
+    "insufficient": "Complete reply CE including EOS on the uncertainty distribution; no content-branch answer CE",
+    "normal": "Mean of KL(P_base || P_content) and KL(P_base || P_uncertainty); no reference-answer CE. Initial and teacher-forced prefix features remain frozen C inputs; this does not guarantee unseen-prefix preservation.",
+    "reduction": "Reply-token mean per example, existing sample weights and batch mean normalization by 1.5; no additional resampling",
+    "coefficient_freeze_gate": "Equations implemented and checked against independent KL arithmetic and gradient routing fixtures; frozen before the first training step, no coefficient sweep"
+  },
+  "planned_optimizer": {"name": "AdamW", "learning_rate": 0.0001, "weight_decay": 0.01, "batch_size": 4, "gradient_clip_norm": 1.0, "precision": "float32", "amp": false, "tf32": false},
+  "first_interval_steps": 50,
+  "automatic_continuation": false,
+  "completed_interval": {"optimizer_steps": 50, "result": "checks/CG-002-step50.json", "local_checkpoint": "build/neural-memory-cg002-step-000050.pt", "checkpoint_sha256": "eb6b9a551c616d08a2aa0e8d183a63233c87a3c10e296f290a7b48b99dea716d", "native_free_generation_complete": true, "free_generation_review": "reviews/CG-002/score.json", "native_audit": "reviews/CG-002/native-audit.json"},
+  "evaluation": "Same 16-case C free-generation panel, unchanged baseline, same greedy/32-token/template constraints; independent blind review, value-swap/removal pairs, wrong-subject diagnostics separate. Per-branch teacher-forced loss is an oracle component diagnostic, never system accuracy.",
+  "stop": "Stop after 50 steps for real C generation/review. No expansion if grounded pairs do not improve or ordinary chat regresses. Retain old failed checkpoint and every denominator.",
+  "completed_first_interval_gates": [
+    "Implement explicit role-separated model with label-free forward and fixed predicted prefill decision",
+    "Verify labels only affect post-forward losses; remove generation-gradient path to private classifier parameters without disguising a surrogate as the original joint objective",
+    "Verify normal preservation loss and exact predicted-normal/disabled bypass; base errors remain reported",
+    "Verify finite live gradients, zero-output identity, C projection parity and native tokenizer/template/domain binding",
+    "Freeze source/data/baseline manifest and qualify CUDA before registering a runnable command"
+  ],
+  "constraints": {"kv_reuse": false, "lora": false, "svd": false, "nas_ng": false, "backbone_trainable": false, "source_text_in_prompt": false, "locomo_training_or_selection": false, "gold_serving_routing": false}
+}

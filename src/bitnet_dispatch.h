@@ -3,6 +3,7 @@
 
 #include "cpu_detect.h"
 #include "quant_q6k.h"
+#include "quant_q8k.h"
 
 /* Function-pointer table. Each public kernel in the runtime has one slot.
  * Slots are added incrementally as phases bring kernels online; entries
@@ -13,6 +14,10 @@
  * directly via #ifdef in bitnet_dispatch.c. */
 typedef struct bitnet_dispatch {
     bitnet_cpu_tier_t tier;
+    int (*quantize_q8k)(const float *, int, bitnet_q8k_block_t *);
+    int (*matmul_q8k)(const void *, int, int, int, const float *, float *);
+    void (*gguf_rms_norm)(float *, const float *, const float *, int, float);
+    float (*gguf_dot)(const float *, int, const float *, int, int);
 
     /* ops.c kernels (Phase 2) */
     void (*rms_norm_eps)(float *x, const float *weight, int n, float eps);

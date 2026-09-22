@@ -1,0 +1,23 @@
+{
+ "id": "V3-019",
+ "status": "full_unfreeze_degrades_route_mode_without_fixing_value",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "hypothesis": "V3-018 proved full unfreezing moves span selection (Aarhus->Gdansk) but 100 steps at lr=1e-5 is insufficient. 1000 steps at lr=1e-4 (the original trunk lr) should converge.",
+ "changes": {
+  "trainable": "ALL parameters",
+  "lr": "1e-4",
+  "steps": 1000,
+  "base": "V3-013 ckpt-440",
+  "value_weight": "2x canonical",
+  "batching": "mini-batch batch=32 (was full-batch 3272, ~100x speedup)",
+  "checkpoints": "every 100 steps"
+ },
+ "evaluation": "EV-014 same panel/gates",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-22",
+  "via": "stop-hook directive"
+ },
+ "result": "1000 steps mini-batch lr=1e-4: BOTH ckpt-500 and ckpt-1000 degrade route (role_swap answers instead of refusing), corrupt normal arithmetic, add overtriggers (3-4), and STILL copy wrong values. Full unfreeze with uniform lr consistently destroys calibrated route/mode without fixing value selection. 9 rounds (V3-008..019) exhaustively prove this architecture cannot achieve grounded through parameter unfreezing alone."
+}

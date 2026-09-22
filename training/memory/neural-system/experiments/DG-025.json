@@ -1,0 +1,12 @@
+{
+ "id": "DG-025",
+ "status": "registered_time_scoped_teacher_compile",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "scope": "Time-scoped teacher-span compilation interface for JB-002 historical_stated records. The pinned compile_teacher/positive_bytes chain stays byte-identical and untouched; a new module delegates every current-time compilation to the original compiler and adds a 2020-time branch using the same cursor/append machinery and TeacherTrajectory format. Zero model forward, zero optimizer, no serving.",
+ "delegation_gate": "Any record with query_time current or absent must compile through the original compile_teacher unchanged; trajectory equality (full dataclass compare) is asserted against direct compile_teacher calls on JB-001 panel records and JB-002 train correct/multi_fact records.",
+ "time_gate": "All 48 train historical_stated records compile to route-1 trajectories: value span bytes equal the 2020 clause value exactly, one START and one END, explicit EOS final, full reply bytes preserved, capacity respected, compile-twice deterministic. Current facts of the same person/relation must NOT be selected. Dev/test stay uncompiled, mirroring the pinned compiler's train-only policy.",
+ "rejection_gate": "Duplicated 2020 clause or missing 2020 fact raises; no silent fallback to the current-time span. Time-scoped compilation is only defined for supported targets.",
+ "limits": "Compiler-side interface only; no neural forward, no gradient, no checkpoint, no C calls beyond the frozen tokenizer already used by encode_value. DG-022-style zero-update supervision over JB-002 is the next registered item.",
+ "stop": "If any historical_stated record fails to compile or a delegation mismatch appears, fix the new module only; do not modify pinned files or hand-patch outputs. Training budgets unchanged."
+}

@@ -1,0 +1,12 @@
+{
+  "format": "dg025-time-scoped-compile-check-v1",
+  "registration_sha256": "d93238d55778e5264e1c135d0fcd421421011893cea30747993cd6bcde4d9cc2",
+  "jb2_train_supported_compiled": 144,
+  "historical_stated": 48,
+  "current_delegated": 96,
+  "jb1_delegation_sample": 6,
+  "delegation_identity_mismatches": 0,
+  "passed": true,
+  "optimizer_steps": 0,
+  "model_forward": false
+}

@@ -1,8 +1,21 @@
 #include "bitnet.h"
 
+/* Compiled out in the runtime. Only the isolated operator diagnostic defines
+ * these observers; no environment switch or serving-side callback is added. */
+#ifndef BITNET_TRACE_FLOAT
+#define BITNET_TRACE_FLOAT(stage, layer, token, data, size) ((void)0)
+#endif
+#ifndef BITNET_TRACE_Q8
+#define BITNET_TRACE_Q8(stage, layer, token, data, size, scale) ((void)0)
+#endif
+#ifndef BITNET_DIAGNOSTIC_INJECT
+#define BITNET_DIAGNOSTIC_INJECT(layer, token, hidden, size) ((void)0)
+#endif
+
 #include "bitnet_dispatch.h"
 #include "bitnet_internal.h"
 #include "gguf.h"
+#include "quant_q8k.h"
 #include "sha256.h"
 #include "ops.h"
 #include "quant_q4k.h"
@@ -982,6 +995,9 @@ static void bitnet_scale_vector(float *x, float scale, int n) {
 
 void bitnet_residual_add_scaled_impl(float *out, const float *a, const float *b,
                                      float b_scale, int n) {
+#if defined(__clang__)
+#pragma clang fp contract(off)
+#endif
     int i = 0;
     if (b_scale == 1.0f) {
         bitnet_residual_add(out, a, b, n);
@@ -993,12 +1009,14 @@ void bitnet_residual_add_scaled_impl(float *out, const float *a, const float *b,
         for (; i + 3 < n; i += 4) {
             float32x4_t av = vld1q_f32(a + i);
             float32x4_t bv = vld1q_f32(b + i);
-            vst1q_f32(out + i, vfmaq_f32(av, bv, sv));
+            vst1q_f32(out + i, vaddq_f32(av, vmulq_f32(bv, sv)));
         }
     }
 #endif
     for (; i < n; ++i) {
-        out[i] = a[i] + b[i] * b_scale;
+        /* The GGUF graph has separate SCALE and ADD nodes, not an FMA. */
+        volatile float scaled = b[i] * b_scale;
+        out[i] = a[i] + scaled;
     }
 }
 
@@ -3182,14 +3200,17 @@ bitnet_context_t *bitnet_create_context(bitnet_model_t *model, int max_tokens) {
     for (int pos = 0; pos < max_tokens; ++pos) {
         const float *rope_factors = max_tokens > (int)model->context_length ?
                                     model->rope_factors_long : model->rope_factors_short;
+        float theta_scale = powf(model->rope_freq_base, -2.0f / (float)model->rope_dimension_count);
+        float angle = (float)pos;
         for (int j = 0; j < (int)model->rope_dimension_count / 2; ++j) {
-            float theta = 1.0f / powf(model->rope_freq_base, (float)(2 * j) / (float)head_dim);
+            float theta = angle;
             if (rope_factors != NULL && (size_t)j < model->rope_factor_count && rope_factors[j] > 0.0f) {
                 theta /= rope_factors[j];
             }
             size_t idx = (size_t)pos * (size_t)(model->rope_dimension_count / 2u) + (size_t)j;
-            ctx->rope_cos[idx] = cosf((float)pos * theta);
-            ctx->rope_sin[idx] = sinf((float)pos * theta);
+            ctx->rope_cos[idx] = cosf(theta);
+            ctx->rope_sin[idx] = sinf(theta);
+            angle *= theta_scale;
         }
     }
 
@@ -3492,6 +3513,123 @@ static void BITNET_MAYBE_UNUSED rope_apply_cached(float *x, int n_heads, int hea
 
 /* ---- bitnet_eval: full 28-block llama transformer forward pass (mmap) ---- */
 
+/* GGUF reference RMSNorm rounds each square in F32 and sums in F64. A
+ * whole-row F32 reduction can cross Q8_K rounding boundaries downstream. */
+void bitnet_gguf_rms_norm_impl(float *dst, const float *src, const float *weight,
+                                int count, float eps) {
+    double sum = 0.0;
+    for (int i = 0; i < count; ++i) sum += (double)(src[i] * src[i]);
+    float mean = (float)(sum / count);
+    float scale = 1.0f / sqrtf(mean + eps);
+#if defined(__ARM_NEON)
+    {
+        /* The F64 square sum stays sequential; the element-wise tail is
+         * order-free and vectorizes without changing any result. */
+        float32x4_t sv = vdupq_n_f32(scale);
+        int i = 0;
+        for (; i + 4 <= count; i += 4)
+            vst1q_f32(dst + i, vmulq_f32(vmulq_f32(vld1q_f32(src + i), sv),
+                                         vld1q_f32(weight + i)));
+        for (; i < count; ++i) dst[i] = (src[i] * scale) * weight[i];
+    }
+#else
+    for (int i = 0; i < count; ++i) dst[i] = (src[i] * scale) * weight[i];
+#endif
+}
+
+/* Four independent F32 lanes per accumulator, with the same reduction tree
+ * for contiguous QK and strided V. Zero padding keeps short causal rows from
+ * using a different reduction than the reference's masked cache rows. */
+float bitnet_gguf_dot_impl(const float *x, int xs, const float *y, int ys, int n) {
+#if defined(__ARM_NEON)
+    /* Contiguous x contiguous fast path: identical per-lane accumulator
+     * mapping, FMA order and reduction tree as the generic loop below. */
+    if (xs == 1 && ys == 1) {
+        float32x4_t a0 = vdupq_n_f32(0), a1 = vdupq_n_f32(0),
+                    a2 = vdupq_n_f32(0), a3 = vdupq_n_f32(0);
+        int i = 0;
+        for (; i + 16 <= n; i += 16) {
+            a0 = vfmaq_f32(a0, vld1q_f32(x + i + 0), vld1q_f32(y + i + 0));
+            a1 = vfmaq_f32(a1, vld1q_f32(x + i + 4), vld1q_f32(y + i + 4));
+            a2 = vfmaq_f32(a2, vld1q_f32(x + i + 8), vld1q_f32(y + i + 8));
+            a3 = vfmaq_f32(a3, vld1q_f32(x + i + 12), vld1q_f32(y + i + 12));
+        }
+        if (i < n) {
+            float ta[16] = {0}, tb[16] = {0};
+            for (int j = i; j < n; ++j) { ta[j - i] = x[j]; tb[j - i] = y[j]; }
+            a0 = vfmaq_f32(a0, vld1q_f32(ta + 0), vld1q_f32(tb + 0));
+            a1 = vfmaq_f32(a1, vld1q_f32(ta + 4), vld1q_f32(tb + 4));
+            a2 = vfmaq_f32(a2, vld1q_f32(ta + 8), vld1q_f32(tb + 8));
+            a3 = vfmaq_f32(a3, vld1q_f32(ta + 12), vld1q_f32(tb + 12));
+        }
+        return vaddvq_f32(vaddq_f32(vaddq_f32(a0, a2), vaddq_f32(a1, a3)));
+    }
+    float32x4_t acc[4] = {vdupq_n_f32(0), vdupq_n_f32(0), vdupq_n_f32(0), vdupq_n_f32(0)};
+    for (int i = 0; i < n; i += 16) {
+        for (int k = 0; k < 4; ++k) {
+            int pos = i + 4 * k;
+            float a[4] = {0}, b[4] = {0};
+            for (int j = 0; j < 4 && pos + j < n; ++j) {
+                a[j] = x[(size_t)(pos + j) * xs]; b[j] = y[(size_t)(pos + j) * ys];
+            }
+            acc[k] = vfmaq_f32(acc[k], vld1q_f32(a), vld1q_f32(b));
+        }
+    }
+    return vaddvq_f32(vaddq_f32(vaddq_f32(acc[0], acc[2]), vaddq_f32(acc[1], acc[3])));
+#else
+    float acc[16] = {0}, lane[4];
+    for (int i = 0; i < n; ++i) acc[i % 16] = fmaf(x[(size_t)i * xs], y[(size_t)i * ys], acc[i % 16]);
+    for (int i = 0; i < 4; ++i) lane[i] = (acc[i] + acc[i + 8]) + (acc[i + 4] + acc[i + 12]);
+    return (lane[0] + lane[1]) + (lane[2] + lane[3]);
+#endif
+}
+
+static void bitnet_gguf_rms_norm(float *dst, const float *src, const float *weight, int n, float eps) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    g_bitnet_dispatch->gguf_rms_norm(dst, src, weight, n, eps);
+}
+
+static float bitnet_gguf_dot(const float *x, int xs, const float *y, int ys, int n) {
+    if (g_bitnet_dispatch == NULL) bitnet_dispatch_init();
+    return g_bitnet_dispatch->gguf_dot(x, xs, y, ys, n);
+}
+
+#if defined(__ARM_NEON)
+/* Fused GGUF-parity value accumulation: for every output column d it
+ * reproduces bitnet_gguf_dot(hs, 1, v + d, head_dim, n) with the identical
+ * per-lane FMA chains and reduction tree while reading each cached row once.
+ * Element index i feeds slot (i & 15); the final combine mirrors
+ * vaddvq_f32(vaddq(vaddq(acc0, acc2), vaddq(acc1, acc3))) per lane j. */
+static void bitnet_gguf_value_columns(const float *hs, const float *v,
+                                      int head_dim, int n, float *out) {
+    if (head_dim <= 0 || head_dim % 4 || head_dim > 128 || n < 0) {
+        for (int d = 0; d < head_dim; ++d)
+            out[d] = bitnet_gguf_dot(hs, 1, v + d, head_dim, n);
+        return;
+    }
+    const int nv = head_dim / 4;
+    float32x4_t bank[16 * 32];
+    for (int s = 0; s < 16 * nv; ++s) bank[s] = vdupq_n_f32(0);
+    for (int i = 0; i < n; ++i) {
+        float32x4_t svec = vld1q_dup_f32(hs + i);
+        const float *row = v + (size_t)i * (size_t)head_dim;
+        float32x4_t *slot = bank + (i & 15) * nv;
+        for (int w = 0; w < nv; ++w) slot[w] = vfmaq_f32(slot[w], svec, vld1q_f32(row + 4 * w));
+    }
+    for (int w = 0; w < nv; ++w) {
+        float32x4_t t0 = vaddq_f32(vaddq_f32(bank[0 * nv + w], bank[8 * nv + w]),
+                                   vaddq_f32(bank[4 * nv + w], bank[12 * nv + w]));
+        float32x4_t t1 = vaddq_f32(vaddq_f32(bank[1 * nv + w], bank[9 * nv + w]),
+                                   vaddq_f32(bank[5 * nv + w], bank[13 * nv + w]));
+        float32x4_t t2 = vaddq_f32(vaddq_f32(bank[2 * nv + w], bank[10 * nv + w]),
+                                   vaddq_f32(bank[6 * nv + w], bank[14 * nv + w]));
+        float32x4_t t3 = vaddq_f32(vaddq_f32(bank[3 * nv + w], bank[11 * nv + w]),
+                                   vaddq_f32(bank[7 * nv + w], bank[15 * nv + w]));
+        vst1q_f32(out + 4 * w, vaddq_f32(vaddq_f32(t0, t1), vaddq_f32(t2, t3)));
+    }
+}
+#endif
+
 int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     bitnet_model_t *model = NULL;
     const bitnet_tensor_cache_t *cache = NULL;
@@ -3661,11 +3799,15 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 #endif
 
             /* ===== Block step 1: attn RMSNorm ===== */
+            BITNET_TRACE_FLOAT(1, block_idx, token_idx, hidden, emb_dim);
             {
                 const float *norm_w = (const float *)gguf_get_tensor_ptr(&model->gguf, bt->attn_norm);
                 if (norm_w == NULL) goto cleanup;
                 /* rms_norm into tmp_out, then swap pointers:
                  * tmp_out = norm(hidden * norm_w), hidden unchanged (residual) */
+                if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
+                    bitnet_gguf_rms_norm(tmp_out, hidden, norm_w, emb_dim, model->rms_norm_eps);
+                } else {
 #if BITNET_USE_TQ2_I2S
                 if (bitnet_rms_norm_quant_tq2_i8(tmp_out, hidden, norm_w, emb_dim,
                                                   tq2_qhidden, &tq2_hidden_scale,
@@ -3677,11 +3819,27 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 bitnet_rms_norm_inplace_eps(tmp_out, hidden, norm_w, emb_dim,
                                             model->rms_norm_eps);
 #endif
+                }
                 { float *swap_tmp = hidden; hidden = tmp_out; tmp_out = swap_tmp; }
             }
 
             /* ===== Block step 2a/2b/2c: q/k/v projection ===== */
+            BITNET_TRACE_FLOAT(2, block_idx, token_idx, hidden, emb_dim);
+#if BITNET_USE_TQ2_I2S
+            BITNET_TRACE_Q8(17, block_idx, token_idx, tq2_qhidden, emb_dim, tq2_hidden_scale);
+#endif
             double profile_step_start = profile_eval ? monotonic_seconds() : 0.0;
+            if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
+                /* One activation quantization serves q, k and v. */
+                bitnet_q8k_block_t q8k_hidden[BITNET_Q8K_MAX_BLOCKS];
+                if (bitnet_quantize_q8k(hidden, emb_dim, q8k_hidden) != 0 ||
+                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->attn_q), bt->attn_q->type,
+                                               q_dim, emb_dim, q8k_hidden, q) != 0 ||
+                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->attn_k), bt->attn_k->type,
+                                               kv_dim, emb_dim, q8k_hidden, k) != 0 ||
+                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->attn_v), bt->attn_v->type,
+                                               kv_dim, emb_dim, q8k_hidden, v) != 0) goto cleanup;
+            } else {
 #if BITNET_USE_TQ2_I2S
             /* Quantized together with attn RMSNorm above. */
 #elif BITNET_USE_TQ2_TL1_LUT
@@ -3802,6 +3960,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
 #endif
 #endif /* BITNET_USE_TQ2_I2S */
             }
+            }
             if (bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_ATTN_Q, hidden, q) != 0 ||
                 bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_ATTN_K, hidden, k) != 0 ||
                 bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_ATTN_V, hidden, v) != 0) {
@@ -3812,6 +3971,9 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
 
             /* ===== Block step 2d: RoPE on q and k ===== */
+            BITNET_TRACE_FLOAT(3, block_idx, token_idx, q, q_dim);
+            BITNET_TRACE_FLOAT(4, block_idx, token_idx, k, kv_dim);
+            BITNET_TRACE_FLOAT(5, block_idx, token_idx, v, kv_dim);
             {
 
                 size_t rope_offset = (size_t)current_pos * (size_t)(rope_dim / 2);
@@ -3824,6 +3986,8 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
 
             /* ===== Block step 2e: KV cache store ===== */
+            BITNET_TRACE_FLOAT(6, block_idx, token_idx, q, q_dim);
+            BITNET_TRACE_FLOAT(7, block_idx, token_idx, k, kv_dim);
             {
                 for (int kv_h = 0; kv_h < n_kv_heads; ++kv_h) {
                     size_t head_offset = (size_t)kv_h * (size_t)head_dim;
@@ -3852,6 +4016,27 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 float inv_sqrt_head_dim = 1.0f / sqrtf((float)head_dim);
                 int gqa_ratio = n_heads / n_kv_heads;
 
+                if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0 &&
+                    ctx->kv_cache_type == BITNET_KV_CACHE_F32) {
+                    for (int h = 0; h < n_heads; ++h) {
+                        int kvh = h / gqa_ratio;
+                        float *hs = scores + (size_t)h * n_positions;
+                        const float *qh = q + (size_t)h * head_dim;
+                        for (int p = 0; p < n_positions; ++p) {
+                            const float *kh = ctx->key_cache + bitnet_kv_cache_offset(ctx, block_idx, kvh, p);
+                            hs[p] = bitnet_gguf_dot(qh, 1, kh, 1, head_dim) * inv_sqrt_head_dim;
+                        }
+                        bitnet_softmax(hs, n_positions);
+                        const float *vh = ctx->value_cache + bitnet_kv_cache_offset(ctx, block_idx, kvh, 0);
+#if defined(__ARM_NEON)
+                        bitnet_gguf_value_columns(hs, vh, head_dim, n_positions,
+                                                  attn_buffer + (size_t)h * head_dim);
+#else
+                        for (int d = 0; d < head_dim; ++d)
+                            attn_buffer[(size_t)h * head_dim + d] = bitnet_gguf_dot(hs, 1, vh + d, head_dim, n_positions);
+#endif
+                    }
+                } else {
                 if (ctx->kv_cache_type == BITNET_KV_CACHE_Q8) {
                     for (int query_head = 0; query_head < n_heads; ++query_head) {
                         ctx->attn_q8_scales[query_head] =
@@ -3987,11 +4172,13 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                     }
                 }
             }
+                }
             if (profile_eval) {
                 profile_attn_sec += monotonic_seconds() - profile_step_start;
             }
 
             /* ===== Block step 3: attn_output projection ===== */
+            BITNET_TRACE_FLOAT(8, block_idx, token_idx, attn_buffer, attn_dim);
             profile_step_start = profile_eval ? monotonic_seconds() : 0.0;
             if (model->use_attn_sub_norm) {
                 const float *sub_norm_w =
@@ -4037,6 +4224,13 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
 #endif
             {
+                if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
+                    bitnet_q8k_block_t q8k_attn[BITNET_Q8K_MAX_BLOCKS];
+                    if (bitnet_quantize_q8k(attn_buffer, attn_dim, q8k_attn) != 0 ||
+                        bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->attn_output),
+                                                   bt->attn_output->type, emb_dim, attn_dim,
+                                                   q8k_attn, down) != 0) goto cleanup;
+                } else {
 #if BITNET_USE_TQ2_I2S
                 if (bitnet_tq2_0_matmul_i2s_neon_parallel(bw->attn_output,
                                                    model->i2s_cache.scales[block_idx * 7 + 3],
@@ -4062,11 +4256,13 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                                              tq2_lut, down);
 #endif
 #endif /* BITNET_USE_TQ2_I2S */
+                }
                 if (bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_ATTN_OUTPUT,
                                       attn_buffer, down) != 0) {
                     goto cleanup;
                 }
                 /* residual add: use saved residual (in tmp_out) + attention output */
+                BITNET_TRACE_FLOAT(9, block_idx, token_idx, down, emb_dim);
                 bitnet_residual_add_scaled(hidden, tmp_out, down,
                                            model->is_minicpm ? model->residual_scale : 1.0f,
                                            emb_dim);
@@ -4076,11 +4272,16 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
 
             /* ===== Block step 4: ffn RMSNorm ===== */
+            BITNET_DIAGNOSTIC_INJECT(block_idx, token_idx, hidden, emb_dim);
+            BITNET_TRACE_FLOAT(10, block_idx, token_idx, hidden, emb_dim);
             {
                 const float *norm_w = (const float *)gguf_get_tensor_ptr(&model->gguf, bt->ffn_norm);
                 if (norm_w == NULL) goto cleanup;
                 /* rms_norm into tmp_out, then swap pointers:
                  * tmp_out = norm(hidden * norm_w), hidden unchanged (residual) */
+                if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
+                    bitnet_gguf_rms_norm(tmp_out, hidden, norm_w, emb_dim, model->rms_norm_eps);
+                } else {
 #if BITNET_USE_TQ2_I2S
                 if (bitnet_rms_norm_quant_tq2_i8(tmp_out, hidden, norm_w, emb_dim,
                                                   tq2_qhidden, &tq2_hidden_scale,
@@ -4092,11 +4293,25 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 bitnet_rms_norm_inplace_eps(tmp_out, hidden, norm_w, emb_dim,
                                             model->rms_norm_eps);
 #endif
+                }
                 { float *swap_tmp = hidden; hidden = tmp_out; tmp_out = swap_tmp; }
             }
 
             /* ===== Block step 5a: ffn_gate projection ===== */
+            BITNET_TRACE_FLOAT(11, block_idx, token_idx, hidden, emb_dim);
+#if BITNET_USE_TQ2_I2S
+            BITNET_TRACE_Q8(18, block_idx, token_idx, tq2_qhidden, emb_dim, tq2_hidden_scale);
+#endif
             profile_step_start = profile_eval ? monotonic_seconds() : 0.0;
+            if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
+                /* One activation quantization serves gate and up. */
+                bitnet_q8k_block_t q8k_hidden[BITNET_Q8K_MAX_BLOCKS];
+                if (bitnet_quantize_q8k(hidden, emb_dim, q8k_hidden) != 0 ||
+                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->ffn_gate), bt->ffn_gate->type,
+                                               ffn_dim, emb_dim, q8k_hidden, gate) != 0 ||
+                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->ffn_up), bt->ffn_up->type,
+                                               ffn_dim, emb_dim, q8k_hidden, up) != 0) goto cleanup;
+            } else {
             {
 #if BITNET_USE_TQ2_I2S
                 /* Quantized together with FFN RMSNorm above. */
@@ -4178,6 +4393,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 }
 #endif
             }
+            }
             if (bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_FFN_GATE, hidden, gate) != 0 ||
                 bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_FFN_UP, hidden, up) != 0) {
                 goto cleanup;
@@ -4187,6 +4403,8 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
 
             /* ===== Block step 5c: activation(gate) and element-wise merge ===== */
+            BITNET_TRACE_FLOAT(12, block_idx, token_idx, gate, ffn_dim);
+            BITNET_TRACE_FLOAT(13, block_idx, token_idx, up, ffn_dim);
             if (model->use_ffn_sub_norm) {
                 /* Sub-norm will recompute the activation max-abs, so use the
                  * no-max activation variant where available to skip the wasted
@@ -4235,7 +4453,14 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
 
             /* ===== Block step 5d: ffn_down projection ===== */
+            BITNET_TRACE_FLOAT(14, block_idx, token_idx, gate, ffn_dim);
             profile_step_start = profile_eval ? monotonic_seconds() : 0.0;
+            if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
+                bitnet_q8k_block_t q8k_gate[BITNET_Q8K_MAX_BLOCKS];
+                if (bitnet_quantize_q8k(gate, ffn_dim, q8k_gate) != 0 ||
+                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->ffn_down), bt->ffn_down->type,
+                                               emb_dim, ffn_dim, q8k_gate, down) != 0) goto cleanup;
+            } else {
             {
 #if BITNET_USE_TQ2_I2S
                 if (bitnet_tq2_0_quantize_vec_i8_known_max(gate, ffn_dim,
@@ -4244,6 +4469,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                                            tq2_ffn_max_abs) != 0) {
                     goto cleanup;
                 }
+                BITNET_TRACE_Q8(20, block_idx, token_idx, tq2_qffn, ffn_dim, tq2_ffn_scale);
 #if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
                 if (model->metal_i2s_cache.ctx != NULL &&
                     model->metal_i2s_cache.blocks != NULL &&
@@ -4310,6 +4536,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 }
 #endif
             }
+            }
             if (bitnet_apply_lora(model, block_idx, BITNET_LORA_LAYER_FFN_DOWN, gate, down) != 0) {
                 goto cleanup;
             }
@@ -4318,10 +4545,12 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
 
             /* ===== Block step 5e: residual add ===== */
+            BITNET_TRACE_FLOAT(15, block_idx, token_idx, down, emb_dim);
             bitnet_residual_add_scaled(hidden, tmp_out, down,
                                        model->is_minicpm ? model->residual_scale : 1.0f,
                                        emb_dim);
 
+            BITNET_TRACE_FLOAT(16, block_idx, token_idx, hidden, emb_dim);
             if (ctx->layer_band_count > 0) {
                 int band = ctx->layer_to_band[block_idx];
                 float squared = 0.0f;
@@ -4369,9 +4598,10 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                     (size_t)token_idx * (size_t)emb_dim : ctx->hidden;
                 memcpy(ctx->tmp_out, row,
                        (size_t)emb_dim * sizeof(*ctx->tmp_out));
-                bitnet_rms_norm_eps(
-                    ctx->tmp_out, norm_w, emb_dim,
-                    model->rms_norm_eps);
+                if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0)
+                    bitnet_gguf_rms_norm(ctx->tmp_out, ctx->tmp_out, norm_w, emb_dim, model->rms_norm_eps);
+                else
+                    bitnet_rms_norm_eps(ctx->tmp_out, norm_w, emb_dim, model->rms_norm_eps);
                 memcpy(
                     ctx->last_eval_hidden +
                     (size_t)token_idx * (size_t)emb_dim,
@@ -4383,7 +4613,10 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             }
             ctx->last_eval_hidden_count = n_tokens;
         }
-        bitnet_rms_norm_eps(hidden, norm_w, emb_dim, model->rms_norm_eps);
+        if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0)
+            bitnet_gguf_rms_norm(hidden, hidden, norm_w, emb_dim, model->rms_norm_eps);
+        else
+            bitnet_rms_norm_eps(hidden, norm_w, emb_dim, model->rms_norm_eps);
         if (ctx->last_hidden != NULL) {
             memcpy(ctx->last_hidden, hidden, (size_t)emb_dim * sizeof(*ctx->last_hidden));
         }
@@ -4403,6 +4636,15 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     if (profile_eval) {
         profile_output_start = monotonic_seconds();
     }
+    if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0 && cache->output != NULL &&
+        cache->output->type == BITNET_TARGET_TENSOR_TYPE_Q6_K) {
+        bitnet_q8k_block_t q8k_final[BITNET_Q8K_MAX_BLOCKS];
+        if (bitnet_quantize_q8k(hidden, emb_dim, q8k_final) != 0 ||
+            bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, cache->output), cache->output->type,
+                                       vocab_size, emb_dim, q8k_final, ctx->logits) != 0) goto cleanup;
+        if (model->is_minicpm && model->logit_scale != 0.0f)
+            for (int i = 0; i < vocab_size; ++i) ctx->logits[i] /= model->logit_scale;
+    } else {
 #if BITNET_USE_TQ2_I2S
     bitnet_tq2_0_park_workers();
 #endif
@@ -4416,6 +4658,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                          tq2_qhidden, &tq2_hidden_scale, NULL) != 0) {
             goto cleanup;
         }
+        BITNET_TRACE_Q8(21, (int)model->block_count, n_tokens - 1, tq2_qhidden, emb_dim, tq2_hidden_scale);
         if (model->is_minicpm && model->logit_scale != 0.0f) {
             tq2_hidden_scale /= model->logit_scale;
         }
@@ -4465,6 +4708,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 goto cleanup;
             }
         }
+    }
     }
     if (bitnet_apply_lora(model, -1, BITNET_LORA_LAYER_OUTPUT, hidden, ctx->logits) != 0) {
         goto cleanup;

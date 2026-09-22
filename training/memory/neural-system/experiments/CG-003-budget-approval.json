@@ -1,0 +1,13 @@
+{
+  "experiment": "CG-003",
+  "date": "2026-09-19",
+  "authorization": "Explicit user reply to the two-arm budget question in this task",
+  "user_reply": "批准，前置检查通过后执行",
+  "arms": ["joint_aux", "joint_product"],
+  "steps_per_arm": 50,
+  "total_steps": 100,
+  "additional_seeds": 0,
+  "automatic_continuation": false,
+  "conditional_on_prerequisites": true,
+  "deployment_approved": false
+}

@@ -167,6 +167,10 @@ static void shim_accum_i8_scaled(float *dst, const int8_t *src, float scale, int
 }
 
 bitnet_dispatch_t g_dispatch_scalar = {
+    .quantize_q8k = bitnet_quantize_q8k_impl,
+    .matmul_q8k = bitnet_matmul_q8k_impl,
+    .gguf_rms_norm = bitnet_gguf_rms_norm_impl,
+    .gguf_dot = bitnet_gguf_dot_impl,
     .tier                     = BITNET_TIER_SCALAR,
     .rms_norm_eps             = shim_rms_norm_eps,
     .rms_norm_inplace_eps     = shim_rms_norm_inplace_eps,
@@ -203,6 +207,10 @@ bitnet_dispatch_t g_dispatch_scalar = {
 /* On ARM, the same shims reach the existing NEON implementations because
  * ops.c / quant_tq2_0.c compile their NEON bodies under __ARM_NEON. */
 bitnet_dispatch_t g_dispatch_arm_neon = {
+    .quantize_q8k = bitnet_quantize_q8k_impl,
+    .matmul_q8k = bitnet_matmul_q8k_impl,
+    .gguf_rms_norm = bitnet_gguf_rms_norm_impl,
+    .gguf_dot = bitnet_gguf_dot_impl,
     .tier                     = BITNET_TIER_AVX2, /* placeholder tag */
     .rms_norm_eps             = shim_rms_norm_eps,
     .rms_norm_inplace_eps     = shim_rms_norm_inplace_eps,
@@ -241,6 +249,10 @@ bitnet_dispatch_t g_dispatch_arm_neon = {
  * implemented remain NULL. Phase 2 brings rms_norm online. */
 
 bitnet_dispatch_t g_dispatch_avx2 = {
+    .quantize_q8k = bitnet_quantize_q8k_impl,
+    .matmul_q8k = bitnet_matmul_q8k_impl,
+    .gguf_rms_norm = bitnet_gguf_rms_norm_impl,
+    .gguf_dot = bitnet_gguf_dot_impl,
     .tier                     = BITNET_TIER_AVX2,
     .rms_norm_eps             = bitnet_rms_norm_eps_avx2,
     .rms_norm_inplace_eps     = bitnet_rms_norm_inplace_eps_avx2,
@@ -274,6 +286,10 @@ bitnet_dispatch_t g_dispatch_avx2 = {
 };
 
 bitnet_dispatch_t g_dispatch_avx_vnni = {
+    .quantize_q8k = bitnet_quantize_q8k_impl,
+    .matmul_q8k = bitnet_matmul_q8k_impl,
+    .gguf_rms_norm = bitnet_gguf_rms_norm_impl,
+    .gguf_dot = bitnet_gguf_dot_impl,
     .tier                     = BITNET_TIER_AVX_VNNI,
     .rms_norm_eps             = bitnet_rms_norm_eps_avx_vnni,
     .rms_norm_inplace_eps     = bitnet_rms_norm_inplace_eps_avx_vnni,
@@ -307,6 +323,10 @@ bitnet_dispatch_t g_dispatch_avx_vnni = {
 };
 
 bitnet_dispatch_t g_dispatch_avx512_vnni = {
+    .quantize_q8k = bitnet_quantize_q8k_impl,
+    .matmul_q8k = bitnet_matmul_q8k_impl,
+    .gguf_rms_norm = bitnet_gguf_rms_norm_impl,
+    .gguf_dot = bitnet_gguf_dot_impl,
     .tier                     = BITNET_TIER_AVX512_VNNI,
     .rms_norm_eps             = bitnet_rms_norm_eps_avx512_vnni,
     .rms_norm_inplace_eps     = bitnet_rms_norm_inplace_eps_avx512_vnni,

@@ -1,0 +1,16 @@
+{
+  "id": "DG-017",
+  "status": "registered_v2_interface_zero_update",
+  "optimizer_steps": 0,
+  "deployment_approved": false,
+  "scope": "Untrained joint fact-span/value-span neural interface and post-forward supervision. No autonomous full reply, new checkpoint, training, LoCoMo or sealed test.",
+  "architecture": "Project frozen query/source features to width64. Enumerate all contiguous structurally allowed token spans of length at most16, without punctuation, entity or label rules. Score fact spans conditioned on query, then score nested value spans conditioned on each fact and query. Compute every conditional before labels. Separate normal/supported/insufficient routing and idle generate/start mode. Cursor continuation/end remain deterministic after predicted value selection.",
+  "limits": "At most32 allowed source tokens and512 total feature rows. All source features stay full rank; this is a new small neural head, not SVD/NAS/LoRA compression. Boundaries are token-aligned in this pilot; unsupported gold byte boundaries fail explicitly, never silently dropped. Same-span containment is structural, not proof of semantic joint binding. Fact spans can wrongly include multiple facts.",
+  "initialization": {"seed": 1017, "width": 64},
+  "native_records": ["joint-cff41e673284fbf1c6d9", "joint-3415d75b34a68cb08833", "joint-f417c9409407bcb8e962", "joint-00358fb1f7c2b30e2c7d"],
+  "selection": "First lexicographic training world jb-000, home_city, en/zh correct and role_swap, all four. Use exact existing C source/query encodings; first reply prefix only (before any transported value) may reuse a bank row after exact token ID binding. Read annotations only after forward for labels.",
+  "prefix_gate": "Replay all44 DG-016 raw actual prefixes and bind hidden features to complete token-ID tuples. Reject a different token tuple even with equal decoded text. This lineage check is separate from the four semantic-input gradient fixtures and is not a joined training dataset.",
+  "loss": "Route CE on all cases, fact CE and conditional value CE only on supported annotations, idle mode CE where annotated. Values selected by label indexing AFTER full forward; no gold-conditioned re-forward. Finite connected gradients, no optimizer calls. Normal/insufficient cannot start a value; NULL/empty support disabled structurally.",
+  "gates": ["No labels or source text/IDs in neural score inputs", "All possible eligible spans independent of gold", "Nested joint distribution normalized", "No support on empty source", "Post-forward-only labels and gradients", "Handle derived from prediction or NULL; oracle never relabelled neural", "Frozen model/input version checks", "Actual-prefix feature identity", "No trained-weight/source changes"],
+  "stop": "Keep all failures and random predictions. Zero-update checks are software/math evidence only. V2 remains incomplete until byte boundaries, mode transition data, full actual-prefix feature compilation, independent review protocol and experimental budget are ready."
+}

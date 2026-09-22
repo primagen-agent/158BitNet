@@ -1,0 +1,19 @@
+{
+  "id": "CG-002-step50-generation",
+  "checkpoint_sha256": "eb6b9a551c616d08a2aa0e8d183a63233c87a3c10e296f290a7b48b99dea716d",
+  "baseline_sha256": "cb6b2f6292352797b9e33ca4326a6836d9fed8eb8b37ed1423227bf4d36491ef",
+  "panel": "Same ordered 16 CG-001 baseline cases; no case selection, additions or removed denominators",
+  "route": "Neural argmax on initial user-prefill only, fixed for the reply; no reference labels in forward",
+  "max_new_tokens": 32,
+  "decode": "greedy",
+  "template": "gguf-chatml-v2",
+  "execution": "Two independent case workers, separate tokenizers and C processes/contexts. Each C process uses the qualified four-thread ARM numerical domain; results serialized in original panel order.",
+  "verification": "Every prefix recomputed by ordinary C reference, C zero-residual base and selected-residual C projection. Base hidden/logits must match exactly; normal route must preserve base logits exactly.",
+  "kv_reuse": false,
+  "internal_prefill_kv_buffers": true,
+  "source_text_in_prompt": false,
+  "review": "Mixed identity-blinded baseline and candidate outputs, two independent reviewer contexts, unchanged rubric and paired controls; retain truncation and disagreements",
+  "scope": "Python neural control/fusion with real C backbone/projection, supplied single event; not full C memory, automatic writer, HTTP or LoCoMo",
+  "training_approved": false,
+  "deployment_approved": false
+}

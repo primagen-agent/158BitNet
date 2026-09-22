@@ -1,0 +1,27 @@
+{
+ "id": "V3-004",
+ "status": "trained_partial_breakthrough_ev004",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "proposal_date": "2026-09-20",
+ "defect_found": "Gradient tracing showed the V3-001/002/003 trainers never applied the reader's static supervision to route-2 items (they only trained the uncertainty branch on those frames), so the route head only ever saw r0/r1 labels - explaining the bit-identical degenerate routing across all three runs. DG-019/026 applied static loss to ALL records; the V3 trainers diverged from that protocol by mistake, not by design.",
+ "fix": "Plain FineSpanReader (no structural scalars, no detach, no weighting - reverting V3-002/003 changes), unweighted losses, and route-2 items additionally receive the reader static fine_loss at their prefix-0 frame alongside the branch CE. Verified by gradient trace: route p2 logit rises under the corrected loss.",
+ "training": {
+  "init": "from scratch, seeds 1018/1021",
+  "steps_requested": 50,
+  "batch": 16,
+  "lr": 0.0001,
+  "data": "same 892-item v3 feature package",
+  "hardware": "local Mac arm64, ~10 minutes"
+ },
+ "evaluation": "EV-004: identical panel/protocol/gates with fresh dual review for any new packets",
+ "decision": "this run isolates the supervision-defect factor with everything else identical to V3-001",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-20",
+  "via": "user reply 继续 in direct response to the approval request",
+  "hardware": "local Mac arm64",
+  "steps": 50
+ },
+ "result": "EV-004: uncertainty 10/10 (both reviewers), truncation 0/24; grounded 0/10 and normal 2/4 fail because the undertrained route head (<1 epoch) sends everything to the uncertainty branch; supervised-refusal behavior verified end-to-end through C-checked trained residuals"
+}

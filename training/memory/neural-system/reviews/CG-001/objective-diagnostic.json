@@ -1,0 +1,335 @@
+{
+  "format": "cg001-loss-interaction-diagnostic-v1",
+  "checkpoint_sha256": "a8976841239f18520842e75551dfbc8681c27f6d25e0784fed03c1efcb5585d9",
+  "feature_package_digest": "8f5b2d2ae685a7995d45422e661a8f59811357186d0cff370211eb596d5f36a6",
+  "fixed_panel_total": 16,
+  "optimizer_steps": 0,
+  "parameters_unchanged": true,
+  "teacher_forced": true,
+  "memory_accuracy_measured": false,
+  "gradient_scope": "generation CE versus 0.2 times initial state CE, state_head weight and bias only",
+  "limitations": "Local gradient alignment is not causal proof of training collapse; no ablation or retraining performed",
+  "cases": [
+    {
+      "id": "case-d68ac9d7b2b39fe94695",
+      "target_state": 1,
+      "teacher_forced_reply_tokens": 9,
+      "generation_nll": 3.097989320755005,
+      "state_ce": 0.07508043944835663,
+      "gate_generation_gradient_l2": 0.8841655850410461,
+      "gate_weighted_state_gradient_l2": 0.5498964786529541,
+      "gate_gradient_cosine": -0.944722056388855,
+      "generation_state_bias_gradient": [
+        0.0029790885746479034,
+        0.022747090086340904,
+        -0.02572615072131157
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.0011525169247761369,
+        -0.01446622610092163,
+        0.013313724659383297
+      ]
+    },
+    {
+      "id": "case-2841cfa9cf20f00891d1",
+      "target_state": 1,
+      "teacher_forced_reply_tokens": 9,
+      "generation_nll": 3.866032838821411,
+      "state_ce": 0.07978907227516174,
+      "gate_generation_gradient_l2": 1.1717703342437744,
+      "gate_weighted_state_gradient_l2": 0.5838615298271179,
+      "gate_gradient_cosine": -0.8993676900863647,
+      "generation_state_bias_gradient": [
+        0.0053963325917720795,
+        0.02913970872759819,
+        -0.03453603759407997
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.001164347748272121,
+        -0.01533779501914978,
+        0.014173418283462524
+      ]
+    },
+    {
+      "id": "case-410cc79e7fc060c0b6a0",
+      "target_state": 2,
+      "teacher_forced_reply_tokens": 13,
+      "generation_nll": 1.2319941520690918,
+      "state_ce": 0.011369792744517326,
+      "gate_generation_gradient_l2": 0.04839230701327324,
+      "gate_weighted_state_gradient_l2": 0.05896131321787834,
+      "gate_gradient_cosine": 0.8796422481536865,
+      "generation_state_bias_gradient": [
+        0.001932391431182623,
+        0.0,
+        -0.0019323757151141763
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.002261078916490078,
+        0.0,
+        -0.0022610723972320557
+      ]
+    },
+    {
+      "id": "case-c61340e0ba8151f9ee09",
+      "target_state": 0,
+      "teacher_forced_reply_tokens": 8,
+      "generation_nll": 0.8053005933761597,
+      "state_ce": 2.94095778465271,
+      "gate_generation_gradient_l2": 0.2039996087551117,
+      "gate_weighted_state_gradient_l2": 6.372272968292236,
+      "gate_gradient_cosine": 0.0482073575258255,
+      "generation_state_bias_gradient": [
+        0.0009362601558677852,
+        0.005407201126217842,
+        -0.006343441549688578
+      ],
+      "weighted_classification_state_bias_gradient": [
+        -0.18943697214126587,
+        0.12205598503351212,
+        0.06738098710775375
+      ]
+    },
+    {
+      "id": "case-5e76236adb954331887e",
+      "target_state": 1,
+      "teacher_forced_reply_tokens": 8,
+      "generation_nll": 2.938812732696533,
+      "state_ce": 0.6766330599784851,
+      "gate_generation_gradient_l2": 3.566347360610962,
+      "gate_weighted_state_gradient_l2": 3.734511375427246,
+      "gate_gradient_cosine": -0.9987835884094238,
+      "generation_state_bias_gradient": [
+        0.002370621310546994,
+        0.09422510862350464,
+        -0.09659568965435028
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.0006965566426515579,
+        -0.09833487123250961,
+        0.0976383164525032
+      ]
+    },
+    {
+      "id": "case-0955f6c759b8d1cc160d",
+      "target_state": 1,
+      "teacher_forced_reply_tokens": 8,
+      "generation_nll": 3.1465847492218018,
+      "state_ce": 0.6759477257728577,
+      "gate_generation_gradient_l2": 4.055057525634766,
+      "gate_weighted_state_gradient_l2": 3.734931468963623,
+      "gate_gradient_cosine": -0.9867156744003296,
+      "generation_state_bias_gradient": [
+        0.005244154017418623,
+        0.10933032631874084,
+        -0.11457445472478867
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.0006548791425302625,
+        -0.09826518595218658,
+        0.09761030226945877
+      ]
+    },
+    {
+      "id": "case-6cc67c267bdfa8a934a1",
+      "target_state": 2,
+      "teacher_forced_reply_tokens": 11,
+      "generation_nll": 1.136549711227417,
+      "state_ce": 0.026979371905326843,
+      "gate_generation_gradient_l2": 0.16743844747543335,
+      "gate_weighted_state_gradient_l2": 0.1427028924226761,
+      "gate_gradient_cosine": 0.9988678097724915,
+      "generation_state_bias_gradient": [
+        0.0063410974107682705,
+        0.0,
+        -0.006341093685477972
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.005323728546500206,
+        0.0,
+        -0.005323737859725952
+      ]
+    },
+    {
+      "id": "case-d39632cf838459875bff",
+      "target_state": 0,
+      "teacher_forced_reply_tokens": 5,
+      "generation_nll": 1.641595482826233,
+      "state_ce": 1.9665143489837646,
+      "gate_generation_gradient_l2": 6.325350761413574,
+      "gate_weighted_state_gradient_l2": 6.217196464538574,
+      "gate_gradient_cosine": -0.9484782218933105,
+      "generation_state_bias_gradient": [
+        0.13786661624908447,
+        0.05186248570680618,
+        -0.18972913920879364
+      ],
+      "weighted_classification_state_bias_gradient": [
+        -0.17201124131679535,
+        0.010554258711636066,
+        0.16145698726177216
+      ]
+    },
+    {
+      "id": "case-0afeea181bfe2cce15ae",
+      "target_state": 1,
+      "teacher_forced_reply_tokens": 9,
+      "generation_nll": 1.8686182498931885,
+      "state_ce": 0.07876536250114441,
+      "gate_generation_gradient_l2": 0.6894478797912598,
+      "gate_weighted_state_gradient_l2": 0.5761666297912598,
+      "gate_gradient_cosine": -0.6386051177978516,
+      "generation_state_bias_gradient": [
+        0.004524482414126396,
+        0.014165549539029598,
+        -0.018690010532736778
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.0013012057170271873,
+        -0.015148654580116272,
+        0.013847447000443935
+      ]
+    },
+    {
+      "id": "case-8994b1d24f644a20010b",
+      "target_state": 1,
+      "teacher_forced_reply_tokens": 9,
+      "generation_nll": 1.120744228363037,
+      "state_ce": 0.07539656013250351,
+      "gate_generation_gradient_l2": 0.2855696678161621,
+      "gate_weighted_state_gradient_l2": 0.5521275401115417,
+      "gate_gradient_cosine": -0.5228604674339294,
+      "generation_state_bias_gradient": [
+        0.0024929966311901808,
+        0.005275608040392399,
+        -0.007768615148961544
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.001281936070881784,
+        -0.014524862170219421,
+        0.013242927379906178
+      ]
+    },
+    {
+      "id": "case-087dc07d3baa42a10ac1",
+      "target_state": 2,
+      "teacher_forced_reply_tokens": 15,
+      "generation_nll": 1.7941793203353882,
+      "state_ce": 0.011216443032026291,
+      "gate_generation_gradient_l2": 0.04018078371882439,
+      "gate_weighted_state_gradient_l2": 0.057808663696050644,
+      "gate_gradient_cosine": 0.8342146277427673,
+      "generation_state_bias_gradient": [
+        0.0015883035957813263,
+        0.0,
+        -0.0015883257146924734
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.002230750396847725,
+        0.0,
+        -0.0022307485342025757
+      ]
+    },
+    {
+      "id": "case-e917740be7f368e54dc4",
+      "target_state": 0,
+      "teacher_forced_reply_tokens": 8,
+      "generation_nll": 1.0324686765670776,
+      "state_ce": 2.9001543521881104,
+      "gate_generation_gradient_l2": 0.05378039553761482,
+      "gate_weighted_state_gradient_l2": 6.4332685470581055,
+      "gate_gradient_cosine": -0.0874546468257904,
+      "generation_state_bias_gradient": [
+        0.00027659389888867736,
+        0.0002677870215848088,
+        -0.0005443893605843186
+      ],
+      "weighted_classification_state_bias_gradient": [
+        -0.1889970600605011,
+        0.13302205502986908,
+        0.05597500875592232
+      ]
+    },
+    {
+      "id": "case-d3cf42c1d8ad5b74a82c",
+      "target_state": 1,
+      "teacher_forced_reply_tokens": 8,
+      "generation_nll": 2.8593833446502686,
+      "state_ce": 0.6249632835388184,
+      "gate_generation_gradient_l2": 1.191681981086731,
+      "gate_weighted_state_gradient_l2": 3.5851805210113525,
+      "gate_gradient_cosine": -0.9482554793357849,
+      "generation_state_bias_gradient": [
+        0.0033278227783739567,
+        0.03131852298974991,
+        -0.03464635834097862
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.0008904130081646144,
+        -0.09294378757476807,
+        0.0920533761382103
+      ]
+    },
+    {
+      "id": "case-ed876424f9d365d8bc64",
+      "target_state": 1,
+      "teacher_forced_reply_tokens": 8,
+      "generation_nll": 2.997702121734619,
+      "state_ce": 0.6150346994400024,
+      "gate_generation_gradient_l2": 0.8738662004470825,
+      "gate_weighted_state_gradient_l2": 3.545766592025757,
+      "gate_gradient_cosine": -0.9867665767669678,
+      "generation_state_bias_gradient": [
+        0.0016401096945628524,
+        0.022968867793679237,
+        -0.024608979001641273
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.0008820164366625249,
+        -0.0918755754828453,
+        0.09099357575178146
+      ]
+    },
+    {
+      "id": "case-b9c87f9a2d4ab9867564",
+      "target_state": 2,
+      "teacher_forced_reply_tokens": 11,
+      "generation_nll": 2.2831268310546875,
+      "state_ce": 0.019212113693356514,
+      "gate_generation_gradient_l2": 0.11223592609167099,
+      "gate_weighted_state_gradient_l2": 0.10319454967975616,
+      "gate_gradient_cosine": 0.9874922037124634,
+      "generation_state_bias_gradient": [
+        0.004194248933345079,
+        0.0,
+        -0.004194231703877449
+      ],
+      "weighted_classification_state_bias_gradient": [
+        0.0038057570345699787,
+        0.0,
+        -0.0038057416677474976
+      ]
+    },
+    {
+      "id": "case-50832826530d9fede5b3",
+      "target_state": 0,
+      "teacher_forced_reply_tokens": 5,
+      "generation_nll": 2.5916428565979004,
+      "state_ce": 2.0396547317504883,
+      "gate_generation_gradient_l2": 6.190335273742676,
+      "gate_weighted_state_gradient_l2": 6.26997184753418,
+      "gate_gradient_cosine": -0.935885488986969,
+      "generation_state_bias_gradient": [
+        0.13028524816036224,
+        0.05683152750134468,
+        -0.18711677193641663
+      ],
+      "weighted_classification_state_bias_gradient": [
+        -0.1739852875471115,
+        0.011469154618680477,
+        0.16251613199710846
+      ]
+    }
+  ],
+  "source_sha256": "83367edfac4bcca07f79840a638f6c70610baca4f62dcf97ee664fdeab04a53b"
+}

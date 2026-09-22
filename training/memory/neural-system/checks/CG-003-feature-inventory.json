@@ -1,0 +1,18 @@
+{
+  "scope": "full_inventory_only_not_extracted_features",
+  "records": 768,
+  "prefixes": 1764,
+  "texts": 608,
+  "reply_tokens": 7944,
+  "value_tokens": 612,
+  "uncopyable_value_tokens": 48,
+  "all_rows_match_prior_C_token_audit": true,
+  "contains_test": false,
+  "dataset_manifest_digest": "fcff455f690e360298701b123102e3a90527d83bf12ef390ca59d035fbd2bf2c",
+  "file_sha256": {
+    "records.json": "38f2cd9a3a651d10b8aaac66d8b568fe2e478e6cb55b46573324961fec545fbe",
+    "inventory.json": "bd998acdae379390f5cb415dff8a87d0947e890f743412fa5773245dda0dbfec"
+  },
+  "optimizer_steps": 0,
+  "training_approved": false
+}

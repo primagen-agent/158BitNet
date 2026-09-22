@@ -1,0 +1,233 @@
+{
+  "purpose": "native_reader_input_transport_only",
+  "identity": {
+    "encoder_id": "f7653ec60c43b2cefa710bd4273513050cedc9dc0b34243c6e622bb7be1fbc01",
+    "binding": {
+      "policy": {
+        "format": "native-reader-f32-v1",
+        "wire_format": "BNEN0001",
+        "hidden": 1024,
+        "layers": 24,
+        "dtype": "float32",
+        "bos": "encoded_then_drop_feature_row",
+        "normalization": "c_ordered_f32_l2_eps1e-12",
+        "message_frame": "json-role-speaker-text-v1",
+        "threads": 4,
+        "metal": false,
+        "context_capacity": 512,
+        "maximum_tokens_with_bos": 511,
+        "cross_input_kv_reuse": false,
+        "internal_prefill_kv_buffers": true
+      },
+      "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+      "binary_sha256": "dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0",
+      "message_frame_source_sha256": "3aa68b33252ad35f22ff150f905fe02fa1905ca55a0645d1229bc845a4feb0b5",
+      "system": "Darwin",
+      "machine": "arm64",
+      "os_release": "25.2.0",
+      "dispatch": "arm_neon"
+    }
+  },
+  "world": "w02",
+  "independent_worlds": 1,
+  "cases": [
+    {
+      "id": "w02-original-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-paraphrase-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-swapped_values-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-same_value_other_person-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-wrong_subject-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-wrong_relation-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-target_removed-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-all_irrelevant-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-distractor_added-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-distractor_reordered-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-multiple_targets-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-role_forward-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-role_reverse-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-hypothetical-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-negated-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-quoted-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-update_current-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-update_history-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-pronoun-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-alias-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-empty-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-ordinary_chat-en",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-original-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-paraphrase-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-swapped_values-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-same_value_other_person-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-wrong_subject-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-wrong_relation-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-target_removed-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-all_irrelevant-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-distractor_added-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-distractor_reordered-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-multiple_targets-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-role_forward-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-role_reverse-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-hypothetical-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-negated-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-quoted-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-update_current-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-update_history-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-pronoun-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-alias-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-empty-zh",
+      "reader_logits_exact": true
+    },
+    {
+      "id": "w02-ordinary_chat-zh",
+      "reader_logits_exact": true
+    }
+  ],
+  "unique_encoded_texts": 44,
+  "fresh_process_order_batch_exact": true,
+  "archive_roundtrip_exact": true,
+  "reader_forward_exact_cases": 44,
+  "reader_gradient_l1": 11199.234375,
+  "novel_input_encoded": true,
+  "memory_accuracy_measured": false,
+  "generation_alignment_passed": false,
+  "training_started": false,
+  "feature_manifest_sha256": "bbb36f67481365db74e04ffdd6c825090651fab0dc5952398c51737090f9c897",
+  "source_sha256": {
+    "native_memory_encoder.py": "1e7bebe67e13852c6e76d407366c658416d430b5bd571e4567bbbc201f0a794e",
+    "diagnose_native_memory_encoder.py": "a02c43236f53f43a5cea973d9f1386b849c4779a32a869b5603ef732656152cd",
+    "episode_memory_inputs.py": "3aa68b33252ad35f22ff150f905fe02fa1905ca55a0645d1229bc845a4feb0b5",
+    "episode_memory.py": "acd7f0b0d057c8834b82a79c980c264936ec599b839c08a6c4ff0dbd99b09e2e"
+  },
+  "input_manifest_sha256": "3930c948bf92d68d87dd093d2b9c9da942f705363781cbcf1e4ef01a9dcc35e2",
+  "extraction_manifest_sha256": {
+    "first": "90f55884d6cb8f4b9eb130a1ecc12b3dde6fbaa3801542bc0218f9c107ab5b67",
+    "fresh-reversed": "e9df1f8a9b7d4e85f66263cdfbb7aa9e7517820773344de1a0b2f373156c4596",
+    "novel": "35af9ae065feea548abc0563cd961a7885cb7fa42a847767b05c36a9bac7046b"
+  }
+}

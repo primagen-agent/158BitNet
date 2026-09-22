@@ -1,0 +1,9 @@
+{
+  "format": "joint-binding-curriculum-v1",
+  "seed": 20260919,
+  "train_worlds": 12,
+  "dev_worlds": 4,
+  "test_worlds": 4,
+  "people": ["Aveline", "Brenna", "Cassian", "Dalia", "Eamon", "Fenna", "Galen", "Helia", "Isolde", "Jovan", "Kellan", "Liora", "Maelle", "Nerina", "Oren", "Petra", "Ronan", "Seline", "Tavian", "Vera", "Wren", "Xenia", "Yuna", "Zelia", "Aster", "Belen", "Caius", "Darya", "Evren", "Fiora", "Gavin", "Hana", "Ivo", "Jessa", "Kian", "Livia", "Marek", "Noemi", "Oskar", "Priya"],
+  "cities": ["Aarhus", "Breda", "Cadiz", "Delft", "Erfurt", "Faro", "Ghent", "Haarlem", "Innsbruck", "Jena", "Kiel", "Lugano", "Mainz", "Namur", "Oslo", "Pisa", "Quimper", "Riga", "Siena", "Tartu", "Umea", "Vaduz", "Weimar", "Xanten", "York", "Zadar", "Aachen", "Bilbao", "Coimbra", "Dijon", "Essen", "Fulda", "Genoa", "Huelva", "Ipswich", "Jaen", "Kaunas", "Leuven", "Malmo", "Nantes"]
+}

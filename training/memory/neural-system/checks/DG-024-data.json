@@ -1,0 +1,25 @@
+{
+  "format": "dg024-expanded-worlds-check-v1",
+  "registration_sha256": "d128201183ca9ddbbd3ebc2eb23813460c2234b73b62e5c0f83e186bbe84427d",
+  "corpus_manifest_sha256": "0e5e1a06e7dff6ecc5e30fa62e15487430e121fe7c81146e3ae37a379f435c22",
+  "config_sha256": "f0ac82d4fb6668ba53b6f9ba99c8501a105cc693a6bd90f0ea0fe6d4d5214b66",
+  "records": 768,
+  "worlds": 24,
+  "pairs": 480,
+  "counts": {
+    "dev/insufficient": 120,
+    "dev/supported": 72,
+    "test/insufficient": 120,
+    "test/supported": 72,
+    "train/insufficient": 240,
+    "train/supported": 144
+  },
+  "regeneration_byte_identical": true,
+  "compile_teacher_current_time_supported": 96,
+  "historical_stated_blocked_by_design": true,
+  "jb001_disjoint": true,
+  "test_policy": "sealed_no_training_selection_or_model_forward",
+  "optimizer_steps": 0,
+  "model_forward_run": false,
+  "passed": true
+}

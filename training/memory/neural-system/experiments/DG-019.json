@@ -1,0 +1,15 @@
+{
+  "id":"DG-019",
+  "status":"registered_teacher_trajectory_zero_update",
+  "optimizer_steps":0,
+  "deployment_approved":false,
+  "initialization":{"seed":1018,"width":64},
+  "selection":{"split":"train","world_id":"jb-000","relation_family":"home_city","languages":["en","zh"],"scenarios":["correct","value_swap","role_swap","empty","ordinary_source","ordinary_empty"],"expected_records":12},
+  "scope":"Training-only teacher trajectories from fixed synthetic labels. Not free generation, autonomous recall, or evaluation accuracy. Keep all12 records: 4 supported,4 insufficient,4 normal. No optimizer or new checkpoint.",
+  "encoding":"Encode reply prelude, exact value and postlude separately with bound C anchored suffix encoding. For supported value use DG-016 oracle-marked handle and real cursor; never a neural-marked gold handle. Explicit EOS last, no template/control token within ordinary segments. Preserve exact full reply bytes and exact source value bytes, including whitespace.",
+  "phases":"GENERATE before/after value, START at its first token, CONTINUE at remaining value tokens, END at first token after value (possibly EOS). Exactly one START and END on each supported record. No positive phases for negative/normal records. CONTINUE and END are cursor bookkeeping, not independent stop classifiers.",
+  "loss":"Route and fact/value/byte-boundary loss once at initial prefix per record; mean idle mode CE over GENERATE/START/END, START=1 and other idle=0. CONTINUE excluded from mode CE because cursor owns it. No teacher state, future token, value boundaries or labels in neural forward. Ordinary token CE is not optimized by this controller-only diagnostic. Keep per-record equal weighting.",
+  "native_gate":"Extract every unique actual teacher prefix with fresh C context using memory_prefix_probe. All rows finite and bound to exact IDs. Direct ordinary C reference for first/middle/final position in each record plus ALL START/CONTINUE/END positions; fixed selection independent of result. Require bitwise hidden/logit agreement. Parse and hash raw files. One-prefill internal KV buffers disclosed; no cross-prefix KV reuse.",
+  "gradient_gate":"Reinitialize the same single untrained DG-018 head, forward on C source/query inputs and actual idle prefix hidden. Only then apply separate labels. Finite nonzero gradients for each record; coarse/fine heads connected on positives. Verify tensors/source/model identities unchanged. Do not interpret logits or teacher bytes as recall accuracy.",
+  "stop":"No inference adapter may consume teacher trajectories. Do not reuse mismatched canonical-prefix features, trim values, drop difficult cases, change labels, use LoCoMo/sealed test, train or deploy. V2 remains incomplete pending autonomous mode controller, expanded held-out protocol and explicit new training budget."
+}

@@ -1,0 +1,19 @@
+{
+ "id": "V3-014",
+ "status": "trained_weighting_route_falsified_again",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "hypothesis": "EV-009 copies the WRONG source city (Aarhus = the other world city, not the asked value Riga): the fact/value span ranking ignores the query (subject,relation) on free prefixes. The fact head scores spans against the pooled query q - if the query-conditioned ranking supervision (fine_loss fact/value terms at canonical prefixes, weight 2x since V3-011) still selects the distractor, the ranking needs the query-condition signal strengthened: raise fact+value to 8x on canonical prefixes AND add negative-span supervision - for canonical items also compute fine_loss against a WRONG ByteTargets (value_bytes pointing at the distractor city) with a NEGATIVE weight, explicitly pushing down the distractor selection.",
+ "changes": {
+  "canon_value_weight": "fact+value 2x -> 8x at canonical prefixes",
+  "negative_span": "distractor-span contrastive term at canonical prefixes (push down wrong span, weight 2x)",
+  "base": "V3-013 ckpt-440"
+ },
+ "evaluation": "EV-010 same panel/gates",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-21",
+  "via": "user reply 继续"
+ },
+ "result": "EV-010: 8x value weighting did NOT fix span selection (still copies Aarhus/Breda - the distractor city; Ianskina repetition). The value-copy selection ignores the query because fine_loss fact/value supervision selects spans via output.spans indexing against byte targets - the teacher items train correct selection on teacher prefixes but the ranking still fails on free prefixes. Weight escalation 2x->4x->8x shows no trend of improvement: the weighting route is definitively falsified. What IS needed: per-position copy supervision on natural prefixes (teacher cursor trajectories replayed on canonical segmentation), as registered in PLAN."
+}

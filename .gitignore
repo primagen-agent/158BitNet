@@ -1,4 +1,5 @@
 build/
+!build/neural-c-weights/
 build-arm64/
 build-strict/
 models/*
@@ -20,6 +21,9 @@ tests/*.bin
 .worktrees/
 .superpowers/
 data/
+!training/memory/neural-system/data/
+training/memory/neural-system/data/*
+!training/memory/neural-system/data/*.json
 docs/
 __pycache__/
 *.pyc

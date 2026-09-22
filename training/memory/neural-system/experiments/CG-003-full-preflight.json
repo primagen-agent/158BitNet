@@ -1,0 +1,15 @@
+{
+  "id": "CG-003-full-preflight",
+  "scope": "CPU zero-update validation of the complete registered train/dev C feature package; no candidate selection or semantic score",
+  "selection": "First lexicographically sorted TRAIN world; both languages, both relations and all ten pair kinds. Forty pairs per arm, eighty total. No dev gradients or test access.",
+  "arms": ["joint_aux", "joint_product"],
+  "seed": 1013,
+  "package_checks": "Exact match with previously frozen full inventory and prior token audit, every reply-prefix key present, full-vs-smoke overlap bit exact, verified artifact hashes and no test records",
+  "gradient_checks": "Finite losses and all existing gradients; state/source/position/copy paths checked where active. Uncertainty gradients may be absent on supported-only pairs; aux factor gradients may be absent on ordinary pairs. Zero upstream gradients behind zero-initialized output matrices are expected. No optimizer.",
+  "invariants": "Predicted-empty route cannot be supported; empty copy mass zero; exact disabled identity; predicted normal preserves base; predicted insufficient uses only query uncertainty; supported distributions normalized; value comparisons require identical C prefixes",
+  "failure_policy": "Persist all case failures, do not silently drop pairs or change denominators. Failed integrity stops interpretation. A numerical failure blocks training until repaired and rerun; no hyperparameter search.",
+  "optimizer_steps": 0,
+  "new_free_generated_answers": 0,
+  "training_approved": false,
+  "deployment_approved": false
+}

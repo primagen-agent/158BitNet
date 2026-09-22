@@ -1,0 +1,515 @@
+{
+  "rows": [
+    {
+      "packet_id": "078dd7f6a127f20e603b6fa0e257709cb1e67cc4a2f27937ce2409c736402422",
+      "record_id": "joint-3415d75b34a68cb08833",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "387f288bd7f290fcbb5b9f71aed0bb1595bcdf17d8245724dbdbfb2081fb8095",
+      "record_id": "joint-00358fb1f7c2b30e2c7d",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "5ab97a0bd2cea7eac3a30d675415a2e957238c2fe34584e82dc436f58113e914",
+      "record_id": "joint-52b4b20ec52ee431532e",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "3bd62d0c952e9d3992adabd636fee8302ef136791507475dd58309774ec03578",
+      "record_id": "joint-4ff45be3a97c231edc81",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "f53e4241bb0dc21e06217d7eebb7356d0d5feb3570ff78d09e0688c4c961da0e",
+      "record_id": "joint-c42056354c0b69813970",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "b6438d1bf61a630061c64e165342a0ff4a51e29736e912c3e38ca0693e004d31",
+      "record_id": "joint-5620a2bfcfca17ae14ce",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "9a46c6fbbe60b839e65c20c47a8d7e87912f8f5f7bcc709b4988d28af139f1a0",
+      "record_id": "joint-aaefd8e262566e4a2353",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "25877a848a2ce4f05818dbfc6f66760263a4263640856effa04649ffa540d6bb",
+      "record_id": "joint-f2c8b739dffa4af42202",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "195f06592aeb4b0f1dec5f60a0a734c68f6e43bdb28b2d96f96a076d62c00189",
+      "record_id": "joint-cff41e673284fbf1c6d9",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "29ea1f40fbeb5840275f080c6241776b6867d956e0250bb94183b4d78c22feb3",
+      "record_id": "joint-f417c9409407bcb8e962",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "7417084ee3ab7781b049f4c2b39ebe73d58d655497bcb73279c6f18e6655607d",
+      "record_id": "joint-a327d6559d03d72cb623",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "a364de641f3b255605a26936cce5e2758ea78fd5163ef442c55fa7d8c6ac2477",
+      "record_id": "joint-d52d5721c8e37ed4372f",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "c5128532d53c5b81a90f64871961f115e66f3e6da1ac8610b8441e378ff07b97",
+      "record_id": "jb2-b2aee792e5fdd39bd518",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "df955813283bfa6f7c44f8d22d8da915105712aa5f5a204159e0c8fcb5f5f2b2",
+      "record_id": "jb2-8bc37d0052d25d0d6d9f",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "6ca90be94a44fe8d2909ab0e12e355bd659a4b91a4d05dcd781cbfa0061a24f6",
+      "record_id": "jb2-0dc6c322a9661b3d09c5",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "a23e4203d7e9729d0d2a8b33007e36cc7b9c3f330ae23f37676164b5b3b3337d",
+      "record_id": "jb2-3dea7d9ff5461e1c765c",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "abc7e1efa25f93fa72a061476ddaf2f35cae43c9f1aaee8f61d6dbad74db15fc",
+      "record_id": "jb2-12b584becc8cb09931e9",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "412374d37112410c6f6983c2d0098cba59b3de250416b1b59c0bcf526f385279",
+      "record_id": "jb2-ee4c489c4e270496374e",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "771039880f5d8c1da71f52c462ce0fc29ba72e4832f22cd66b680215a984164f",
+      "record_id": "jb2-046f5baa33fabddc9321",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "7aadfe54a0ab8195d5521939d538d523fbfbd5258d58431a2b3e722eb0b1b4e8",
+      "record_id": "jb2-50cb825931be8d5f891a",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "5f1d3a7706385570fc0b18b7b8a7fec585b70740e1bf56fa161db63535518709",
+      "record_id": "jb2-4b16632e026da62edce9",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "95cfe8a351f5c148192b3a9c4470617c9a23443efb8dacb1ef16d350a9654208",
+      "record_id": "jb2-2486c844eeddad06b9b7",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "d4da6e83f50d2ab13481c79126afab42ee584d6fa3f55db2530bed727c022ce3",
+      "record_id": "jb2-4aee717e4ebe81e80cb8",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "941126b3c2145e083273a6f98bb60d501e6f902ebf880b913bf0aa2ba59985b2",
+      "record_id": "jb2-2591e21a58d46471bedf",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": true,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    }
+  ],
+  "counts": {
+    "0": {
+      "denominator": 4,
+      "a_pass": 2,
+      "b_pass": 2,
+      "agreement": 4
+    },
+    "1": {
+      "denominator": 10,
+      "a_pass": 0,
+      "b_pass": 0,
+      "agreement": 10
+    },
+    "2": {
+      "denominator": 10,
+      "a_pass": 10,
+      "b_pass": 10,
+      "agreement": 10
+    }
+  },
+  "truncated": 0,
+  "total": 24,
+  "format": "ev004-review-score-v1",
+  "gates": {
+    "uncertainty_both_agree": "10/10 (gate >=4)",
+    "grounded_both_agree": "0/10 (gate >=3)",
+    "normal_both_agree": "2/4 (gate 4/4)",
+    "truncation": "0/24 (gate <=2)",
+    "passed": false
+  },
+  "route_collapse_note": "trained reader predicts insufficient for all 24 items (undertrained route head, <1 epoch); every reply goes through the TRAINED uncertainty branch whose residuals were C-verified per position; replies are trained refusals, not base continuations"
+}

@@ -1,0 +1,15 @@
+{
+  "id":"DG-021",
+  "status":"registered_query_only_uncertainty_interface",
+  "optimizer_steps":0,
+  "deployment_approved":false,
+  "initialization":{"reader_seed":1018,"uncertainty_seed":1021,"hidden":1024},
+  "scope":"Versioned query-only uncertainty residual and diagnostic controller handoff. Preserve DG-020 code/results. New module takes only bound actual-prefix hidden/base logits and frozen output projection, never memory payload/features, value handles or teacher answers.",
+  "operator":"delta = Wout tanh(Win LayerNorm(h)). Dense1024x1024 layers, Wout initialized exactly zero. logits = base + frozen_GGUF_output(delta)/logit_scale using qualified continuous_logits. Explicit disabled bypass preserves base bits and does not call the residual network.",
+  "handoff":"Diagnostic-only wrapper intercepts its own core NEEDS_UNCERTAINTY action, never an externally supplied route. It starts a source-free uncertainty session at the same actual prefix. Normal/supported actions remain core actions; token acknowledgement, prefix, origin, source/model versions, branch/head identity, EOS and budgets remain enforced. Untrained zero branch is explicitly labelled, not a hidden normal fallback or learned refusal.",
+  "native_gate":"Use all12 DG-020 natural inputs, certified saved initial fresh C frames and unchanged untrained reader. Recompute neural first decision and query-only handoff; run new C zero-increment projection on every initial prefix. Require exact zero/base/reference equality. Commit only the first proposed token, no complete reply or semantic accuracy claim.",
+  "nonzero_fixture":{"case_indices":[0,6],"output_weight":"0.001 times identity in a SEPARATE artificial module copy","native_parity":{"atol":0.00001,"rtol":0.0001,"same_top1":true},"finite_difference":{"epsilon":0.01,"atol":0.0005,"rtol":0.02,"objective":"CE to base argmax, a calculus fixture not a correct answer","direction":"unit residual gradient","parameter_updates":0}},
+  "gradient_gate":"Only the four ground-truth insufficient training records supply first-token CE labels AFTER forward. Zero initialization must give finite nonzero Wout gradient and zero Win gradient (expected chain rule, not failed learning). Nonzero artificial fixture must connect both layers and pass native residual finite differences. No optimizer, weight update or checkpoint.",
+  "limits":"First-position checks only. No source-conditioned correction, canned response, source text injection, prefix cache reuse or seed/epsilon search. Internal one-prefill K/V work buffers remain. Query-only is an interface/property of hidden provenance, not a guarantee of correct natural refusal.",
+  "stop":"Keep failures and all12 rows. Do not claim memory accuracy from zero branch/base-identical tokens or artificial nonzero tests. Full free-reply evaluation, uncertainty supervision breadth and explicit new training budget remain required; no HTTP deployment or LoCoMo."
+}

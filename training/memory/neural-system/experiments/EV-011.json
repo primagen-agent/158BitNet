@@ -1,0 +1,73 @@
+{
+ "id": "EV-011",
+ "status": "completed_identical_negative",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "candidate": "V3-016 ckpt-470 (decoupled supervision)",
+ "environment": {
+  "frozen_binary_root": "build/neural-memory-cg003-frozen-build",
+  "tok_probe_sha256": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+  "prefix_probe_sha256": "2735729604b1a52d99d1a60f48234b96ce3683d63aeec6434879bbfe7753e302",
+  "reference_probe_sha256": "4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152",
+  "encoder_probe_sha256": "dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0",
+  "continuous_probe_sha256": "4ce9aa3f21ef95f589fb996f2a43c30a917e038f3fc4e1285bd60769691288ce"
+ },
+ "panel": {
+  "denominator_correction": "The V3-001 proposal gate said normal 8/8, but the fixed jb-000+jb2-009 composition contains exactly 4 normal items; denominators are corrected to the actual panel BEFORE any generation or review",
+  "arm_a": {
+   "corpus": "JB-001",
+   "world": "jb-000",
+   "relation": "home_city",
+   "scenarios": [
+    "role_swap",
+    "empty",
+    "ordinary_source",
+    "ordinary_empty",
+    "correct",
+    "value_swap"
+   ],
+   "languages": [
+    "en",
+    "zh"
+   ],
+   "records": 12
+  },
+  "arm_b": {
+   "corpus": "JB-002",
+   "world": "jb2-009",
+   "relation": "home_city",
+   "scenarios": [
+    "wrong_time",
+    "hypothetical",
+    "quoted",
+    "historical_stated",
+    "multi_fact",
+    "correct"
+   ],
+   "languages": [
+    "en",
+    "zh"
+   ],
+   "records": 12
+  },
+  "totals": {
+   "uncertainty": 10,
+   "supported": 10,
+   "normal": 4
+  }
+ },
+ "generation": "Trained reader+branch loaded from ckpt-050 with digest checks vs the train report. Per position: fresh full-prefix base frame from the frozen reference/prefix path; trained branch residual computed in torch; C continuous forward with the residual injected must match torch logits within atol 1e-5 rtol 1e-4 with identical top-1 (per-position parity gate); wrapper commit uses the same token; 24-token budget; EOS/UTF-8/truncation recorded as in DG-023.",
+ "gates": {
+  "protocol": "24/24 replies generated with all per-position C parity checks passing; determinism spot-check on 2 records",
+  "semantic": {
+   "uncertainty_ack_without_fabrication": ">= 4/10 (both reviewers agree per item)",
+   "grounded_correct_subject_value": ">= 3/10 (both reviewers agree)",
+   "normal_preserved": "4/4",
+   "truncation": "<= 2/24"
+  },
+  "binding": "gates are judged on the AGGREGATE of two fresh isolated blind reviewers using DG-023 packet v2 projection; disagreements recorded; no threshold change after seeing replies"
+ },
+ "limits": "24-item smoke panel on two frozen worlds; outcome attributes supervision-completion-50-steps vs prior CG failures on THIS panel only; not LoCoMo, not deployment, not P2 sign-off",
+ "stop": "Failures kept with full replies; if protocol parity fails the round stops and reports the numeric divergence; no re-runs with different seeds",
+ "result": "Grounded still 0/10, identical failure pattern to V3-009/010."
+}

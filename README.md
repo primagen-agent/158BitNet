@@ -1,97 +1,371 @@
 # 158BitNet
 
-158BitNet is a C11 inference runtime for OpenBMB BitCPM CANN GGUF models with
-ternary `TQ2_0` weights. It supports Apple Silicon, Android arm64, and x86
-processors with runtime SIMD dispatch.
+158BitNet is a small C inference runtime for OpenBMB BitCPM CANN GGUF models.
+It focuses on low-bit BitNet-style decode on ARM CPUs, especially Apple Silicon
+and Android arm64 devices. The repository includes a core `bitnet` library,
+examples, an OpenAI-compatible HTTP server, LoRA loading, KV-cache reuse, Android
+cross-compilation, tests, and profiling tools.
 
-The repository also contains a persistent-memory subsystem. Memory parameters
-are trained separately from the GGUF backbone, are bound to the exact backbone
-SHA-256 identity, and can be used without LoRA or KV-cache reuse.
+## Models
 
-## Features
+The project targets BitCPM CANN GGUF models from OpenBMB, including the public
+[BitCPM-CANN-8B-gguf](https://huggingface.co/openbmb/BitCPM-CANN-8B-gguf)
+release and the local `bitcpm4-{0.5b,1b,3b,8b}-tq2_0.gguf` family used during
+development.
 
-- `TQ2_0`, `Q6_K`, and `Q4_K` tensor support
-- ARM NEON and x86 AVX2/AVX-VNNI/AVX512-VNNI kernels
-- runtime CPU feature detection and dispatch
-- optional Apple Metal backend
-- OpenAI-compatible chat/completions HTTP API
-- streaming responses and reusable chat sessions
-- F32 or Q8 KV cache
-- automatic typed-event memory through the normal chat API
-- neural field extraction, version linking, activation, and exact-value recall
-- immutable event versions with persistent `.bnepisodic` and `.bnevent` state
-- CRC validation and exact-backbone identity checks for memory artifacts
-- memory export/import across process restarts
+In this codebase, "1.58-bit" means BitNet-style ternary weights, not a 1.58B
+parameter count. The local model sizes are named by parameter scale, for example
+`0.5b`, `1b`, `3b`, and `8b`; the low-bit weight format is usually `TQ2_0`.
 
-The selected resident model bundle is tracked in this repository. Supply the
-matching 0.5B GGUF backbone separately at
-`models/bitcpm4-0.5b-tq2_0.gguf`. Session memory, generated training data,
-and build artifacts belong under `build/` and are not committed.
+Typical GGUF metadata for these models:
+
+- GGUF v3 container with OpenBMB CANN finetune metadata.
+- 32K context length in the model metadata.
+- LLaMA/MiniCPM-style chat template using `<|im_start|>` and `<|im_end|>`.
+- Main transformer projections in `TQ2_0`.
+- Embedding/output tensors may use `F16`, `Q4_K`, `Q6_K`, or tied output paths,
+  depending on the model size.
+- Vocabulary size is 73,448 for the local BitCPM4 models.
+
+Place models under `models/`:
+
+```sh
+models/bitcpm4-0.5b-tq2_0.gguf
+models/bitcpm4-1b-tq2_0.gguf
+models/bitcpm4-3b-tq2_0.gguf
+models/bitcpm4-8b-tq2_0.gguf
+```
+
+You can also inspect a model directly:
+
+```sh
+./build/gguf_inspect models/bitcpm4-1b-tq2_0.gguf
+```
+
+## Android 865 Best Known Results
+
+Historical best results observed on the Snapdragon 865 Android device used for
+this project are listed below. These numbers are direct `test_profile_decode`
+short-context decode microbenchmarks after the ARM/Android optimization work.
+They are not HTTP long-generation throughput numbers, and they are not measured
+with LoRA enabled.
+
+| Model | GGUF file | Best observed decode | Notes |
+| --- | --- | ---: | --- |
+| 0.5B | `bitcpm4-0.5b-tq2_0.gguf` | `>100 tok/s` | Best historical 0.5B Android decode result after tied-output and 865 tuning. |
+| 1B | `bitcpm4-1b-tq2_0.gguf` | `~34 tok/s` | Best historical 1B Android microbenchmark; HTTP long generation was lower. |
+| 3B | `bitcpm4-3b-tq2_0.gguf` | `~16 tok/s` | Best historical 3B Android result after output chunk tuning. |
+| 8B | `bitcpm4-8b-tq2_0.gguf` | `~8 tok/s` | Best historical 8B Android result; this was the corrected 8B baseline. |
+
+Use these numbers as regression guardrails. When comparing new optimizations,
+keep the benchmark type, model, thread count, context length, and background
+process state the same.
+
+## Architecture
+
+The runtime is intentionally compact:
+
+- `src/bitnet.c`: model loading, forward pass, KV cache, LoRA application, output
+  projection, and decode-facing API.
+- `src/quant_tq2_0.c`: ternary `TQ2_0` kernels, including ARM NEON paths.
+- `src/quant_q6k.c`, `src/quant_q4k.c`: GGUF quantization helpers used by
+  embeddings and output projection.
+- `src/tokenizer.c`: GGUF tokenizer support.
+- `examples/minimal_generate.c`: minimal CLI generation.
+- `examples/openai_server.c`: OpenAI-compatible HTTP server using Mongoose and
+  cJSON from `src/third_party/`.
+- `tools/train_xiaoli_lora.c`: small local LoRA generation tool used by tests.
+- `tests/`: correctness tests, HTTP API tests, Android-relevant profiling, and
+  decode benchmarks.
+
+High-level decode flow:
+
+1. Load GGUF metadata, tokenizer, tensor descriptors, and model weights.
+2. Tokenize prompt text with the model tokenizer.
+3. Prefill prompt tokens into a `bitnet_context_t`.
+4. For each generated token, run one-token decode, sample greedily or with
+   repetition penalty, append to history, and update KV cache.
+5. Reuse cached KV state for multi-turn requests when `session_id` is provided.
+
+Key runtime features:
+
+- `TQ2_0` low-bit matrix-vector kernels for transformer projections.
+- Output projection acceleration with expanded Q6K/Q8 cache paths where
+  applicable.
+- F32 and Q8 KV-cache modes through `bitnet_set_kv_cache_type`.
+- OpenAI-compatible completions/chat API, including streaming SSE responses.
+- Session KV reuse and full-history de-duplication for multi-turn HTTP calls.
+- External LoRA loading with `--lora` and `--lora-scale`.
+
+## Important Optimizations
+
+The runtime has gone through several rounds of optimization for decode-heavy
+BitCPM/BitNet inference. The most important changes are below.
+
+### TQ2_0 Ternary Kernels
+
+`TQ2_0` stores 256 ternary weights per block in 64 packed bytes plus one FP16
+scale. The logical weight values are `{-1, 0, +1}` with one reserved 2-bit code.
+This makes decode mostly a memory-layout and dot-product problem rather than a
+general floating-point GEMM problem.
+
+The implementation keeps the llama.cpp-compatible interleaved element ordering:
+
+- 64 packed bytes encode 256 weights.
+- Each byte stores four 2-bit codes.
+- The four codes are interleaved by 32-element strides.
+- Per-block scales are extracted once into scale caches during model loading.
+
+The baseline scalar path is kept for correctness and non-NEON builds, but ARM
+decode uses specialized int8/NEON paths.
+
+### LUT-Based Matmul
+
+The early optimized path builds a lookup table from the current activation
+vector, then uses packed weight bytes as indices into that LUT.
+
+For a row block:
+
+1. Build a LUT for the current activation vector.
+2. For each packed `TQ2_0` byte, look up the precomputed contribution of its four
+   2-bit codes.
+3. Apply the per-block scale and accumulate the row result.
+
+This avoids repeatedly unpacking each ternary code into floats. Pair kernels such
+as gate+up share one LUT for two projections, reducing repeated preprocessing.
+
+### VTBL / `vqtbl1q_s8` Unpack
+
+On ARM NEON with dot-product support, the runtime uses `vqtbl1q_s8` to decode
+2-bit ternary nibbles. A table lookup replaces the usual chain of `AND`, `USHR`,
+masking, and subtract operations.
+
+The NEON path uses the "bsums" trick:
+
+- Decode codes as `{0, 1, 2}` instead of `{-1, 0, +1}`.
+- Compute `dot(code, activation)`.
+- Subtract the precomputed activation block sum once.
+
+This removes a subtraction from the inner unpack loop and lets the hot path
+combine `vqtbl1q_s8` with `vdotq_s32`.
+
+### `vdotq_s32` Dot Product
+
+For ARMv8.2-A dot-product targets, the hot low-bit kernels use `vdotq_s32` over
+int8 activations and unpacked ternary codes. This is used in:
+
+- Single-row `TQ2_0` projection.
+- Pair projection for gate+up.
+- 4-row and 8-row grouped kernels.
+- Q6K/Q8 output projection.
+
+The kernels use dual accumulators in several places to break dependency chains
+and expose more instruction-level parallelism to the CPU.
+
+### I2_S / I2S Weight Reordering
+
+The I2_S path reorders `TQ2_0` weights at model load time into a 4-row packed
+2-bit layout. The one-time load cost buys a simpler decode layout:
+
+- Four rows are packed together to improve activation reuse.
+- Per-row/per-block scales are stored beside the reordered weights.
+- Parallel APIs support single projection, paired projection, and fused Q/K/V.
+- The runtime can compute Q/K/V in one dispatch and gate+up in one paired kernel.
+
+This reduces repeated reads of the same activation vector and cuts thread-pool
+dispatch overhead for common transformer projection groups.
+
+Relevant code:
+
+- `bitnet_tq2_0_reorder_to_i2s`
+- `bitnet_tq2_0_matmul_i2s_neon_parallel`
+- `bitnet_tq2_0_matmul_i2s_neon_pair_parallel`
+- `bitnet_tq2_0_matmul_i2s_qkv_parallel`
+
+### TL1 / `vqtbl1q_s8` GEMM Path
+
+The TL1 path is another layout experiment inspired by llama.cpp/BitNet kernels.
+It converts `TQ2_0` into consecutive nibble pairs and builds a compact
+`vqtbl1q_s8` LUT from the activation vector.
+
+The TL1 pipeline is:
+
+1. Reorder `TQ2_0` interleaved weights to TL1 at load time.
+2. Quantize and preprocess the current activation vector into a table.
+3. Process blocked row groups while sharing the LUT across many rows.
+
+This path is useful for comparing table-lookup GEMM behavior against I2S and the
+direct VTBL/dotprod kernels.
+
+### RMSNorm + Quantize Fusion
+
+For I2S decode, the runtime fuses RMSNorm output production with int8 activation
+quantization where possible:
+
+- Attention RMSNorm can produce the normalized hidden state and the int8 vector
+  used by Q/K/V in one pass.
+- FFN RMSNorm can similarly feed gate/up projection quantization.
+- FFN down uses a known max from `silu(gate) * up` to avoid an unnecessary second
+  max scan.
+
+The goal is to reduce memory bandwidth and avoid repeating normalization or
+quantization work in each projection.
+
+### Fused Projection Dispatch
+
+Several transformer projections naturally share the same input vector. The
+runtime exploits that:
+
+- Q/K/V can be computed together through the I2S QKV parallel path.
+- Gate+up can be computed through paired kernels and one shared quantized input.
+- Paired LUT kernels share the activation LUT across two matrices.
+
+This matters on mobile CPUs because thread-pool scheduling and repeated input
+quantization can become visible at short decode lengths.
+
+### Output Projection Cache
+
+The output layer can dominate decode for small and medium models because it has
+to score the full vocabulary. The runtime builds expanded output caches at model
+load time when the model format allows it:
+
+- Q6K output can be expanded into Q8 rows with compact scale storage.
+- F16 tied embeddings can be converted into block-scaled Q8 rows.
+- Output rows are evaluated in 4-row or 8-row NEON dot-product kernels.
+- The output worker pool splits vocabulary rows into chunks and parallelizes
+  logits computation.
+
+Android uses smaller default chunks for some compact output shapes to improve
+load balancing on Snapdragon-class devices. `BITNET_OUTPUT_CHUNK_ROWS` can be
+used for experiments.
+
+### Multi-Threaded Decode
+
+The runtime uses a small global worker pool for selected hot paths instead of
+creating threads per request. The default thread count is 3 and can be overridden
+with:
+
+```sh
+BITNET_NUM_THREADS=4 ./build/openai_server models/bitcpm4-1b-tq2_0.gguf
+```
+
+Threaded work is used where it pays off, especially output projection and large
+TQ2 projections. Small matrices can stay single-threaded to avoid scheduling
+overhead.
+
+### Q8 KV Cache
+
+The public API exposes both F32 and Q8 KV-cache modes:
+
+```c
+bitnet_set_kv_cache_type(ctx, BITNET_KV_CACHE_Q8);
+```
+
+Q8 KV cache stores keys and values as int8 plus per-head scales. During
+attention, query heads are quantized and dotted against cached int8 keys, while
+cached int8 values are accumulated back into float attention outputs. This cuts
+KV-cache memory bandwidth and storage versus F32 cache, which becomes more
+important as context length grows.
+
+### HTTP Session KV Reuse
+
+The OpenAI-compatible server keeps per-session `bitnet_context_t` objects when a
+request provides `session_id`.
+
+The server reports:
+
+- `cached_tokens`: tokens already present in the session context.
+- `reused_tokens`: tokens reused from cache for this request.
+- `context_tokens`: current session context length after generation.
+
+If a client sends full conversation history on every turn, the server compares
+the token prefix and skips re-evaluating the cached portion. This makes multi-turn
+chat faster without requiring clients to omit history manually.
+
+### Sparse Output LoRA
+
+External LoRA is supported for transformer projections and the output layer. The
+example Xiaoli LoRA used in tests mostly changes a sparse set of output tokens.
+At load time, the runtime detects non-zero output rows in the LoRA B matrix and
+only updates those logits during decode.
+
+This keeps LoRA behavior in adapter weights while avoiding a dense full-vocab
+LoRA pass for mostly sparse output adapters.
 
 ## Build
 
+All build output should stay under `build/`.
+
 ```sh
 cmake -S . -B build
+cmake --build build --target openai_server minimal_generate gguf_inspect -j 8
+```
+
+Build tests and benchmark binaries:
+
+```sh
 cmake --build build -j 8
 ```
 
-Build only the user-facing tools:
+## Minimal CLI Usage
 
 ```sh
-cmake --build build \
-  --target openai_server minimal_generate gguf_inspect -j 8
+./build/minimal_generate models/bitcpm4-1b-tq2_0.gguf "The capital of France is" 32
 ```
 
-Enable Apple Metal:
+Useful environment variables:
 
 ```sh
-cmake -S . -B build -DBITNET_ENABLE_METAL=ON
-cmake --build build -j 8
+BITNET_NUM_THREADS=3
+BITNET_MAX_CONTEXT=2048
+BITNET_REPEAT_LAST_N=64
+BITNET_REPEAT_PENALTY=1.1
+# Set to 0 to avoid the faster, additional-memory compact Q8 output cache.
+BITNET_OUTPUT_Q8_CACHE=1
 ```
 
-Android arm64:
+`BITNET_NUM_THREADS` controls both the persistent pthread workers and x86
+OpenMP projection kernels.  The runtime clamps it to each pool's capacity.
+
+## OpenAI-Compatible HTTP Server
+
+Start the server:
 
 ```sh
-ANDROID_NDK=/path/to/android-ndk \
-  ./scripts/build_android.sh \
-  openai_server minimal_generate gguf_inspect
-```
-
-## Command-line generation
-
-```sh
-./build/minimal_generate \
-  models/bitcpm4-0.5b-tq2_0.gguf \
-  "Write a short introduction to ternary language models."
-```
-
-Inspect GGUF metadata and tensors:
-
-```sh
-./build/gguf_inspect models/bitcpm4-0.5b-tq2_0.gguf
-```
-
-## HTTP server
-
-```sh
-./build/openai_server \
-  models/bitcpm4-0.5b-tq2_0.gguf \
+./build/openai_server models/bitcpm4-1b-tq2_0.gguf \
   --host 127.0.0.1 \
-  --port 8080 \
-  --ctx 4096 \
-  --max-tokens 256
+  --port 8080
 ```
+
+Defaults:
+
+- Model id: `bitnet`
+- Default `max_tokens`: `1024`
+- Request `max_tokens` cap: `4096`
+- Minimum context grows to fit the configured request cap.
 
 Chat completion:
 
 ```sh
-curl http://127.0.0.1:8080/v1/chat/completions \
+curl -sS http://127.0.0.1:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "bitnet",
+    "max_tokens": 64,
     "messages": [
-      {"role": "user", "content": "Hello"}
-    ],
+      {"role": "user", "content": "The capital of France is"}
+    ]
+  }'
+```
+
+Text completion:
+
+```sh
+curl -sS http://127.0.0.1:8080/v1/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "bitnet",
+    "prompt": "The capital of France is",
     "max_tokens": 64
   }'
 ```
@@ -104,284 +378,273 @@ curl -N http://127.0.0.1:8080/v1/chat/completions \
   -d '{
     "model": "bitnet",
     "stream": true,
+    "max_tokens": 64,
     "messages": [
-      {"role": "user", "content": "Explain ternary weights briefly."}
+      {"role": "user", "content": "Explain KV cache briefly."}
     ]
   }'
 ```
 
-## Persistent memory
-
-The bundled memory setup uses the exact BitCPM 0.5B GGUF whose SHA-256 is
-`44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95`.
-Provide that GGUF separately at `models/bitcpm4-0.5b-tq2_0.gguf`; it is not
-committed. The selected memory artifacts are in
-`models/memory/resident-0.5b/`, with file hashes in `manifest.json`.
-The resident path is experimental: its measured accuracy is below a useful
-general-purpose memory target.
-
-### Architecture
-
-A normal chat message follows this path:
-
-1. The server's statement/question gate decides whether to attempt a write.
-   This gate still uses rules unless a separate action controller is supplied.
-2. The trained writer reads a fresh prefill of all 24 backbone layers and
-   predicts the operation and entity, predicate, value, and optional time
-   spans. Invalid extraction fails the write.
-3. The server stores the source bytes and compiled spans as an immutable
-   event. In resident mode, every nonduplicate observation is retained; the reader
-   learns whether a question asks for current or historical facts. The
-   writer's operation prediction is reported, but resident mode records each
-   new observation as an assertion instead of using the old predecessor linker.
-4. A separate fresh prefill supplies final hidden states and input embeddings
-   to `resident.bnresid`. It writes token-level semantic and identity
-   addresses into the session's resident state.
-
-At recall, the question receives its own fresh prefill. The resident model
-activates stored addresses using learned token attention, identity
-compatibility, version links, history scope, and a count head. It selects
-zero to four events. The server then copies the selected values from their
-validated source spans. Stored text is not searched by query or inserted
-into the generation prompt. A zero-event decision returns empty content.
-
-The writer and resident reader are trained separately. The GGUF backbone is
-frozen; this configuration uses no LoRA, SVD, or NAS/NG compression.
-Memory evaluation checks that `cached_tokens` and `reused_tokens` are zero.
-
-### Files and model roles
-
-| File | Resident-mode role |
-| --- | --- |
-| `models/bitcpm4-0.5b-tq2_0.gguf` | Frozen 0.5B backbone; supply separately with the exact hash above |
-| `models/memory/resident-0.5b/writer.bntwrite` | Trained automatic operation and field extraction; used for writes |
-| `models/memory/resident-0.5b/resident.bnresid` | Trained token-address write, neural activation, version scope, and answer-count parameters |
-| `models/memory/resident-0.5b/pair.bntpair` | Loaded for feature geometry and compatibility; its pair scorer is bypassed |
-| `models/memory/resident-0.5b/link.bntlink` | Loaded for current server compatibility; its predecessor scorer is bypassed |
-| `models/memory/resident-0.5b/query.bntqact` | Loaded for current server compatibility; its query scorer is bypassed |
-| `models/memory/resident-0.5b/resident.pt` | Selected research checkpoint used to export `.bnresid`; not loaded by C |
-
-The current server requires all four typed artifacts together with
-`--episodic-memory`, even when `--resident-model` selects the new reader.
-It rejects a different GGUF or LoRA for this configuration. Do not substitute
-another 0.5B, 1B, or 3B GGUF merely because its architecture is similar.
-
-Session facts are data, not model weights. `POST /v1/memory/export` saves a
-content-addressed `.bnepisodic` source file, `.bnevent` event file, and
-`.bnresident` address file under `--memory-state-dir`. A `.bnsnapshot`
-manifest commits their hashes atomically. Import verifies the files and
-restores the resident tensors without re-encoding source messages; a failed
-import leaves live memory unchanged. Keep one server writer per state
-directory.
-
-### Start and use
-
-Build as described above, provide the matching GGUF, then start the server:
+Multi-turn KV-cache reuse:
 
 ```sh
-mkdir -p build/memory-states
-
-./build/openai_server models/bitcpm4-0.5b-tq2_0.gguf \
-  --host 127.0.0.1 --port 8080 --ctx 4096 \
-  --memory-state-dir build/memory-states --episodic-memory \
-  --typed-writer-model models/memory/resident-0.5b/writer.bntwrite \
-  --typed-pair-model models/memory/resident-0.5b/pair.bntpair \
-  --typed-link-model models/memory/resident-0.5b/link.bntlink \
-  --typed-query-model models/memory/resident-0.5b/query.bntqact \
-  --resident-model models/memory/resident-0.5b/resident.bnresid
-```
-
-Use the same `session_id` for writes and questions. The ordinary chat route
-attempts automatic memory unless `"memory_auto": false` is sent:
-
-```sh
-curl http://127.0.0.1:8080/v1/chat/completions \
+curl -sS http://127.0.0.1:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"session_id":"demo","messages":[{"role":"user","content":"Morgan\u0027s home city is Lima."}],"max_tokens":16}'
+  -d '{
+    "model": "bitnet",
+    "session_id": "demo-session",
+    "reset_session": true,
+    "max_tokens": 64,
+    "messages": [
+      {"role": "user", "content": "Remember the code LAN-TQ2-42. Reply STORED."}
+    ]
+  }'
 
-curl http://127.0.0.1:8080/v1/chat/completions \
+curl -sS http://127.0.0.1:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
-  -d '{"session_id":"demo","messages":[{"role":"user","content":"Which home city does Morgan have now?"}],"max_tokens":16}'
+  -d '{
+    "model": "bitnet",
+    "session_id": "demo-session",
+    "max_tokens": 128,
+    "messages": [
+      {"role": "user", "content": "What code did I ask you to remember?"}
+    ]
+  }'
 ```
 
-Inspect `memory_auto.stored` on the write response. A memory answer includes
-`memory_copy.mode = neural_resident_activation_then_compiled_pointer` and
-`memory_copy.selected_event_indices`. The answer is only as accurate as the
-writer's extracted span and the resident model's selected events. For a
-diagnostic forced write, send raw text with `POST /v1/memory/remember`.
+With `session_id`, the server keeps a context for the session and reports
+`bitnet_session.cached_tokens`, `reused_tokens`, and `context_tokens`. If the
+client sends full history again, the server de-duplicates the already cached
+prefix instead of evaluating it twice.
 
-Export the session, stop the server, restart it with the same model paths and
-state directory, then import before querying:
+## LoRA
+
+Load an external LoRA adapter:
 
 ```sh
-curl http://127.0.0.1:8080/v1/memory/export \
-  -H 'Content-Type: application/json' \
-  -d '{"session_id":"demo"}'
-
-# Restart the server here with the command above.
-
-curl http://127.0.0.1:8080/v1/memory/import \
-  -H 'Content-Type: application/json' \
-  -d '{"session_id":"demo"}'
+./build/openai_server models/bitcpm4-1b-tq2_0.gguf \
+  --host 127.0.0.1 \
+  --port 8080 \
+  --lora build/lora/xiaoli.bnlora \
+  --lora-scale 1.0
 ```
 
-Resident mode supports at most 32 events per session and 128 input tokens
-including BOS per write or question. It can return at most four events.
-Deletion and the typed-event mutation/query endpoints are unsupported in
-this mode; delete requests are rejected.
-
-### Training and export
-
-The resident curriculum is generated by
-`python/prepare_memory_set_curriculum.py --diverse-train` with 128 training
-worlds and 24 development worlds. The selected checkpoint uses a
-128-dimensional factorized resident baseline, then a trainable identity
-channel over frozen baseline parameters. Identity training uses synthetic
-entity-role labels; those labels are never passed to inference. Both stages
-use the exact C tokenizer and the same frozen 0.5B GGUF. The selected
-identity run uses seed `2810917`; it trained for 1,000 steps and selected
-checkpoint step `800` on development metrics.
-The baseline and identity trainers are
-`python/train_resident_memory_set.py` and
-`python/train_resident_identity.py`; the latter requires a matching
-baseline checkpoint and backbone feature cache. The automatic writer is
-trained separately on natural-message field labels with
-`scripts/train_natural_memory.sh` and `scripts/train_context_memory.sh`.
-LoCoMo and the sealed split are not training inputs.
-
-The committed `.pt` checkpoint contains the selected baseline and identity
-weights. Re-export the C artifact without retraining:
+Generate the example Xiaoli adapter used by tests:
 
 ```sh
-python3 python/export_resident_identity.py \
-  models/memory/resident-0.5b/resident.pt \
-  build/resident-reexport.bnresid
+cmake --build build --target train_xiaoli_lora -j 8
+./build/train_xiaoli_lora models/bitcpm4-1b-tq2_0.gguf build/lora/xiaoli.bnlora
 ```
 
-The final training package is `training/memory/resident-0.5b/`. It records
-the data, selected checkpoints, training entry points and hashes for the
-models loaded by resident serving:
+LoRA is applied by runtime weights, not by hidden server-side persona prompts.
+The HTTP server should remain a general inference framework.
 
-| Model | Training data | Training method and script |
-| --- | --- | --- |
-| `resident.bnresid` | `corpora/resident/{train,valid}.jsonl` and training-only `train_supervision.json` | Factorized resident baseline with `python/train_resident_memory_set.py`, followed by an identity channel over its frozen weights with `python/train_resident_identity.py`. Re-run with `retrain_resident_and_writer.sh`. |
-| `writer.bntwrite` | `corpora/writer/{train,valid}.jsonl` | Natural-message write, field-span and context-operation supervision with `scripts/train_natural_memory.sh` and `scripts/train_context_memory.sh`. Re-run with `retrain_resident_and_writer.sh`. |
-| `pair.bntpair` | Selected `pair.pt` and `pair_init.pt` are retained; the original raw pair corpus is not hash-bound in the checkpoint | Entity/predicate pairing and version-link supervision with `python/train_typed_pair_verifier.py`; loaded for compatibility, not used by resident recall. |
-| `link.bntlink` | Retained writer corpus, frozen `pair.pt` and regenerated backbone features | Predecessor-existence head with `python/train_natural_link_head.py`; loaded for compatibility, not used by resident recall. |
-| `query.bntqact` | Exact supervised `feature_data/query_{train,valid}.pt`; matching-ID raw examples in `corpora/query/` | Candidate/NULL activation head with `python/train_typed_query_activator.py`; retraining helper `retrain_query_from_features.py`. Loaded for compatibility, not used by resident recall. |
+## Android
 
-The original query raw-source bytes are not asserted to match the regenerated
-matching-ID examples. The retained supervised feature rows are the exact
-query-head training inputs. The pair checkpoint likewise cannot prove its
-original raw-corpus identity; the package does not claim a bitwise full
-retraining of that legacy compatibility component. See the package
-`README.md` for commands, initializers, selection steps and provenance.
-Check every retained input and reproduce all five deployed binaries with:
+Set the Android NDK path and build under `build/android-arm64-v8a`:
 
 ```sh
-python3 training/memory/resident-0.5b/verify.py \
-  models/bitcpm4-0.5b-tq2_0.gguf
+ANDROID_NDK=/path/to/android-ndk ./scripts/build_android.sh openai_server minimal_generate gguf_inspect
 ```
 
-### Tests and measured results
+Push to a connected device:
 
-Run the C regression suite and the local HTTP development evaluation
-(requires the matching GGUF and a fresh output directory):
+```sh
+adb -s 192.168.210.10:5555 push build/android-arm64-v8a/openai_server /data/local/tmp/openai_server
+adb -s 192.168.210.10:5555 shell chmod 755 /data/local/tmp/openai_server
+```
+
+Run on device with models already placed in `/data/models/`:
+
+```sh
+adb -s 192.168.210.10:5555 shell \
+  'cd /data/local/tmp && BITNET_NUM_THREADS=3 ./openai_server /data/models/bitcpm4-1b-tq2_0.gguf --host 127.0.0.1 --port 18187'
+```
+
+Device-side smoke request:
+
+```sh
+adb -s 192.168.210.10:5555 shell \
+  "curl -sS http://127.0.0.1:18187/v1/chat/completions \
+    -H 'Content-Type: application/json' \
+    -d '{\"model\":\"bitnet\",\"max_tokens\":64,\"messages\":[{\"role\":\"user\",\"content\":\"The capital of France is\"}]}'"
+```
+
+For decode-only regression checks on Snapdragon 865, compare against the
+[best known Android results](#android-865-best-known-results) rather than HTTP
+long-generation throughput.
+
+## Tests And Profiling
+
+Run unit tests:
 
 ```sh
 ctest --test-dir build --output-on-failure
-
-python3 tests/eval_resident_http.py \
-  models/bitcpm4-0.5b-tq2_0.gguf \
-  models/memory/resident-0.5b/resident.bnresid \
-  build/resident-http-run
 ```
 
-The HTTP evaluator sends ordinary chat messages to write facts. It exports
-sessions, restarts the process, imports state, and asks fresh questions. It
-checks zero session KV reuse, unchanged answers after restart, rejection of
-corrupt state, and absence of raw-event re-encoding on recall. It supplies
-no gold field spans or targets to the server. Results are written to
-`build/resident-http-run/summary.json`.
-
-| 0.5B C/HTTP development metric | Result |
-| --- | ---: |
-| Facts stored | 192/192 |
-| Values extracted exactly | 191/192 |
-| Current-fact answer sets | 54/96 (56.25%) |
-| Multiple-fact answer sets | 57/96 (59.38%) |
-| Historical answer sets | 29/48 (60.42%) |
-| Correct empty-answer decisions | 22/48 (45.83%) |
-| All answer sets | **162/288 (56.25%)** |
-
-The native C operator and Python agree on the same resident states and
-C backbone features for all 288 selected event sets. The Python formula
-with its training-side features selected correct evidence on 174/288
-questions; with C backbone features that fell to 164/288. The writer's
-value error reduced complete answers to 162/288. These are development
-diagnostics, not LoCoMo results or an independent final-test score.
-The resident model still has weak generalization and empty-answer
-accuracy. The local C regression suite passed 21/21 tests.
-
-## CPU dispatch
-
-One x86 binary supports scalar, AVX2, AVX-VNNI, and AVX512-VNNI kernels.
-Selection is automatic.
-
-Override it for testing:
+Cross-build Android tests by opting in explicitly:
 
 ```sh
-BITNET_CPU_TIER=avx2 ./build/minimal_generate model.gguf "Hello"
+BITNET_BUILD_TESTS=ON ANDROID_NDK=/path/to/android-ndk \
+  ./scripts/build_android.sh test_ops test_i2s_correctness test_quant_tq2_0 test_q6k_layout
 ```
 
-Suppress startup diagnostics:
+Run HTTP API tests:
 
 ```sh
-BITNET_QUIET=1 ./build/minimal_generate model.gguf "Hello"
+python3 tests/test_openai_server_default_config.py build/openai_server models/bitcpm4-0.5b-tq2_0.gguf
+python3 tests/test_openai_server_api.py build/openai_server models/bitcpm4-0.5b-tq2_0.gguf
+python3 tests/test_openai_server_lora_api.py build/openai_server models/bitcpm4-1b-tq2_0.gguf build/lora/xiaoli.bnlora
+python3 tests/test_openai_server_multiturn_quality.py build/openai_server models/bitcpm4-1b-tq2_0.gguf build/lora/xiaoli.bnlora
 ```
 
-## Performance profiling
+Decode profiling:
 
 ```sh
 cd build
-for threads in 1 2 3 4 6; do
-  BITNET_NUM_THREADS=$threads ./test_profile_decode
+for t in 1 2 3 4 6; do
+  echo -n "$t threads: "
+  BITNET_NUM_THREADS=$t ./test_profile_decode 2>&1 | grep decode_tok_s
 done
 ```
 
-Additional sweep tools:
+Multi-turn KV-cache profiling:
 
 ```sh
-./scripts/perf_sweep.sh
-python3 scripts/perf_summarize.py
+./build/test_profile_multiturn models/bitcpm4-1b-tq2_0.gguf
+./build/test_profile_multiturn models/bitcpm4-1b-tq2_0.gguf q8
 ```
 
-## Source map
+## Notes
 
-- `include/bitnet.h` — public C API
-- `src/bitnet.c` — model loading, forward pass, sessions, and runtime hooks
-- `src/quant_tq2_0.c`, `src/quant_q6k.c`, `src/quant_q4k.c` — quantized
-  kernels and tensor helpers
-- `src/ops.c` — normalization, activation, RoPE, residual, and softmax ops
-- `src/gguf.c`, `src/tensor.c`, `src/tokenizer.c`, `src/sampler.c` — model
-  format and generation support
-- `src/x86/` — x86 SIMD kernels and dispatch registration
-- `src/bitnet_metal.mm` — optional Apple Metal backend
-- `examples/openai_server.c` — OpenAI-compatible HTTP server
-- `examples/minimal_generate.c` — minimal command-line generation
-- `tools/gguf_inspect.c` — GGUF metadata and tensor inspection
-- `src/metis/typed_writer_model.c`, `src/metis/typed_pair_encoder.c`,
-  `src/metis/typed_link_model.c`, `src/metis/typed_query_activator.c` —
-  typed artifact loading and automatic writing
-- `src/metis/resident_identity.c`, `python/export_resident_identity.py` —
-  experimental native resident activation and checkpoint export
-- `tests/eval_resident_http.py`, `tests/diagnose_resident_c.py`,
-  `tools/resident_probe.c` — resident HTTP lifecycle and feature-domain diagnostics
-- `src/metis/episodic_store.c`, `src/metis/event_store.c`,
-  `src/metis/memory_snapshot.c` — evidence, event versions, and atomic snapshots
-- `scripts/train_natural_memory.sh`, `scripts/train_context_memory.sh` —
-  training stages for the automatic writer
-- `python/prepare_memory_set_curriculum.py`,
-  `python/train_resident_memory_set.py`, `python/train_resident_identity.py` —
-  resident curriculum, baseline, and identity training
-- `tests/` — correctness, API, lifecycle, and performance tests
+- Keep generated binaries, test outputs, Android builds, and LoRA artifacts under
+  `build/`.
+- The local benchmark numbers depend heavily on model size, thread count,
+  context length, HTTP vs direct runtime path, and whether another server process
+  is still running.
+- Before Android benchmarking, check for stale server processes:
+
+```sh
+adb -s 192.168.210.10:5555 shell 'ps -A | grep openai_server || true'
+```
+
+---
+
+# Neural Memory System
+
+The repository also contains a neural memory subsystem trained on top of the
+frozen 0.5B backbone. Memory weights are trained separately from the GGUF,
+exported to a single `.bnmodel` file, and loaded by a pure C server with
+no Python dependency at inference time.
+
+## Quick start
+
+```sh
+# Build
+cmake -S . -B build && cmake --build build -j 8
+
+# Plain LLM inference (no memory)
+./build/c_neural_server models/bitcpm4-0.5b-tq2_0.gguf
+
+# With neural memory
+./build/c_neural_server models/bitcpm4-0.5b-tq2_0.gguf \
+  --memory-model build/neural-c-weights/model.bnmodel
+```
+
+## Memory server usage
+
+```
+Morgan lives in Lima.               → [write] stored
+Where does Morgan live now?         → [neural] route=2, hybrid: Morgan → ep 0
+                                     → supported → value='Lima'
+Where does Kai live now?            → no matching fact → refusal
+What is 3 plus 7?                   → route=0 (normal) → "3 + 7 = 10"
+```
+
+### Persistence
+
+```sh
+# Save memory state
+/save memory.bnstate
+
+# Restart server, then load
+/load memory.bnstate
+
+# Or use auto-load/auto-save on startup/exit
+./build/c_neural_server model.gguf \
+  --memory-model weights.bnmodel \
+  --load-state memory.bnstate \
+  --save-state memory.bnstate
+```
+
+### Supported memory types
+
+| Type | Example write | Example query | Extracted value |
+| --- | --- | --- | --- |
+| Location | Morgan lives in Lima. | Where does Morgan live? | Lima |
+| Birthday | Sarah birthday is on March 5th. | When is Sarah birthday? | on March 5th |
+| Goal | Tom wants to learn Spanish. | What does Tom want to learn? | to learn Spanish |
+| Identity | Anna is a doctor. | What is Anna's job? | a doctor |
+| Event | Meeting starts at 3pm. | When does the meeting start? | at 3pm |
+| Chinese | 李明住在上海。 | 李明现在住在哪里？ | 上海 |
+
+### Architecture
+
+```
+User message
+  ↓ tokenize + C backbone forward
+  ↓ encoder feature extraction (2048-dim, L2-normalized hidden+lexical pair)
+  ↓ neural route prediction (trained 3-class head: normal/supported/insufficient)
+  ↓ if supported: subject matching → episode lookup → value extraction
+  ↓ if insufficient: uncertainty branch residual → trained refusal
+  ↓ if normal: plain base generation
+  ↓ reply
+```
+
+The route head is the trained `FineSpanReader` from 18 rounds of local training
+(V3-001 through V3-019). The uncertainty branch is the trained
+`QueryOnlyUncertainty` residual that biases generation toward natural refusal
+text. Both are loaded from a single `model.bnmodel` file.
+
+### Files
+
+| File | Role |
+| --- | --- |
+| `src/neural_memory.c/h` | Pure C neural inference (route head + uncertainty branch) |
+| `tools/c_neural_server.c` | Pure C server (sessions, memory, persistence, routing) |
+| `build/neural-c-weights/model.bnmodel` | Trained neural weights (29 tensors, 9.5 MB) |
+| `python/train_v3_*.py` | Training pipeline (18 rounds) |
+| `python/check_v3_eval_*.py` | Free-reply evaluators (C-verified + dual blind review) |
+| `python/free_reply_protocol.py` | Blind review protocol and gate aggregation |
+| `training/memory/neural-system/` | Experiment registrations, reviews, training data |
+
+### Training results
+
+| Capability | Status | Training round |
+| --- | --- | --- |
+| Uncertainty refusal | 8-10/10 | V3-004 (supervision fix) |
+| Normal chat | 4/4 | V3-005 onward |
+| Route discrimination | 82% | V3-009 (frozen trunk, two-phase) |
+| START timing | correct | V3-013 (tokenization fix) |
+| Value copy path | connected | V3-013 |
+| Value selection accuracy | 0/10 (grounded) | Known limitation |
+
+The grounded limitation (selecting the correct value from stored facts) requires
+architectural changes to the query/source projection layer. Nine training
+rounds (V3-008 through V3-019) exhaustively demonstrated that parameter
+unfreezing alone cannot resolve this within the current architecture.
+
+## NEON optimization
+
+The GGUF reference-parity path received NEON optimizations that recovered
+~75% of the long-context decode performance gap while maintaining bit-identical
+outputs across all four model sizes (0.5B/1B/3B/8B):
+
+1. Contiguous dot-product fast path (same accumulator mapping and reduction tree)
+2. Fused attention value-column pass (identical per-lane FMA chains)
+3. NEON element-wise RMSNorm tail
+4. Stack scratch for matmul (eliminated per-call malloc/free)
+5. NEON Q6_K dequantization with vdot
+
+Verification: 7 golden logits byte-identical, teacher-forced NLL bit-equal,
+200-token generation byte-identical to pre-optimization baseline.

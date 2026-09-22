@@ -1,0 +1,41 @@
+{
+  "id": "EP-001",
+  "status": "planned_not_started",
+  "phase": "P2A",
+  "hypothesis": "Preserving episode boundaries and learning subject-role/content compatibility reduces cross-person activation without text search or gold routing.",
+  "prerequisites": ["P1.1", "P1.2", "P1.3", "P1.4", "P1.5", "P1.6", "P1.7"],
+  "prerequisites_complete": false,
+  "scope": "Reader component only; supplied episode boundaries; no autonomous-memory or generation accuracy claim.",
+  "drafts_to_review": ["python/episode_memory.py", "python/train_episode_memory.py"],
+  "fixed_constraints": {
+    "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "backbone_frozen": true,
+    "kv_cache": false,
+    "lora": false,
+    "svd": false,
+    "nas_ng": false,
+    "locomo_training_or_selection": false,
+    "source_text_search": false,
+    "gold_fields_in_forward": false
+  },
+  "required_controls": [
+    "same subject and different relation",
+    "same value and different subject",
+    "subject-role reversal",
+    "target removed",
+    "all episodes irrelevant",
+    "distractor number and order changed",
+    "multiple relevant episodes",
+    "annotation mutation does not change inference"
+  ],
+  "pilot_step_cap": 1000,
+  "maximum_screening_variants": 2,
+  "development_manifest": null,
+  "protocol_smoke_manifest": "training/memory/neural-system/data/P1-smoke.manifest.json",
+  "source_manifest": null,
+  "seeds": null,
+  "launch_command": null,
+  "launch_rule": "Populate and validate all protocol fields after P1, before running. Do not launch the draft scripts yet.",
+  "promotion_rule": "Use P2A thresholds from PLAN.md. A 32-case smoke result cannot promote the component.",
+  "failure_action": "Retain predictions and classify binding, relevance and rejection errors. Do not compensate with generation templates or heuristic lookup."
+}

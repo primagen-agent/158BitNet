@@ -1,0 +1,5195 @@
+{
+  "experiment": {
+    "id": "DG-007",
+    "status": "registered_zero_optimizer_diagnostic",
+    "checkpoint_sha256": "a8976841239f18520842e75551dfbc8681c27f6d25e0784fed03c1efcb5585d9",
+    "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "panel": "Unchanged CG-001 ordered 16 development records and their recorded 168 free-generation prefixes",
+    "interventions": [
+      "Detach mixture probabilities and uncertainty state features from generation gradients; retain independent state CE gradients. Forward values must remain identical.",
+      "Hold only initial user-prefill probabilities constant for the reply; retain current-prefix content and uncertainty features. No answer prefix in the decision constructor.",
+      "Compare original zero-gain initialization with a nonzero last-layer gain parameter of 1.0 plus zero content output matrix. Same seed, other parameters unchanged; both total residuals must start at zero. This is one reparameterization comparison, not trained weights."
+    ],
+    "recorded_prefix_ablations": [
+      "unchanged",
+      "remove_content",
+      "remove_uncertainty",
+      "fixed_prefill_probabilities"
+    ],
+    "scope": "Offline replay of identity-bound real C tensors, post-forward losses and one-step distributions. Changed logits on old prefixes are off-policy diagnostics, NOT new free-generated answers or accuracy.",
+    "numeric_tolerance": {
+      "atol": 1e-05,
+      "rtol": 0.0001
+    },
+    "initialization_seed": 3180923,
+    "gradient_gates": [
+      "Compatibility forward exactly matches the original module",
+      "Isolation preserves logits and blocks all generation gradients to state_encoder and state_head, while state CE retains a nonzero controller gradient",
+      "Generation output matrices retain finite nonzero gradients where a branch is structurally available",
+      "Both initializations preserve base logits exactly; the alternative exposes nonzero content-output gradients without a double-zero dead path",
+      "Prefill decision rejects multiple hidden rows, model updates, memory changes and mutation; later prefixes cannot change its probabilities"
+    ],
+    "reporting": "Keep all 16 cases, every recorded prefix and every intervention. Report classification, NLL, gradient norms, projected branch norms and changed next-token counts separately. Do not score replayed tokens as complete responses.",
+    "optimizer_steps": 0,
+    "parameter_updates": 0,
+    "automatic_training_approval": false,
+    "deployment_approved": false,
+    "constraints": {
+      "kv_reuse": false,
+      "lora": false,
+      "svd": false,
+      "nas_ng": false,
+      "locomo": false,
+      "gold_forward_routing": false
+    }
+  },
+  "training_controls": [
+    {
+      "id": "case-d68ac9d7b2b39fe94695",
+      "target_state": 1,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 3.097989320755005,
+          "state_ce": 0.07508043944835663,
+          "generation_classifier_grad_l2": 1.912981390953064,
+          "state_classifier_grad_l2": 0.9953015446662903,
+          "content_output_grad_l2": 0.004027405753731728,
+          "uncertainty_output_grad_l2": 3.0869052410125732,
+          "content_gain_grad_l2": 0.19494913518428802,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 3.097989320755005,
+          "state_ce": 0.07508043944835663,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 0.9953015446662903,
+          "content_output_grad_l2": 0.004027405753731728,
+          "uncertainty_output_grad_l2": 3.0869052410125732,
+          "content_gain_grad_l2": 0.19494913518428802,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 3.9641566276550293,
+          "state_ce": 0.07508033514022827,
+          "generation_classifier_grad_l2": 6.726346969604492,
+          "state_classifier_grad_l2": 0.9953002333641052,
+          "content_output_grad_l2": 0.0059974417090415955,
+          "uncertainty_output_grad_l2": 0.28359776735305786,
+          "content_gain_grad_l2": 0.2703692317008972,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 4.067328453063965,
+          "state_ce": 1.181910753250122,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.984326362609863,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.762452244758606,
+          "content_gain_grad_l2": 0.0018825704464688897,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 4.067328453063965,
+          "state_ce": 1.181910753250122,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.984326362609863,
+          "content_output_grad_l2": 0.15996667742729187,
+          "uncertainty_output_grad_l2": 0.762452244758606,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-2841cfa9cf20f00891d1",
+      "target_state": 1,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 3.866032838821411,
+          "state_ce": 0.07978907227516174,
+          "generation_classifier_grad_l2": 2.6841533184051514,
+          "state_classifier_grad_l2": 1.0610121488571167,
+          "content_output_grad_l2": 0.004007918294519186,
+          "uncertainty_output_grad_l2": 3.304947853088379,
+          "content_gain_grad_l2": 0.19348280131816864,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 3.866032838821411,
+          "state_ce": 0.07978907227516174,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 1.0610121488571167,
+          "content_output_grad_l2": 0.004007918294519186,
+          "uncertainty_output_grad_l2": 3.304947853088379,
+          "content_gain_grad_l2": 0.19348280131816864,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 4.877591609954834,
+          "state_ce": 0.07978907227516174,
+          "generation_classifier_grad_l2": 7.673847675323486,
+          "state_classifier_grad_l2": 1.0610122680664062,
+          "content_output_grad_l2": 0.00610384764149785,
+          "uncertainty_output_grad_l2": 0.31830358505249023,
+          "content_gain_grad_l2": 0.2848736643791199,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 4.994161605834961,
+          "state_ce": 1.1774017810821533,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.9758992195129395,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.8163477182388306,
+          "content_gain_grad_l2": 0.0063947644084692,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 4.994161605834961,
+          "state_ce": 1.1774017810821533,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.9758992195129395,
+          "content_output_grad_l2": 0.16504265367984772,
+          "uncertainty_output_grad_l2": 0.8163477182388306,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-410cc79e7fc060c0b6a0",
+      "target_state": 2,
+      "has_source": false,
+      "modes": {
+        "unchanged": {
+          "nll": 1.2319941520690918,
+          "state_ce": 0.011369792744517326,
+          "generation_classifier_grad_l2": 1.0917726755142212,
+          "state_classifier_grad_l2": 0.08608665317296982,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.5631251335144043,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 1.2319941520690918,
+          "state_ce": 0.011369792744517326,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 0.08608665317296982,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.5631251335144043,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 1.2368162870407104,
+          "state_ce": 0.011369792744517326,
+          "generation_classifier_grad_l2": 1.1264760494232178,
+          "state_classifier_grad_l2": 0.08608648926019669,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.5539101362228394,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 1.9694652557373047,
+          "state_ce": 0.8071545362472534,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 4.020130634307861,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.5127676725387573,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 1.9694652557373047,
+          "state_ce": 0.8071545362472534,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 4.020130634307861,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.5127676725387573,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-c61340e0ba8151f9ee09",
+      "target_state": 0,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 0.8053005933761597,
+          "state_ce": 2.94095778465271,
+          "generation_classifier_grad_l2": 0.9478074312210083,
+          "state_classifier_grad_l2": 11.873857498168945,
+          "content_output_grad_l2": 0.0018812130438163877,
+          "uncertainty_output_grad_l2": 1.528201937675476,
+          "content_gain_grad_l2": 0.007681512739509344,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 0.8053005933761597,
+          "state_ce": 2.94095778465271,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 11.873857498168945,
+          "content_output_grad_l2": 0.0018812130438163877,
+          "uncertainty_output_grad_l2": 1.528201937675476,
+          "content_gain_grad_l2": 0.007681512739509344,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 1.3790019750595093,
+          "state_ce": 2.9409584999084473,
+          "generation_classifier_grad_l2": 18.359542846679688,
+          "state_classifier_grad_l2": 11.873857498168945,
+          "content_output_grad_l2": 0.002648937050253153,
+          "uncertainty_output_grad_l2": 0.9265606999397278,
+          "content_gain_grad_l2": 0.005479860119521618,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 1.8123139142990112,
+          "state_ce": 0.9434822201728821,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.327754497528076,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.4551820158958435,
+          "content_gain_grad_l2": 0.0006677738856524229,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 1.8123139142990112,
+          "state_ce": 0.9434822201728821,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.327754497528076,
+          "content_output_grad_l2": 0.11223790049552917,
+          "uncertainty_output_grad_l2": 0.4551820158958435,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-5e76236adb954331887e",
+      "target_state": 1,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 2.938812732696533,
+          "state_ce": 0.6766330599784851,
+          "generation_classifier_grad_l2": 5.550657749176025,
+          "state_classifier_grad_l2": 5.661388874053955,
+          "content_output_grad_l2": 0.0019417969742789865,
+          "uncertainty_output_grad_l2": 3.5174014568328857,
+          "content_gain_grad_l2": 0.09789576381444931,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 2.938812732696533,
+          "state_ce": 0.6766330599784851,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.661388874053955,
+          "content_output_grad_l2": 0.0019417969742789865,
+          "uncertainty_output_grad_l2": 3.5174014568328857,
+          "content_gain_grad_l2": 0.09789576381444931,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 3.331282138824463,
+          "state_ce": 0.6766332387924194,
+          "generation_classifier_grad_l2": 17.5185489654541,
+          "state_classifier_grad_l2": 5.661390781402588,
+          "content_output_grad_l2": 0.0030818884260952473,
+          "uncertainty_output_grad_l2": 1.9625073671340942,
+          "content_gain_grad_l2": 0.08766256272792816,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 4.011806488037109,
+          "state_ce": 1.3511669635772705,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 6.5057291984558105,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.8951920866966248,
+          "content_gain_grad_l2": 0.004789373837411404,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 4.011806488037109,
+          "state_ce": 1.3511669635772705,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 6.5057291984558105,
+          "content_output_grad_l2": 0.13176941871643066,
+          "uncertainty_output_grad_l2": 0.8951920866966248,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-0955f6c759b8d1cc160d",
+      "target_state": 1,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 3.1465847492218018,
+          "state_ce": 0.6759477257728577,
+          "generation_classifier_grad_l2": 6.652021884918213,
+          "state_classifier_grad_l2": 5.663333892822266,
+          "content_output_grad_l2": 0.0019467303063720465,
+          "uncertainty_output_grad_l2": 3.647735595703125,
+          "content_gain_grad_l2": 0.10045663267374039,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 3.1465847492218018,
+          "state_ce": 0.6759477257728577,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.663333892822266,
+          "content_output_grad_l2": 0.0019467303063720465,
+          "uncertainty_output_grad_l2": 3.647735595703125,
+          "content_gain_grad_l2": 0.10045663267374039,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 3.809462308883667,
+          "state_ce": 0.675948441028595,
+          "generation_classifier_grad_l2": 26.23370933532715,
+          "state_classifier_grad_l2": 5.6633381843566895,
+          "content_output_grad_l2": 0.0031316610984504223,
+          "uncertainty_output_grad_l2": 2.030374765396118,
+          "content_gain_grad_l2": 0.1186925619840622,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 4.771594047546387,
+          "state_ce": 1.3215222358703613,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 6.548803806304932,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.8821747899055481,
+          "content_gain_grad_l2": 0.00017674057744443417,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 4.771594047546387,
+          "state_ce": 1.3215222358703613,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 6.548803806304932,
+          "content_output_grad_l2": 0.15205499529838562,
+          "uncertainty_output_grad_l2": 0.8821747899055481,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-6cc67c267bdfa8a934a1",
+      "target_state": 2,
+      "has_source": false,
+      "modes": {
+        "unchanged": {
+          "nll": 1.136549711227417,
+          "state_ce": 0.026979371905326843,
+          "generation_classifier_grad_l2": 0.6263377070426941,
+          "state_classifier_grad_l2": 0.20436744391918182,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.0867505073547363,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 1.136549711227417,
+          "state_ce": 0.026979371905326843,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 0.20436744391918182,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.0867505073547363,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 1.139326572418213,
+          "state_ce": 0.026979371905326843,
+          "generation_classifier_grad_l2": 0.6893510222434998,
+          "state_classifier_grad_l2": 0.20436768233776093,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.084391474723816,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 1.6749697923660278,
+          "state_ce": 0.845949649810791,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 4.118500709533691,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.4041135013103485,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 1.6749697923660278,
+          "state_ce": 0.845949649810791,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 4.118500709533691,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.4041135013103485,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-d39632cf838459875bff",
+      "target_state": 0,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 1.641595482826233,
+          "state_ce": 1.9665143489837646,
+          "generation_classifier_grad_l2": 9.908398628234863,
+          "state_classifier_grad_l2": 9.65517520904541,
+          "content_output_grad_l2": 0.00032048014691099524,
+          "uncertainty_output_grad_l2": 2.8091397285461426,
+          "content_gain_grad_l2": 0.021889951080083847,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 1.641595482826233,
+          "state_ce": 1.9665143489837646,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 9.65517520904541,
+          "content_output_grad_l2": 0.00032048014691099524,
+          "uncertainty_output_grad_l2": 2.8091397285461426,
+          "content_gain_grad_l2": 0.021889951080083847,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 1.6437437534332275,
+          "state_ce": 1.9665151834487915,
+          "generation_classifier_grad_l2": 10.215775489807129,
+          "state_classifier_grad_l2": 9.655177116394043,
+          "content_output_grad_l2": 0.00033396377693861723,
+          "uncertainty_output_grad_l2": 2.7079832553863525,
+          "content_gain_grad_l2": 0.021161923184990883,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 2.7779898643493652,
+          "state_ce": 0.9234839081764221,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.24832010269165,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.7384674549102783,
+          "content_gain_grad_l2": 0.0019198359223082662,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 2.7779898643493652,
+          "state_ce": 0.9234839081764221,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.24832010269165,
+          "content_output_grad_l2": 0.11252177506685257,
+          "uncertainty_output_grad_l2": 0.7384674549102783,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-0afeea181bfe2cce15ae",
+      "target_state": 1,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 1.8686182498931885,
+          "state_ce": 0.07876536250114441,
+          "generation_classifier_grad_l2": 2.2844576835632324,
+          "state_classifier_grad_l2": 1.0108236074447632,
+          "content_output_grad_l2": 0.0024810682516545057,
+          "uncertainty_output_grad_l2": 2.844456195831299,
+          "content_gain_grad_l2": 0.035758815705776215,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 1.8686182498931885,
+          "state_ce": 0.07876536250114441,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 1.0108236074447632,
+          "content_output_grad_l2": 0.0024810682516545057,
+          "uncertainty_output_grad_l2": 2.844456195831299,
+          "content_gain_grad_l2": 0.035758815705776215,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 3.1313371658325195,
+          "state_ce": 0.07876547425985336,
+          "generation_classifier_grad_l2": 7.133270740509033,
+          "state_classifier_grad_l2": 1.0108250379562378,
+          "content_output_grad_l2": 0.0045848144218325615,
+          "uncertainty_output_grad_l2": 0.26528000831604004,
+          "content_gain_grad_l2": 0.03969305381178856,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 3.2427024841308594,
+          "state_ce": 1.1274484395980835,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.906850337982178,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.6046028137207031,
+          "content_gain_grad_l2": 0.00572200957685709,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 3.2427024841308594,
+          "state_ce": 1.1274484395980835,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.906850337982178,
+          "content_output_grad_l2": 0.15123479068279266,
+          "uncertainty_output_grad_l2": 0.6046028137207031,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-8994b1d24f644a20010b",
+      "target_state": 1,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 1.120744228363037,
+          "state_ce": 0.07539656013250351,
+          "generation_classifier_grad_l2": 1.4179868698120117,
+          "state_classifier_grad_l2": 0.9665837287902832,
+          "content_output_grad_l2": 0.002488964470103383,
+          "uncertainty_output_grad_l2": 2.5664048194885254,
+          "content_gain_grad_l2": 0.03570636361837387,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 1.120744228363037,
+          "state_ce": 0.07539656013250351,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 0.9665837287902832,
+          "content_output_grad_l2": 0.002488964470103383,
+          "uncertainty_output_grad_l2": 2.5664048194885254,
+          "content_gain_grad_l2": 0.03570636361837387,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 2.1449897289276123,
+          "state_ce": 0.07539656013250351,
+          "generation_classifier_grad_l2": 5.938206195831299,
+          "state_classifier_grad_l2": 0.9665836691856384,
+          "content_output_grad_l2": 0.004314086399972439,
+          "uncertainty_output_grad_l2": 0.2318069338798523,
+          "content_gain_grad_l2": 0.07918314635753632,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 2.2387406826019287,
+          "state_ce": 1.1194301843643188,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.872176170349121,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.6082158088684082,
+          "content_gain_grad_l2": 0.001699136570096016,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 2.2387406826019287,
+          "state_ce": 1.1194301843643188,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.872176170349121,
+          "content_output_grad_l2": 0.13240599632263184,
+          "uncertainty_output_grad_l2": 0.6082158088684082,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-087dc07d3baa42a10ac1",
+      "target_state": 2,
+      "has_source": false,
+      "modes": {
+        "unchanged": {
+          "nll": 1.7941793203353882,
+          "state_ce": 0.011216443032026291,
+          "generation_classifier_grad_l2": 0.9644686579704285,
+          "state_classifier_grad_l2": 0.08483441919088364,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.620728850364685,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 1.7941793203353882,
+          "state_ce": 0.011216443032026291,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 0.08483441919088364,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.620728850364685,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 1.799151062965393,
+          "state_ce": 0.011216443032026291,
+          "generation_classifier_grad_l2": 1.004946231842041,
+          "state_classifier_grad_l2": 0.08483441919088364,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.6103923320770264,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 2.5959889888763428,
+          "state_ce": 0.7623178958892822,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 3.8668935298919678,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.5666138529777527,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 2.5959889888763428,
+          "state_ce": 0.7623178958892822,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 3.8668935298919678,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.5666138529777527,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-e917740be7f368e54dc4",
+      "target_state": 0,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 1.0324686765670776,
+          "state_ce": 2.9001543521881104,
+          "generation_classifier_grad_l2": 0.9362154603004456,
+          "state_classifier_grad_l2": 11.993671417236328,
+          "content_output_grad_l2": 0.0025501272175461054,
+          "uncertainty_output_grad_l2": 1.7018429040908813,
+          "content_gain_grad_l2": 0.02866336703300476,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 1.0324686765670776,
+          "state_ce": 2.9001543521881104,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 11.993671417236328,
+          "content_output_grad_l2": 0.0025501272175461054,
+          "uncertainty_output_grad_l2": 1.7018429040908813,
+          "content_gain_grad_l2": 0.02866336703300476,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 1.6180089712142944,
+          "state_ce": 2.900153875350952,
+          "generation_classifier_grad_l2": 15.651191711425781,
+          "state_classifier_grad_l2": 11.993671417236328,
+          "content_output_grad_l2": 0.0033019050024449825,
+          "uncertainty_output_grad_l2": 0.8394181132316589,
+          "content_gain_grad_l2": 0.0165229681879282,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 1.9638056755065918,
+          "state_ce": 0.9294921159744263,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.331079006195068,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.4986326992511749,
+          "content_gain_grad_l2": 0.0012066010385751724,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 1.9638056755065918,
+          "state_ce": 0.9294921159744263,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.331079006195068,
+          "content_output_grad_l2": 0.12255802750587463,
+          "uncertainty_output_grad_l2": 0.4986326992511749,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-d3cf42c1d8ad5b74a82c",
+      "target_state": 1,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 2.8593833446502686,
+          "state_ce": 0.6249632835388184,
+          "generation_classifier_grad_l2": 2.2580602169036865,
+          "state_classifier_grad_l2": 5.48239278793335,
+          "content_output_grad_l2": 0.001810129382647574,
+          "uncertainty_output_grad_l2": 3.524562358856201,
+          "content_gain_grad_l2": 0.02932974137365818,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 2.8593833446502686,
+          "state_ce": 0.6249632835388184,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.48239278793335,
+          "content_output_grad_l2": 0.001810129382647574,
+          "uncertainty_output_grad_l2": 3.524562358856201,
+          "content_gain_grad_l2": 0.02932974137365818,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 3.738976240158081,
+          "state_ce": 0.6249631643295288,
+          "generation_classifier_grad_l2": 28.81385612487793,
+          "state_classifier_grad_l2": 5.482392311096191,
+          "content_output_grad_l2": 0.003163729328662157,
+          "uncertainty_output_grad_l2": 1.8895593881607056,
+          "content_gain_grad_l2": 0.04730303958058357,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 4.722982406616211,
+          "state_ce": 1.4127624034881592,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 6.750957489013672,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.8178964257240295,
+          "content_gain_grad_l2": 0.0043203216046094894,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 4.722982406616211,
+          "state_ce": 1.4127624034881592,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 6.750957489013672,
+          "content_output_grad_l2": 0.14327023923397064,
+          "uncertainty_output_grad_l2": 0.8178964257240295,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-ed876424f9d365d8bc64",
+      "target_state": 1,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 2.997702121734619,
+          "state_ce": 0.6150346994400024,
+          "generation_classifier_grad_l2": 1.849313735961914,
+          "state_classifier_grad_l2": 5.422298431396484,
+          "content_output_grad_l2": 0.0018142766784876585,
+          "uncertainty_output_grad_l2": 3.584944486618042,
+          "content_gain_grad_l2": 0.02841542474925518,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 2.997702121734619,
+          "state_ce": 0.6150346994400024,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.422298431396484,
+          "content_output_grad_l2": 0.0018142766784876585,
+          "uncertainty_output_grad_l2": 3.584944486618042,
+          "content_gain_grad_l2": 0.02841542474925518,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 3.4854354858398438,
+          "state_ce": 0.615033745765686,
+          "generation_classifier_grad_l2": 15.56380844116211,
+          "state_classifier_grad_l2": 5.422292232513428,
+          "content_output_grad_l2": 0.00311274197883904,
+          "uncertainty_output_grad_l2": 1.8227344751358032,
+          "content_gain_grad_l2": 0.026201173663139343,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 4.0458221435546875,
+          "state_ce": 1.433340311050415,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 6.781208038330078,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.8529080748558044,
+          "content_gain_grad_l2": 0.003045416437089443,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 4.0458221435546875,
+          "state_ce": 1.433340311050415,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 6.781208038330078,
+          "content_output_grad_l2": 0.12722663581371307,
+          "uncertainty_output_grad_l2": 0.8529080748558044,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-b9c87f9a2d4ab9867564",
+      "target_state": 2,
+      "has_source": false,
+      "modes": {
+        "unchanged": {
+          "nll": 2.2831268310546875,
+          "state_ce": 0.019212113693356514,
+          "generation_classifier_grad_l2": 0.7107418775558472,
+          "state_classifier_grad_l2": 0.14632242918014526,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.9734501838684082,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 2.2831268310546875,
+          "state_ce": 0.019212113693356514,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 0.14632242918014526,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.9734501838684082,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 2.286374807357788,
+          "state_ce": 0.019212231040000916,
+          "generation_classifier_grad_l2": 0.7601539492607117,
+          "state_classifier_grad_l2": 0.14632314443588257,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 1.9523271322250366,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 2.912376642227173,
+          "state_ce": 0.8229766488075256,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 4.056621551513672,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.608256995677948,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 2.912376642227173,
+          "state_ce": 0.8229766488075256,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 4.056621551513672,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.608256995677948,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    },
+    {
+      "id": "case-50832826530d9fede5b3",
+      "target_state": 0,
+      "has_source": true,
+      "modes": {
+        "unchanged": {
+          "nll": 2.5916428565979004,
+          "state_ce": 2.0396547317504883,
+          "generation_classifier_grad_l2": 9.567492485046387,
+          "state_classifier_grad_l2": 9.623600959777832,
+          "content_output_grad_l2": 0.00035846533137373626,
+          "uncertainty_output_grad_l2": 3.5360352993011475,
+          "content_gain_grad_l2": 0.02478655055165291,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "isolated": {
+          "nll": 2.5916428565979004,
+          "state_ce": 2.0396547317504883,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 9.623600959777832,
+          "content_output_grad_l2": 0.00035846533137373626,
+          "uncertainty_output_grad_l2": 3.5360352993011475,
+          "content_gain_grad_l2": 0.02478655055165291,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": true
+        },
+        "fixed_prefill": {
+          "nll": 2.567802906036377,
+          "state_ce": 2.0396552085876465,
+          "generation_classifier_grad_l2": 8.820488929748535,
+          "state_classifier_grad_l2": 9.623600959777832,
+          "content_output_grad_l2": 0.00040149723645299673,
+          "uncertainty_output_grad_l2": 3.2316176891326904,
+          "content_gain_grad_l2": 0.02276437170803547,
+          "zero_residual": false,
+          "base_logits_exact": false,
+          "same_logits_as_original": false
+        }
+      },
+      "initialization": {
+        "original": {
+          "nll": 3.635000705718994,
+          "state_ce": 1.0016984939575195,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.550380706787109,
+          "content_output_grad_l2": 0.0,
+          "uncertainty_output_grad_l2": 0.8616796135902405,
+          "content_gain_grad_l2": 0.003441564040258527,
+          "zero_residual": true,
+          "base_logits_exact": true
+        },
+        "zero_content_output": {
+          "nll": 3.635000705718994,
+          "state_ce": 1.0016984939575195,
+          "generation_classifier_grad_l2": 0.0,
+          "state_classifier_grad_l2": 5.550380706787109,
+          "content_output_grad_l2": 0.14538359642028809,
+          "uncertainty_output_grad_l2": 0.8616796135902405,
+          "content_gain_grad_l2": 0.0,
+          "zero_residual": true,
+          "base_logits_exact": true
+        }
+      },
+      "software_gradient_gate_passed": true
+    }
+  ],
+  "recorded_prefix_controls": [
+    {
+      "id": "case-d68ac9d7b2b39fe94695",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59357,
+            "remove_content": 59357,
+            "remove_uncertainty": 59357,
+            "fixed_prefill": 59357
+          },
+          "content_logit_l2": 0.6863632202148438,
+          "uncertainty_logit_l2": 12.04418659210205,
+          "current_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ],
+          "fixed_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 39676,
+            "remove_content": 39676,
+            "remove_uncertainty": 39676,
+            "fixed_prefill": 39676
+          },
+          "content_logit_l2": 0.06915288418531418,
+          "uncertainty_logit_l2": 142.2371368408203,
+          "current_probabilities": [
+            0.005640304647386074,
+            0.12344488501548767,
+            0.8709148168563843
+          ],
+          "fixed_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4686,
+            "remove_content": 4686,
+            "remove_uncertainty": 1410,
+            "fixed_prefill": 1410
+          },
+          "content_logit_l2": 0.004114952404052019,
+          "uncertainty_logit_l2": 163.3722381591797,
+          "current_probabilities": [
+            0.0018079800065606833,
+            0.007579435128718615,
+            0.9906125068664551
+          ],
+          "fixed_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 7344,
+            "remove_content": 7344,
+            "remove_uncertainty": 7344,
+            "fixed_prefill": 7344
+          },
+          "content_logit_l2": 0.0010490623535588384,
+          "uncertainty_logit_l2": 180.75509643554688,
+          "current_probabilities": [
+            0.00029315572464838624,
+            0.0020253583788871765,
+            0.9976814985275269
+          ],
+          "fixed_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1377,
+            "remove_content": 1377,
+            "remove_uncertainty": 1377,
+            "fixed_prefill": 1377
+          },
+          "content_logit_l2": 0.001253035617992282,
+          "uncertainty_logit_l2": 175.57461547851562,
+          "current_probabilities": [
+            0.0003782311105169356,
+            0.0026638342533260584,
+            0.9969578981399536
+          ],
+          "fixed_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2404,
+            "remove_content": 2404,
+            "remove_uncertainty": 2404,
+            "fixed_prefill": 2404
+          },
+          "content_logit_l2": 0.0010305296164005995,
+          "uncertainty_logit_l2": 177.65696716308594,
+          "current_probabilities": [
+            0.0004154918424319476,
+            0.002310746116563678,
+            0.9972737431526184
+          ],
+          "fixed_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4436,
+            "remove_content": 4436,
+            "remove_uncertainty": 4436,
+            "fixed_prefill": 4436
+          },
+          "content_logit_l2": 0.005546155385673046,
+          "uncertainty_logit_l2": 170.81295776367188,
+          "current_probabilities": [
+            0.00432416470721364,
+            0.011911952868103981,
+            0.9837639331817627
+          ],
+          "fixed_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 72,
+            "remove_content": 72,
+            "remove_uncertainty": 4599,
+            "fixed_prefill": 4599
+          },
+          "content_logit_l2": 0.002284439280629158,
+          "uncertainty_logit_l2": 166.41928100585938,
+          "current_probabilities": [
+            0.0014285974903032184,
+            0.004805615171790123,
+            0.9937658309936523
+          ],
+          "fixed_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.005578333046287298,
+          "uncertainty_logit_l2": 165.39662170410156,
+          "current_probabilities": [
+            0.003327864920720458,
+            0.010259920731186867,
+            0.9864121675491333
+          ],
+          "fixed_probabilities": [
+            0.005762576591223478,
+            0.9276689887046814,
+            0.06656849384307861
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 2,
+        "fixed_prefill": 2
+      }
+    },
+    {
+      "id": "case-2841cfa9cf20f00891d1",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59357,
+            "remove_content": 59357,
+            "remove_uncertainty": 59357,
+            "fixed_prefill": 59357
+          },
+          "content_logit_l2": 0.683174729347229,
+          "uncertainty_logit_l2": 12.883724212646484,
+          "current_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ],
+          "fixed_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 39676,
+            "remove_content": 39676,
+            "remove_uncertainty": 39676,
+            "fixed_prefill": 39676
+          },
+          "content_logit_l2": 0.06755692511796951,
+          "uncertainty_logit_l2": 143.5052947998047,
+          "current_probabilities": [
+            0.00541331060230732,
+            0.12141939252614975,
+            0.8731672763824463
+          ],
+          "fixed_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4686,
+            "remove_content": 4686,
+            "remove_uncertainty": 1410,
+            "fixed_prefill": 1410
+          },
+          "content_logit_l2": 0.0038790260441601276,
+          "uncertainty_logit_l2": 163.2736358642578,
+          "current_probabilities": [
+            0.0017352929571643472,
+            0.007239950820803642,
+            0.9910247325897217
+          ],
+          "fixed_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 7344,
+            "remove_content": 7344,
+            "remove_uncertainty": 7344,
+            "fixed_prefill": 7344
+          },
+          "content_logit_l2": 0.0009856601245701313,
+          "uncertainty_logit_l2": 180.57672119140625,
+          "current_probabilities": [
+            0.0002842872345354408,
+            0.0019230085890740156,
+            0.9977927207946777
+          ],
+          "fixed_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1377,
+            "remove_content": 1377,
+            "remove_uncertainty": 1377,
+            "fixed_prefill": 1377
+          },
+          "content_logit_l2": 0.0012406365713104606,
+          "uncertainty_logit_l2": 175.39500427246094,
+          "current_probabilities": [
+            0.0003788827161770314,
+            0.002661967184394598,
+            0.9969592094421387
+          ],
+          "fixed_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2404,
+            "remove_content": 2404,
+            "remove_uncertainty": 2404,
+            "fixed_prefill": 2404
+          },
+          "content_logit_l2": 0.000981527497060597,
+          "uncertainty_logit_l2": 178.15036010742188,
+          "current_probabilities": [
+            0.0004004249058198184,
+            0.0022213011980056763,
+            0.9973783493041992
+          ],
+          "fixed_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4436,
+            "remove_content": 4436,
+            "remove_uncertainty": 4436,
+            "fixed_prefill": 4436
+          },
+          "content_logit_l2": 0.005294357426464558,
+          "uncertainty_logit_l2": 170.56092834472656,
+          "current_probabilities": [
+            0.004125688690692186,
+            0.011460497975349426,
+            0.9844138622283936
+          ],
+          "fixed_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 72,
+            "remove_content": 72,
+            "remove_uncertainty": 4599,
+            "fixed_prefill": 4599
+          },
+          "content_logit_l2": 0.0022150783333927393,
+          "uncertainty_logit_l2": 166.227294921875,
+          "current_probabilities": [
+            0.0013636332005262375,
+            0.004714491777122021,
+            0.9939218759536743
+          ],
+          "fixed_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.005279909819364548,
+          "uncertainty_logit_l2": 165.33761596679688,
+          "current_probabilities": [
+            0.0031251825857907534,
+            0.009817233309149742,
+            0.987057626247406
+          ],
+          "fixed_probabilities": [
+            0.005821744911372662,
+            0.9233110547065735,
+            0.07086712121963501
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 2,
+        "fixed_prefill": 2
+      }
+    },
+    {
+      "id": "case-410cc79e7fc060c0b6a0",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59357,
+            "remove_content": 59357,
+            "remove_uncertainty": 59357,
+            "fixed_prefill": 59357
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 215.23289489746094,
+          "current_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 39676,
+            "remove_content": 39676,
+            "remove_uncertainty": 39676,
+            "fixed_prefill": 39676
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 186.349609375,
+          "current_probabilities": [
+            0.0050698090344667435,
+            0.0,
+            0.9949302077293396
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1410,
+            "remove_content": 1410,
+            "remove_uncertainty": 1410,
+            "fixed_prefill": 1410
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 187.37464904785156,
+          "current_probabilities": [
+            0.002726311329752207,
+            0.0,
+            0.9972737431526184
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4686,
+            "remove_content": 4686,
+            "remove_uncertainty": 4686,
+            "fixed_prefill": 4686
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 184.7335662841797,
+          "current_probabilities": [
+            0.0021221823990345,
+            0.0,
+            0.997877836227417
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 5503,
+            "remove_content": 5503,
+            "remove_uncertainty": 5503,
+            "fixed_prefill": 5503
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 182.6627197265625,
+          "current_probabilities": [
+            0.002080409089103341,
+            0.0,
+            0.9979196190834045
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1377,
+            "remove_content": 1377,
+            "remove_uncertainty": 1377,
+            "fixed_prefill": 1377
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 175.4359588623047,
+          "current_probabilities": [
+            0.0023048201110213995,
+            0.0,
+            0.9976951479911804
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2404,
+            "remove_content": 2404,
+            "remove_uncertainty": 2404,
+            "fixed_prefill": 2404
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 166.97552490234375,
+          "current_probabilities": [
+            0.003539974568411708,
+            0.0,
+            0.9964600205421448
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4436,
+            "remove_content": 4436,
+            "remove_uncertainty": 4436,
+            "fixed_prefill": 4436
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 165.2071075439453,
+          "current_probabilities": [
+            0.005784701090306044,
+            0.0,
+            0.9942153096199036
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4599,
+            "remove_content": 4599,
+            "remove_uncertainty": 4599,
+            "fixed_prefill": 4599
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 163.99603271484375,
+          "current_probabilities": [
+            0.003515987889841199,
+            0.0,
+            0.9964840412139893
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 9,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 72,
+            "remove_content": 72,
+            "remove_uncertainty": 72,
+            "fixed_prefill": 72
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 165.5077362060547,
+          "current_probabilities": [
+            0.00389504455961287,
+            0.0,
+            0.9961049556732178
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        },
+        {
+          "position": 10,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 178.47909545898438,
+          "current_probabilities": [
+            0.005910769104957581,
+            0.0,
+            0.9940892457962036
+          ],
+          "fixed_probabilities": [
+            0.011305350810289383,
+            0.0,
+            0.9886946082115173
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 0,
+        "fixed_prefill": 0
+      }
+    },
+    {
+      "id": "case-c61340e0ba8151f9ee09",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 22997,
+            "remove_content": 22997,
+            "remove_uncertainty": 22997,
+            "fixed_prefill": 22997
+          },
+          "content_logit_l2": 0.4454226791858673,
+          "uncertainty_logit_l2": 60.213722229003906,
+          "current_probabilities": [
+            0.052815087139606476,
+            0.6102797985076904,
+            0.3369050920009613
+          ],
+          "fixed_probabilities": [
+            0.052815087139606476,
+            0.6102797985076904,
+            0.3369050920009613
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 72,
+            "remove_content": 72,
+            "remove_uncertainty": 72,
+            "fixed_prefill": 72
+          },
+          "content_logit_l2": 0.003254489041864872,
+          "uncertainty_logit_l2": 165.4226531982422,
+          "current_probabilities": [
+            0.0023809627164155245,
+            0.0058613005094230175,
+            0.9917576909065247
+          ],
+          "fixed_probabilities": [
+            0.052815087139606476,
+            0.6102797985076904,
+            0.3369050920009613
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.00407871138304472,
+          "uncertainty_logit_l2": 158.7478485107422,
+          "current_probabilities": [
+            0.0037637525238096714,
+            0.0071398173458874226,
+            0.989096462726593
+          ],
+          "fixed_probabilities": [
+            0.052815087139606476,
+            0.6102797985076904,
+            0.3369050920009613
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 0,
+        "fixed_prefill": 0
+      }
+    },
+    {
+      "id": "case-5e76236adb954331887e",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 31079,
+            "remove_content": 31079,
+            "remove_uncertainty": 5580,
+            "fixed_prefill": 31079
+          },
+          "content_logit_l2": 0.3560682535171509,
+          "uncertainty_logit_l2": 138.03138732910156,
+          "current_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 65,
+            "remove_content": 65,
+            "remove_uncertainty": 65,
+            "fixed_prefill": 65
+          },
+          "content_logit_l2": 0.0034526812378317118,
+          "uncertainty_logit_l2": 277.1204528808594,
+          "current_probabilities": [
+            0.0002857907966244966,
+            0.005862473044544458,
+            0.9938517808914185
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59422,
+            "remove_content": 59422,
+            "remove_uncertainty": 59422,
+            "fixed_prefill": 59422
+          },
+          "content_logit_l2": 0.040570877492427826,
+          "uncertainty_logit_l2": 287.2892150878906,
+          "current_probabilities": [
+            0.0008070357143878937,
+            0.06160203740000725,
+            0.9375908970832825
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3602,
+            "remove_content": 3602,
+            "remove_uncertainty": 4585,
+            "fixed_prefill": 4585
+          },
+          "content_logit_l2": 0.01301281712949276,
+          "uncertainty_logit_l2": 277.4410705566406,
+          "current_probabilities": [
+            0.0007915259338915348,
+            0.021484144032001495,
+            0.9777243733406067
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4585,
+            "remove_content": 4585,
+            "remove_uncertainty": 4585,
+            "fixed_prefill": 4585
+          },
+          "content_logit_l2": 0.005763249937444925,
+          "uncertainty_logit_l2": 282.2035827636719,
+          "current_probabilities": [
+            0.0003796942764893174,
+            0.009669538587331772,
+            0.9899507164955139
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2516,
+            "remove_content": 2516,
+            "remove_uncertainty": 2516,
+            "fixed_prefill": 2516
+          },
+          "content_logit_l2": 0.00620797835290432,
+          "uncertainty_logit_l2": 304.9927978515625,
+          "current_probabilities": [
+            0.000490141857881099,
+            0.010686368681490421,
+            0.9888234734535217
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 56222,
+            "remove_content": 56222,
+            "remove_uncertainty": 56222,
+            "fixed_prefill": 56222
+          },
+          "content_logit_l2": 0.017576754093170166,
+          "uncertainty_logit_l2": 304.4265441894531,
+          "current_probabilities": [
+            0.0004280793946236372,
+            0.02800535038113594,
+            0.9715666174888611
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 23262,
+            "remove_content": 23262,
+            "remove_uncertainty": 23262,
+            "fixed_prefill": 23262
+          },
+          "content_logit_l2": 0.01852310448884964,
+          "uncertainty_logit_l2": 184.5990753173828,
+          "current_probabilities": [
+            0.002664118306711316,
+            0.03487907350063324,
+            0.9624568223953247
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3602,
+            "remove_content": 3602,
+            "remove_uncertainty": 7387,
+            "fixed_prefill": 3602
+          },
+          "content_logit_l2": 0.0028609465807676315,
+          "uncertainty_logit_l2": 307.6548156738281,
+          "current_probabilities": [
+            0.00011107748287031427,
+            0.004696958232671022,
+            0.9951919317245483
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 9,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 33345,
+            "remove_content": 33345,
+            "remove_uncertainty": 10408,
+            "fixed_prefill": 33345
+          },
+          "content_logit_l2": 0.002061067381873727,
+          "uncertainty_logit_l2": 315.4861755371094,
+          "current_probabilities": [
+            0.00019070289272349328,
+            0.0035864871460944414,
+            0.996222734451294
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 10,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 60129,
+            "remove_content": 60129,
+            "remove_uncertainty": 60129,
+            "fixed_prefill": 60129
+          },
+          "content_logit_l2": 0.0019715765956789255,
+          "uncertainty_logit_l2": 309.97589111328125,
+          "current_probabilities": [
+            0.0002392141177551821,
+            0.0037160348147153854,
+            0.9960447549819946
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 11,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 60348,
+            "remove_content": 60348,
+            "remove_uncertainty": 60348,
+            "fixed_prefill": 60348
+          },
+          "content_logit_l2": 0.0021547130309045315,
+          "uncertainty_logit_l2": 316.95135498046875,
+          "current_probabilities": [
+            0.00017657663556747139,
+            0.0039390637539327145,
+            0.995884358882904
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 12,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3522,
+            "remove_content": 3522,
+            "remove_uncertainty": 3522,
+            "fixed_prefill": 3522
+          },
+          "content_logit_l2": 0.00457362923771143,
+          "uncertainty_logit_l2": 297.9841003417969,
+          "current_probabilities": [
+            0.0005243430496193469,
+            0.008033432066440582,
+            0.9914422631263733
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 13,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 19470,
+            "remove_content": 19470,
+            "remove_uncertainty": 19470,
+            "fixed_prefill": 19470
+          },
+          "content_logit_l2": 0.002091448986902833,
+          "uncertainty_logit_l2": 309.4600524902344,
+          "current_probabilities": [
+            0.00011824436660390347,
+            0.003543062601238489,
+            0.9963387250900269
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 14,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 66,
+            "remove_content": 66,
+            "remove_uncertainty": 66,
+            "fixed_prefill": 66
+          },
+          "content_logit_l2": 0.0030716240871697664,
+          "uncertainty_logit_l2": 263.9114990234375,
+          "current_probabilities": [
+            0.0003685102565214038,
+            0.005244627129286528,
+            0.9943869113922119
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        },
+        {
+          "position": 15,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.005726292729377747,
+          "uncertainty_logit_l2": 278.451171875,
+          "current_probabilities": [
+            0.00026888836873695254,
+            0.009060935117304325,
+            0.9906702041625977
+          ],
+          "fixed_probabilities": [
+            0.0034827685449272394,
+            0.5083255171775818,
+            0.488191694021225
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 4,
+        "fixed_prefill": 1
+      }
+    },
+    {
+      "id": "case-0955f6c759b8d1cc160d",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 31079,
+            "remove_content": 31079,
+            "remove_uncertainty": 5580,
+            "fixed_prefill": 31079
+          },
+          "content_logit_l2": 0.3531869649887085,
+          "uncertainty_logit_l2": 137.83621215820312,
+          "current_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 65,
+            "remove_content": 65,
+            "remove_uncertainty": 65,
+            "fixed_prefill": 65
+          },
+          "content_logit_l2": 0.003370324382558465,
+          "uncertainty_logit_l2": 277.9703063964844,
+          "current_probabilities": [
+            0.0002705555525608361,
+            0.005795047152787447,
+            0.9939344525337219
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59422,
+            "remove_content": 59422,
+            "remove_uncertainty": 59422,
+            "fixed_prefill": 59422
+          },
+          "content_logit_l2": 0.03994375467300415,
+          "uncertainty_logit_l2": 287.7337646484375,
+          "current_probabilities": [
+            0.00075956666842103,
+            0.06115444749593735,
+            0.9380859732627869
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3602,
+            "remove_content": 3602,
+            "remove_uncertainty": 4585,
+            "fixed_prefill": 4585
+          },
+          "content_logit_l2": 0.012243901379406452,
+          "uncertainty_logit_l2": 279.04718017578125,
+          "current_probabilities": [
+            0.0007217509555630386,
+            0.0204579196870327,
+            0.9788203835487366
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4585,
+            "remove_content": 4585,
+            "remove_uncertainty": 4585,
+            "fixed_prefill": 4585
+          },
+          "content_logit_l2": 0.00574842095375061,
+          "uncertainty_logit_l2": 283.2325744628906,
+          "current_probabilities": [
+            0.00036050297785550356,
+            0.009747495874762535,
+            0.9898920059204102
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2516,
+            "remove_content": 2516,
+            "remove_uncertainty": 2516,
+            "fixed_prefill": 2516
+          },
+          "content_logit_l2": 0.006223453674465418,
+          "uncertainty_logit_l2": 304.6405334472656,
+          "current_probabilities": [
+            0.00045354722533375025,
+            0.010857080109417439,
+            0.9886893630027771
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 56222,
+            "remove_content": 56222,
+            "remove_uncertainty": 56222,
+            "fixed_prefill": 56222
+          },
+          "content_logit_l2": 0.018108690157532692,
+          "uncertainty_logit_l2": 304.17999267578125,
+          "current_probabilities": [
+            0.0004156630311626941,
+            0.029187245294451714,
+            0.9703970551490784
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 23262,
+            "remove_content": 23262,
+            "remove_uncertainty": 23262,
+            "fixed_prefill": 23262
+          },
+          "content_logit_l2": 0.01673630066215992,
+          "uncertainty_logit_l2": 186.99525451660156,
+          "current_probabilities": [
+            0.002355340402573347,
+            0.03209095820784569,
+            0.9655537009239197
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3602,
+            "remove_content": 3602,
+            "remove_uncertainty": 7387,
+            "fixed_prefill": 3602
+          },
+          "content_logit_l2": 0.002852289006114006,
+          "uncertainty_logit_l2": 307.004638671875,
+          "current_probabilities": [
+            0.00010349371586926281,
+            0.004749286454170942,
+            0.995147168636322
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 9,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 33345,
+            "remove_content": 33345,
+            "remove_uncertainty": 10408,
+            "fixed_prefill": 33345
+          },
+          "content_logit_l2": 0.0021473837550729513,
+          "uncertainty_logit_l2": 315.023681640625,
+          "current_probabilities": [
+            0.00018293870380148292,
+            0.003781226696446538,
+            0.9960358738899231
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 10,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 60129,
+            "remove_content": 60129,
+            "remove_uncertainty": 60129,
+            "fixed_prefill": 60129
+          },
+          "content_logit_l2": 0.001978058833628893,
+          "uncertainty_logit_l2": 309.7362365722656,
+          "current_probabilities": [
+            0.00023447723651770502,
+            0.003777787322178483,
+            0.9959877133369446
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 11,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 60348,
+            "remove_content": 60348,
+            "remove_uncertainty": 60348,
+            "fixed_prefill": 60348
+          },
+          "content_logit_l2": 0.002167568076401949,
+          "uncertainty_logit_l2": 316.810546875,
+          "current_probabilities": [
+            0.00016961139044724405,
+            0.00400876346975565,
+            0.9958215951919556
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 12,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3522,
+            "remove_content": 3522,
+            "remove_uncertainty": 3522,
+            "fixed_prefill": 3522
+          },
+          "content_logit_l2": 0.004688316490501165,
+          "uncertainty_logit_l2": 297.7622375488281,
+          "current_probabilities": [
+            0.0005069992039352655,
+            0.008337818086147308,
+            0.9911551475524902
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 13,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 19470,
+            "remove_content": 19470,
+            "remove_uncertainty": 19470,
+            "fixed_prefill": 19470
+          },
+          "content_logit_l2": 0.0021215451415628195,
+          "uncertainty_logit_l2": 309.0787353515625,
+          "current_probabilities": [
+            0.00011219959560548887,
+            0.0036392509937286377,
+            0.9962485432624817
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 14,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 66,
+            "remove_content": 66,
+            "remove_uncertainty": 66,
+            "fixed_prefill": 66
+          },
+          "content_logit_l2": 0.0029887952841818333,
+          "uncertainty_logit_l2": 264.8419494628906,
+          "current_probabilities": [
+            0.00033523168531246483,
+            0.005176132079213858,
+            0.9944885969161987
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        },
+        {
+          "position": 15,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.005760465282946825,
+          "uncertainty_logit_l2": 279.0337829589844,
+          "current_probabilities": [
+            0.00025572936283424497,
+            0.009251768700778484,
+            0.9904925227165222
+          ],
+          "fixed_probabilities": [
+            0.0032743867486715317,
+            0.5086737275123596,
+            0.4880518913269043
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 4,
+        "fixed_prefill": 1
+      }
+    },
+    {
+      "id": "case-6cc67c267bdfa8a934a1",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 56222,
+            "remove_content": 56222,
+            "remove_uncertainty": 5580,
+            "fixed_prefill": 56222
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 229.435791015625,
+          "current_probabilities": [
+            0.026618707925081253,
+            0.0,
+            0.9733813405036926
+          ],
+          "fixed_probabilities": [
+            0.026618707925081253,
+            0.0,
+            0.9733813405036926
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 23262,
+            "remove_content": 23262,
+            "remove_uncertainty": 23262,
+            "fixed_prefill": 23262
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 186.72171020507812,
+          "current_probabilities": [
+            0.0028897884767502546,
+            0.0,
+            0.9971101880073547
+          ],
+          "fixed_probabilities": [
+            0.026618707925081253,
+            0.0,
+            0.9733813405036926
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3602,
+            "remove_content": 3602,
+            "remove_uncertainty": 3602,
+            "fixed_prefill": 3602
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 213.0706329345703,
+          "current_probabilities": [
+            0.0019247430609539151,
+            0.0,
+            0.9980752468109131
+          ],
+          "fixed_probabilities": [
+            0.026618707925081253,
+            0.0,
+            0.9733813405036926
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 33345,
+            "remove_content": 33345,
+            "remove_uncertainty": 33345,
+            "fixed_prefill": 33345
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 218.99053955078125,
+          "current_probabilities": [
+            0.003799267578870058,
+            0.0,
+            0.9962007403373718
+          ],
+          "fixed_probabilities": [
+            0.026618707925081253,
+            0.0,
+            0.9733813405036926
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3354,
+            "remove_content": 3354,
+            "remove_uncertainty": 3354,
+            "fixed_prefill": 3354
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 201.44993591308594,
+          "current_probabilities": [
+            0.0030470166821032763,
+            0.0,
+            0.996953010559082
+          ],
+          "fixed_probabilities": [
+            0.026618707925081253,
+            0.0,
+            0.9733813405036926
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 66,
+            "remove_content": 66,
+            "remove_uncertainty": 66,
+            "fixed_prefill": 66
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 192.8147735595703,
+          "current_probabilities": [
+            0.0034012789838016033,
+            0.0,
+            0.9965987801551819
+          ],
+          "fixed_probabilities": [
+            0.026618707925081253,
+            0.0,
+            0.9733813405036926
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 211.838134765625,
+          "current_probabilities": [
+            0.0053171431645751,
+            0.0,
+            0.9946828484535217
+          ],
+          "fixed_probabilities": [
+            0.026618707925081253,
+            0.0,
+            0.9733813405036926
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 1,
+        "fixed_prefill": 0
+      }
+    },
+    {
+      "id": "case-d39632cf838459875bff",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2987,
+            "remove_content": 2987,
+            "remove_uncertainty": 2987,
+            "fixed_prefill": 2987
+          },
+          "content_logit_l2": 0.03643253445625305,
+          "uncertainty_logit_l2": 200.19766235351562,
+          "current_probabilities": [
+            0.1399436742067337,
+            0.05277119576931,
+            0.8072851300239563
+          ],
+          "fixed_probabilities": [
+            0.1399436742067337,
+            0.05277119576931,
+            0.8072851300239563
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 65,
+            "remove_content": 65,
+            "remove_uncertainty": 65,
+            "fixed_prefill": 65
+          },
+          "content_logit_l2": 0.004548459779471159,
+          "uncertainty_logit_l2": 245.7744598388672,
+          "current_probabilities": [
+            0.0025043862406164408,
+            0.007738360669463873,
+            0.9897571802139282
+          ],
+          "fixed_probabilities": [
+            0.1399436742067337,
+            0.05277119576931,
+            0.8072851300239563
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3068,
+            "remove_content": 3068,
+            "remove_uncertainty": 59362,
+            "fixed_prefill": 3068
+          },
+          "content_logit_l2": 0.005236240103840828,
+          "uncertainty_logit_l2": 275.4830322265625,
+          "current_probabilities": [
+            0.012656686827540398,
+            0.008228212594985962,
+            0.9791151285171509
+          ],
+          "fixed_probabilities": [
+            0.1399436742067337,
+            0.05277119576931,
+            0.8072851300239563
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 49349,
+            "remove_content": 49349,
+            "remove_uncertainty": 59362,
+            "fixed_prefill": 49349
+          },
+          "content_logit_l2": 0.0011807525297626853,
+          "uncertainty_logit_l2": 287.129638671875,
+          "current_probabilities": [
+            0.0018798757810145617,
+            0.0021087699569761753,
+            0.9960113763809204
+          ],
+          "fixed_probabilities": [
+            0.1399436742067337,
+            0.05277119576931,
+            0.8072851300239563
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59381,
+            "remove_content": 59381,
+            "remove_uncertainty": 59345,
+            "fixed_prefill": 59381
+          },
+          "content_logit_l2": 0.002690498484298587,
+          "uncertainty_logit_l2": 213.15061950683594,
+          "current_probabilities": [
+            0.009815638884902,
+            0.0049493033438920975,
+            0.9852350950241089
+          ],
+          "fixed_probabilities": [
+            0.1399436742067337,
+            0.05277119576931,
+            0.8072851300239563
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59370,
+            "remove_content": 59370,
+            "remove_uncertainty": 59370,
+            "fixed_prefill": 59370
+          },
+          "content_logit_l2": 0.0024119948502629995,
+          "uncertainty_logit_l2": 203.32862854003906,
+          "current_probabilities": [
+            0.003239591605961323,
+            0.004860967863351107,
+            0.9918994903564453
+          ],
+          "fixed_probabilities": [
+            0.1399436742067337,
+            0.05277119576931,
+            0.8072851300239563
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 66,
+            "remove_content": 66,
+            "remove_uncertainty": 66,
+            "fixed_prefill": 66
+          },
+          "content_logit_l2": 0.00216325162909925,
+          "uncertainty_logit_l2": 185.32733154296875,
+          "current_probabilities": [
+            0.0020851909648627043,
+            0.00418073870241642,
+            0.9937340617179871
+          ],
+          "fixed_probabilities": [
+            0.1399436742067337,
+            0.05277119576931,
+            0.8072851300239563
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.0035178621765226126,
+          "uncertainty_logit_l2": 228.5452117919922,
+          "current_probabilities": [
+            0.004728131461888552,
+            0.0059702275320887566,
+            0.9893016219139099
+          ],
+          "fixed_probabilities": [
+            0.1399436742067337,
+            0.05277119576931,
+            0.8072851300239563
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 3,
+        "fixed_prefill": 0
+      }
+    },
+    {
+      "id": "case-0afeea181bfe2cce15ae",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 5250,
+            "remove_content": 5250,
+            "remove_uncertainty": 5250,
+            "fixed_prefill": 5250
+          },
+          "content_logit_l2": 0.6672924160957336,
+          "uncertainty_logit_l2": 12.296846389770508,
+          "current_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ],
+          "fixed_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 12941,
+            "remove_content": 12941,
+            "remove_uncertainty": 12941,
+            "fixed_prefill": 12941
+          },
+          "content_logit_l2": 0.047318555414676666,
+          "uncertainty_logit_l2": 142.0046844482422,
+          "current_probabilities": [
+            0.008836129680275917,
+            0.0926116555929184,
+            0.8985522389411926
+          ],
+          "fixed_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1410,
+            "remove_content": 1410,
+            "remove_uncertainty": 1410,
+            "fixed_prefill": 1410
+          },
+          "content_logit_l2": 0.0034547115210443735,
+          "uncertainty_logit_l2": 163.13807678222656,
+          "current_probabilities": [
+            0.0015559691237285733,
+            0.006518860347568989,
+            0.9919251799583435
+          ],
+          "fixed_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4686,
+            "remove_content": 4686,
+            "remove_uncertainty": 4686,
+            "fixed_prefill": 4686
+          },
+          "content_logit_l2": 0.0018004054436460137,
+          "uncertainty_logit_l2": 180.044677734375,
+          "current_probabilities": [
+            0.0003056444402318448,
+            0.0033630335237830877,
+            0.9963313937187195
+          ],
+          "fixed_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 5503,
+            "remove_content": 5503,
+            "remove_uncertainty": 5503,
+            "fixed_prefill": 5503
+          },
+          "content_logit_l2": 0.0010561819653958082,
+          "uncertainty_logit_l2": 195.71469116210938,
+          "current_probabilities": [
+            0.00017630694492254406,
+            0.0020453808829188347,
+            0.9977783560752869
+          ],
+          "fixed_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1377,
+            "remove_content": 1377,
+            "remove_uncertainty": 1377,
+            "fixed_prefill": 1377
+          },
+          "content_logit_l2": 0.0017010445008054376,
+          "uncertainty_logit_l2": 173.2165985107422,
+          "current_probabilities": [
+            0.0004410590336192399,
+            0.00357923679985106,
+            0.9959796667098999
+          ],
+          "fixed_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 17223,
+            "remove_content": 17223,
+            "remove_uncertainty": 1358,
+            "fixed_prefill": 1358
+          },
+          "content_logit_l2": 0.0008347981492988765,
+          "uncertainty_logit_l2": 178.5076446533203,
+          "current_probabilities": [
+            0.00040008165524341166,
+            0.0019120980286970735,
+            0.997687816619873
+          ],
+          "fixed_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 72,
+            "remove_content": 72,
+            "remove_uncertainty": 72,
+            "fixed_prefill": 72
+          },
+          "content_logit_l2": 0.0028159755747765303,
+          "uncertainty_logit_l2": 164.13502502441406,
+          "current_probabilities": [
+            0.0016794831026345491,
+            0.005786830559372902,
+            0.9925336837768555
+          ],
+          "fixed_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.0048888809978961945,
+          "uncertainty_logit_l2": 164.8129425048828,
+          "current_probabilities": [
+            0.0025790086947381496,
+            0.009235921315848827,
+            0.9881850481033325
+          ],
+          "fixed_probabilities": [
+            0.006506053265184164,
+            0.9242566823959351,
+            0.0692373588681221
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 1,
+        "fixed_prefill": 1
+      }
+    },
+    {
+      "id": "case-8994b1d24f644a20010b",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 5250,
+            "remove_content": 5250,
+            "remove_uncertainty": 5250,
+            "fixed_prefill": 5250
+          },
+          "content_logit_l2": 0.669829785823822,
+          "uncertainty_logit_l2": 11.737497329711914,
+          "current_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ],
+          "fixed_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 12941,
+            "remove_content": 12941,
+            "remove_uncertainty": 12941,
+            "fixed_prefill": 12941
+          },
+          "content_logit_l2": 0.05098775774240494,
+          "uncertainty_logit_l2": 140.4737548828125,
+          "current_probabilities": [
+            0.0094107361510396,
+            0.09914685040712357,
+            0.8914424180984497
+          ],
+          "fixed_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1410,
+            "remove_content": 1410,
+            "remove_uncertainty": 1410,
+            "fixed_prefill": 1410
+          },
+          "content_logit_l2": 0.003520786762237549,
+          "uncertainty_logit_l2": 163.03118896484375,
+          "current_probabilities": [
+            0.0015858442056924105,
+            0.006636453792452812,
+            0.991777777671814
+          ],
+          "fixed_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4686,
+            "remove_content": 4686,
+            "remove_uncertainty": 4686,
+            "fixed_prefill": 4686
+          },
+          "content_logit_l2": 0.0018230510177090764,
+          "uncertainty_logit_l2": 179.37477111816406,
+          "current_probabilities": [
+            0.0003191801079083234,
+            0.0034026112407445908,
+            0.9962782263755798
+          ],
+          "fixed_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 5503,
+            "remove_content": 5503,
+            "remove_uncertainty": 5503,
+            "fixed_prefill": 5503
+          },
+          "content_logit_l2": 0.0010881097987294197,
+          "uncertainty_logit_l2": 194.64291381835938,
+          "current_probabilities": [
+            0.00018525580526329577,
+            0.0021068025380373,
+            0.9977079629898071
+          ],
+          "fixed_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1377,
+            "remove_content": 1377,
+            "remove_uncertainty": 1377,
+            "fixed_prefill": 1377
+          },
+          "content_logit_l2": 0.00173118244856596,
+          "uncertainty_logit_l2": 173.1107940673828,
+          "current_probabilities": [
+            0.0004469860577955842,
+            0.0036393117625266314,
+            0.9959136843681335
+          ],
+          "fixed_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 17223,
+            "remove_content": 17223,
+            "remove_uncertainty": 1358,
+            "fixed_prefill": 1358
+          },
+          "content_logit_l2": 0.0008481884724460542,
+          "uncertainty_logit_l2": 178.32821655273438,
+          "current_probabilities": [
+            0.00040478678420186043,
+            0.0019452653359621763,
+            0.9976499676704407
+          ],
+          "fixed_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 72,
+            "remove_content": 72,
+            "remove_uncertainty": 72,
+            "fixed_prefill": 72
+          },
+          "content_logit_l2": 0.002912824973464012,
+          "uncertainty_logit_l2": 164.05606079101562,
+          "current_probabilities": [
+            0.0017137485556304455,
+            0.0059927674010396,
+            0.9922934770584106
+          ],
+          "fixed_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.005104435607790947,
+          "uncertainty_logit_l2": 164.6743927001953,
+          "current_probabilities": [
+            0.0026789186522364616,
+            0.0096363490447402,
+            0.9876847267150879
+          ],
+          "fixed_probabilities": [
+            0.006409686990082264,
+            0.9273756742477417,
+            0.06621463596820831
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 1,
+        "fixed_prefill": 1
+      }
+    },
+    {
+      "id": "case-087dc07d3baa42a10ac1",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 5250,
+            "remove_content": 5250,
+            "remove_uncertainty": 5250,
+            "fixed_prefill": 5250
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 212.280029296875,
+          "current_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ],
+          "fixed_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 12941,
+            "remove_content": 12941,
+            "remove_uncertainty": 12941,
+            "fixed_prefill": 12941
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 173.10231018066406,
+          "current_probabilities": [
+            0.0041085537523031235,
+            0.0,
+            0.9958914518356323
+          ],
+          "fixed_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1410,
+            "remove_content": 1410,
+            "remove_uncertainty": 1410,
+            "fixed_prefill": 1410
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 182.10997009277344,
+          "current_probabilities": [
+            0.002476724097505212,
+            0.0,
+            0.9975232481956482
+          ],
+          "fixed_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4686,
+            "remove_content": 4686,
+            "remove_uncertainty": 4686,
+            "fixed_prefill": 4686
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 179.8484649658203,
+          "current_probabilities": [
+            0.0021458084229379892,
+            0.0,
+            0.9978541731834412
+          ],
+          "fixed_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 5503,
+            "remove_content": 5503,
+            "remove_uncertainty": 5503,
+            "fixed_prefill": 5503
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 181.8602294921875,
+          "current_probabilities": [
+            0.002075956901535392,
+            0.0,
+            0.9979239702224731
+          ],
+          "fixed_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 1377,
+            "remove_content": 1377,
+            "remove_uncertainty": 1377,
+            "fixed_prefill": 1377
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 173.60882568359375,
+          "current_probabilities": [
+            0.0019826197531074286,
+            0.0,
+            0.998017430305481
+          ],
+          "fixed_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 17223,
+            "remove_content": 17223,
+            "remove_uncertainty": 1358,
+            "fixed_prefill": 17223
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 159.3961944580078,
+          "current_probabilities": [
+            0.0036982111632823944,
+            0.0,
+            0.9963017702102661
+          ],
+          "fixed_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 72,
+            "remove_content": 72,
+            "remove_uncertainty": 72,
+            "fixed_prefill": 72
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 163.24285888671875,
+          "current_probabilities": [
+            0.004263693001121283,
+            0.0,
+            0.9957362413406372
+          ],
+          "fixed_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 174.85995483398438,
+          "current_probabilities": [
+            0.005369442515075207,
+            0.0,
+            0.9946305751800537
+          ],
+          "fixed_probabilities": [
+            0.011153754778206348,
+            0.0,
+            0.9888462424278259
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 1,
+        "fixed_prefill": 0
+      }
+    },
+    {
+      "id": "case-e917740be7f368e54dc4",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 22997,
+            "remove_content": 22997,
+            "remove_uncertainty": 22997,
+            "fixed_prefill": 22997
+          },
+          "content_logit_l2": 0.4820147752761841,
+          "uncertainty_logit_l2": 50.52287292480469,
+          "current_probabilities": [
+            0.05501474812626839,
+            0.6651102900505066,
+            0.27987489104270935
+          ],
+          "fixed_probabilities": [
+            0.05501474812626839,
+            0.6651102900505066,
+            0.27987489104270935
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 72,
+            "remove_content": 72,
+            "remove_uncertainty": 72,
+            "fixed_prefill": 72
+          },
+          "content_logit_l2": 0.0032689485233277082,
+          "uncertainty_logit_l2": 166.39459228515625,
+          "current_probabilities": [
+            0.0022661208640784025,
+            0.005963690113276243,
+            0.9917701482772827
+          ],
+          "fixed_probabilities": [
+            0.05501474812626839,
+            0.6651102900505066,
+            0.27987489104270935
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.0035454179160296917,
+          "uncertainty_logit_l2": 158.7257843017578,
+          "current_probabilities": [
+            0.0031492512207478285,
+            0.006294431630522013,
+            0.9905562996864319
+          ],
+          "fixed_probabilities": [
+            0.05501474812626839,
+            0.6651102900505066,
+            0.27987489104270935
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 0,
+        "fixed_prefill": 0
+      }
+    },
+    {
+      "id": "case-d3cf42c1d8ad5b74a82c",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 38270,
+            "remove_content": 38270,
+            "remove_uncertainty": 38270,
+            "fixed_prefill": 38270
+          },
+          "content_logit_l2": 0.37881067395210266,
+          "uncertainty_logit_l2": 117.48321533203125,
+          "current_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 65,
+            "remove_content": 65,
+            "remove_uncertainty": 65,
+            "fixed_prefill": 65
+          },
+          "content_logit_l2": 0.005147729534655809,
+          "uncertainty_logit_l2": 266.8026123046875,
+          "current_probabilities": [
+            0.00034579343628138304,
+            0.00849230121821165,
+            0.9911619424819946
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59422,
+            "remove_content": 59422,
+            "remove_uncertainty": 59422,
+            "fixed_prefill": 59422
+          },
+          "content_logit_l2": 0.042538173496723175,
+          "uncertainty_logit_l2": 273.9808044433594,
+          "current_probabilities": [
+            0.0008691729162819684,
+            0.0651588886976242,
+            0.9339719414710999
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3602,
+            "remove_content": 3602,
+            "remove_uncertainty": 4585,
+            "fixed_prefill": 4585
+          },
+          "content_logit_l2": 0.013253752142190933,
+          "uncertainty_logit_l2": 282.9738464355469,
+          "current_probabilities": [
+            0.0005969000048935413,
+            0.02157866209745407,
+            0.9778243899345398
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4585,
+            "remove_content": 4585,
+            "remove_uncertainty": 4585,
+            "fixed_prefill": 4585
+          },
+          "content_logit_l2": 0.007374102715402842,
+          "uncertainty_logit_l2": 282.2564392089844,
+          "current_probabilities": [
+            0.0003665912081487477,
+            0.012273186817765236,
+            0.9873602986335754
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2516,
+            "remove_content": 2516,
+            "remove_uncertainty": 2516,
+            "fixed_prefill": 2516
+          },
+          "content_logit_l2": 0.006632228381931782,
+          "uncertainty_logit_l2": 308.7213134765625,
+          "current_probabilities": [
+            0.000387772946851328,
+            0.01124319527298212,
+            0.9883689880371094
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 17621,
+            "remove_content": 17621,
+            "remove_uncertainty": 17621,
+            "fixed_prefill": 17621
+          },
+          "content_logit_l2": 0.018927881494164467,
+          "uncertainty_logit_l2": 280.5633850097656,
+          "current_probabilities": [
+            0.0006556875305250287,
+            0.030246755108237267,
+            0.9690975546836853
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 45953,
+            "remove_content": 45953,
+            "remove_uncertainty": 45953,
+            "fixed_prefill": 45953
+          },
+          "content_logit_l2": 0.0077401455491781235,
+          "uncertainty_logit_l2": 296.3797912597656,
+          "current_probabilities": [
+            0.00023788878752384335,
+            0.013135111890733242,
+            0.9866270422935486
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2427,
+            "remove_content": 2427,
+            "remove_uncertainty": 2427,
+            "fixed_prefill": 2427
+          },
+          "content_logit_l2": 0.011807643808424473,
+          "uncertainty_logit_l2": 290.3475036621094,
+          "current_probabilities": [
+            0.0003172485448885709,
+            0.01941986195743084,
+            0.9802629351615906
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 9,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 66,
+            "remove_content": 66,
+            "remove_uncertainty": 66,
+            "fixed_prefill": 66
+          },
+          "content_logit_l2": 0.0024432928767055273,
+          "uncertainty_logit_l2": 272.990234375,
+          "current_probabilities": [
+            0.0002989751228597015,
+            0.004262234084308147,
+            0.9954387545585632
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        },
+        {
+          "position": 10,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 3917,
+            "fixed_prefill": 3917
+          },
+          "content_logit_l2": 0.0043376535177230835,
+          "uncertainty_logit_l2": 270.68621826171875,
+          "current_probabilities": [
+            0.00026128627359867096,
+            0.0069109294563531876,
+            0.9928277134895325
+          ],
+          "fixed_probabilities": [
+            0.004452061373740435,
+            0.5352811217308044,
+            0.46026676893234253
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 2,
+        "fixed_prefill": 2
+      }
+    },
+    {
+      "id": "case-ed876424f9d365d8bc64",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 38270,
+            "remove_content": 38270,
+            "remove_uncertainty": 38270,
+            "fixed_prefill": 38270
+          },
+          "content_logit_l2": 0.3811874985694885,
+          "uncertainty_logit_l2": 115.95673370361328,
+          "current_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 65,
+            "remove_content": 65,
+            "remove_uncertainty": 65,
+            "fixed_prefill": 65
+          },
+          "content_logit_l2": 0.005163193680346012,
+          "uncertainty_logit_l2": 265.65447998046875,
+          "current_probabilities": [
+            0.0003513666451908648,
+            0.008582362905144691,
+            0.9910662770271301
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59422,
+            "remove_content": 59422,
+            "remove_uncertainty": 59422,
+            "fixed_prefill": 59422
+          },
+          "content_logit_l2": 0.04248272627592087,
+          "uncertainty_logit_l2": 273.0428161621094,
+          "current_probabilities": [
+            0.000876163539942354,
+            0.06554476916790009,
+            0.9335790276527405
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3602,
+            "remove_content": 3602,
+            "remove_uncertainty": 4585,
+            "fixed_prefill": 4585
+          },
+          "content_logit_l2": 0.013287360779941082,
+          "uncertainty_logit_l2": 281.8262939453125,
+          "current_probabilities": [
+            0.0006060930318199098,
+            0.021829387173056602,
+            0.9775645136833191
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4585,
+            "remove_content": 4585,
+            "remove_uncertainty": 4585,
+            "fixed_prefill": 4585
+          },
+          "content_logit_l2": 0.007374190725386143,
+          "uncertainty_logit_l2": 281.2792663574219,
+          "current_probabilities": [
+            0.00037282740231603384,
+            0.012382636778056622,
+            0.9872445464134216
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2516,
+            "remove_content": 2516,
+            "remove_uncertainty": 2516,
+            "fixed_prefill": 2516
+          },
+          "content_logit_l2": 0.006671103183180094,
+          "uncertainty_logit_l2": 308.5942687988281,
+          "current_probabilities": [
+            0.00039270950946956873,
+            0.011443953961133957,
+            0.9881632924079895
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 17621,
+            "remove_content": 17621,
+            "remove_uncertainty": 17621,
+            "fixed_prefill": 17621
+          },
+          "content_logit_l2": 0.018722711130976677,
+          "uncertainty_logit_l2": 280.2275695800781,
+          "current_probabilities": [
+            0.0006519094458781183,
+            0.03014962561428547,
+            0.9691984057426453
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 45953,
+            "remove_content": 45953,
+            "remove_uncertainty": 45953,
+            "fixed_prefill": 45953
+          },
+          "content_logit_l2": 0.0075149331241846085,
+          "uncertainty_logit_l2": 296.5618591308594,
+          "current_probabilities": [
+            0.0002352690789848566,
+            0.012853749096393585,
+            0.9869109392166138
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2427,
+            "remove_content": 2427,
+            "remove_uncertainty": 2427,
+            "fixed_prefill": 2427
+          },
+          "content_logit_l2": 0.011460885405540466,
+          "uncertainty_logit_l2": 290.3729553222656,
+          "current_probabilities": [
+            0.0003154418955091387,
+            0.0190273467451334,
+            0.980657160282135
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 9,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 66,
+            "remove_content": 66,
+            "remove_uncertainty": 66,
+            "fixed_prefill": 66
+          },
+          "content_logit_l2": 0.0024284315295517445,
+          "uncertainty_logit_l2": 272.6369323730469,
+          "current_probabilities": [
+            0.00031236998620443046,
+            0.0042744847014546394,
+            0.9954131245613098
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        },
+        {
+          "position": 10,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 3917,
+            "fixed_prefill": 3917
+          },
+          "content_logit_l2": 0.004372682422399521,
+          "uncertainty_logit_l2": 269.7167663574219,
+          "current_probabilities": [
+            0.00026711352984420955,
+            0.00701531395316124,
+            0.9927175045013428
+          ],
+          "fixed_probabilities": [
+            0.00441008573397994,
+            0.5406226515769958,
+            0.45496729016304016
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 2,
+        "fixed_prefill": 2
+      }
+    },
+    {
+      "id": "case-b9c87f9a2d4ab9867564",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 38270,
+            "remove_content": 38270,
+            "remove_uncertainty": 38270,
+            "fixed_prefill": 38270
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 232.17684936523438,
+          "current_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 65,
+            "remove_content": 65,
+            "remove_uncertainty": 65,
+            "fixed_prefill": 65
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 205.72386169433594,
+          "current_probabilities": [
+            0.005845098290592432,
+            0.0,
+            0.9941548705101013
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59422,
+            "remove_content": 59422,
+            "remove_uncertainty": 59422,
+            "fixed_prefill": 59422
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 214.22959899902344,
+          "current_probabilities": [
+            0.006866648327559233,
+            0.0,
+            0.9931333661079407
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 4585,
+            "remove_content": 4585,
+            "remove_uncertainty": 4585,
+            "fixed_prefill": 4585
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 204.84979248046875,
+          "current_probabilities": [
+            0.0075668031349778175,
+            0.0,
+            0.9924331903457642
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2516,
+            "remove_content": 2516,
+            "remove_uncertainty": 2516,
+            "fixed_prefill": 2516
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 199.41355895996094,
+          "current_probabilities": [
+            0.013737796805799007,
+            0.0,
+            0.9862622022628784
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 17621,
+            "remove_content": 17621,
+            "remove_uncertainty": 17621,
+            "fixed_prefill": 17621
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 226.06947326660156,
+          "current_probabilities": [
+            0.00517650693655014,
+            0.0,
+            0.9948234558105469
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 45953,
+            "remove_content": 45953,
+            "remove_uncertainty": 45953,
+            "fixed_prefill": 45953
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 213.9455108642578,
+          "current_probabilities": [
+            0.0029357720632106066,
+            0.0,
+            0.9970641732215881
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 7,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2427,
+            "remove_content": 2427,
+            "remove_uncertainty": 2427,
+            "fixed_prefill": 2427
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 215.78472900390625,
+          "current_probabilities": [
+            0.0029024137184023857,
+            0.0,
+            0.9970976114273071
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 8,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 66,
+            "remove_content": 66,
+            "remove_uncertainty": 66,
+            "fixed_prefill": 66
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 197.5322265625,
+          "current_probabilities": [
+            0.007922849617898464,
+            0.0,
+            0.9920772314071655
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 9,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 53808,
+            "remove_content": 53808,
+            "remove_uncertainty": 3917,
+            "fixed_prefill": 53808
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 201.8433380126953,
+          "current_probabilities": [
+            0.0056736222468316555,
+            0.0,
+            0.9943264126777649
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 10,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 10599,
+            "remove_content": 10599,
+            "remove_uncertainty": 2465,
+            "fixed_prefill": 10599
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 187.00872802734375,
+          "current_probabilities": [
+            0.015502287074923515,
+            0.0,
+            0.9844977259635925
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 11,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 27054,
+            "remove_content": 27054,
+            "remove_uncertainty": 27054,
+            "fixed_prefill": 27054
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 208.82150268554688,
+          "current_probabilities": [
+            0.00519539276137948,
+            0.0,
+            0.9948045611381531
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 12,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 6214,
+            "remove_content": 6214,
+            "remove_uncertainty": 6214,
+            "fixed_prefill": 6214
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 202.55575561523438,
+          "current_probabilities": [
+            0.004767946898937225,
+            0.0,
+            0.9952320456504822
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 13,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59654,
+            "remove_content": 59654,
+            "remove_uncertainty": 59654,
+            "fixed_prefill": 59654
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 185.6646728515625,
+          "current_probabilities": [
+            0.007385958917438984,
+            0.0,
+            0.9926140308380127
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 14,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2432,
+            "remove_content": 2432,
+            "remove_uncertainty": 2432,
+            "fixed_prefill": 2432
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 192.34991455078125,
+          "current_probabilities": [
+            0.010233289562165737,
+            0.0,
+            0.9897666573524475
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 15,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 54809,
+            "remove_content": 54809,
+            "remove_uncertainty": 54809,
+            "fixed_prefill": 54809
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 197.3627471923828,
+          "current_probabilities": [
+            0.008328260853886604,
+            0.0,
+            0.9916717410087585
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 16,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 8369,
+            "remove_content": 8369,
+            "remove_uncertainty": 11624,
+            "fixed_prefill": 8369
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 201.96075439453125,
+          "current_probabilities": [
+            0.0035059249494224787,
+            0.0,
+            0.9964941143989563
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 17,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 11624,
+            "remove_content": 11624,
+            "remove_uncertainty": 11624,
+            "fixed_prefill": 11624
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 196.04225158691406,
+          "current_probabilities": [
+            0.004991710186004639,
+            0.0,
+            0.9950082302093506
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 18,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2205,
+            "remove_content": 2205,
+            "remove_uncertainty": 2205,
+            "fixed_prefill": 2205
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 192.57769775390625,
+          "current_probabilities": [
+            0.0070217628963291645,
+            0.0,
+            0.9929782748222351
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 19,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59455,
+            "remove_content": 59455,
+            "remove_uncertainty": 59455,
+            "fixed_prefill": 59455
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 197.39207458496094,
+          "current_probabilities": [
+            0.006506658159196377,
+            0.0,
+            0.993493378162384
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 20,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 9603,
+            "remove_content": 9603,
+            "remove_uncertainty": 9603,
+            "fixed_prefill": 9603
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 199.05947875976562,
+          "current_probabilities": [
+            0.0050370050594210625,
+            0.0,
+            0.9949630498886108
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 21,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 5250,
+            "remove_content": 5250,
+            "remove_uncertainty": 5250,
+            "fixed_prefill": 5250
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 226.55514526367188,
+          "current_probabilities": [
+            0.003498402889817953,
+            0.0,
+            0.9965015649795532
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 22,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 12941,
+            "remove_content": 12941,
+            "remove_uncertainty": 12941,
+            "fixed_prefill": 12941
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 175.92337036132812,
+          "current_probabilities": [
+            0.0035980071406811476,
+            0.0,
+            0.9964020252227783
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 23,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3602,
+            "remove_content": 3602,
+            "remove_uncertainty": 59350,
+            "fixed_prefill": 3602
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 216.07144165039062,
+          "current_probabilities": [
+            0.0010571446036919951,
+            0.0,
+            0.9989429116249084
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 24,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 33345,
+            "remove_content": 33345,
+            "remove_uncertainty": 10408,
+            "fixed_prefill": 33345
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 209.89743041992188,
+          "current_probabilities": [
+            0.003817976452410221,
+            0.0,
+            0.9961820244789124
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 25,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 60129,
+            "remove_content": 60129,
+            "remove_uncertainty": 60129,
+            "fixed_prefill": 60129
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 199.1285858154297,
+          "current_probabilities": [
+            0.005230222828686237,
+            0.0,
+            0.9947697520256042
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 26,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 60348,
+            "remove_content": 60348,
+            "remove_uncertainty": 60348,
+            "fixed_prefill": 60348
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 206.89044189453125,
+          "current_probabilities": [
+            0.00326919206418097,
+            0.0,
+            0.9967308044433594
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 27,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3522,
+            "remove_content": 3522,
+            "remove_uncertainty": 3522,
+            "fixed_prefill": 3522
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 186.8650665283203,
+          "current_probabilities": [
+            0.013205052353441715,
+            0.0,
+            0.9867950081825256
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 28,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 66,
+            "remove_content": 66,
+            "remove_uncertainty": 66,
+            "fixed_prefill": 66
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 201.172607421875,
+          "current_probabilities": [
+            0.003357792505994439,
+            0.0,
+            0.9966422319412231
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        },
+        {
+          "position": 29,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.0,
+          "uncertainty_logit_l2": 183.46908569335938,
+          "current_probabilities": [
+            0.016982436180114746,
+            0.0,
+            0.9830175638198853
+          ],
+          "fixed_probabilities": [
+            0.01902882009744644,
+            0.0,
+            0.9809711575508118
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 5,
+        "fixed_prefill": 0
+      }
+    },
+    {
+      "id": "case-50832826530d9fede5b3",
+      "positions": [
+        {
+          "position": 0,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 2987,
+            "remove_content": 2987,
+            "remove_uncertainty": 59349,
+            "fixed_prefill": 2987
+          },
+          "content_logit_l2": 0.04047052189707756,
+          "uncertainty_logit_l2": 203.1416015625,
+          "current_probabilities": [
+            0.13007353246212006,
+            0.057345807552337646,
+            0.8125806450843811
+          ],
+          "fixed_probabilities": [
+            0.13007353246212006,
+            0.057345807552337646,
+            0.8125806450843811
+          ]
+        },
+        {
+          "position": 1,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 65,
+            "remove_content": 65,
+            "remove_uncertainty": 65,
+            "fixed_prefill": 65
+          },
+          "content_logit_l2": 0.004794810898602009,
+          "uncertainty_logit_l2": 250.44387817382812,
+          "current_probabilities": [
+            0.0022209000308066607,
+            0.00804992113262415,
+            0.9897291660308838
+          ],
+          "fixed_probabilities": [
+            0.13007353246212006,
+            0.057345807552337646,
+            0.8125806450843811
+          ]
+        },
+        {
+          "position": 2,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 3068,
+            "remove_content": 3068,
+            "remove_uncertainty": 59349,
+            "fixed_prefill": 3068
+          },
+          "content_logit_l2": 0.005538495257496834,
+          "uncertainty_logit_l2": 274.8063659667969,
+          "current_probabilities": [
+            0.011406791396439075,
+            0.00864206813275814,
+            0.9799511432647705
+          ],
+          "fixed_probabilities": [
+            0.13007353246212006,
+            0.057345807552337646,
+            0.8125806450843811
+          ]
+        },
+        {
+          "position": 3,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 49349,
+            "remove_content": 49349,
+            "remove_uncertainty": 59349,
+            "fixed_prefill": 49349
+          },
+          "content_logit_l2": 0.0014618439599871635,
+          "uncertainty_logit_l2": 278.2439270019531,
+          "current_probabilities": [
+            0.0019085090607404709,
+            0.0026133647188544273,
+            0.995478093624115
+          ],
+          "fixed_probabilities": [
+            0.13007353246212006,
+            0.057345807552337646,
+            0.8125806450843811
+          ]
+        },
+        {
+          "position": 4,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 59381,
+            "remove_content": 59381,
+            "remove_uncertainty": 59345,
+            "fixed_prefill": 59381
+          },
+          "content_logit_l2": 0.002154446206986904,
+          "uncertainty_logit_l2": 206.93959045410156,
+          "current_probabilities": [
+            0.008010483346879482,
+            0.003946767188608646,
+            0.9880427122116089
+          ],
+          "fixed_probabilities": [
+            0.13007353246212006,
+            0.057345807552337646,
+            0.8125806450843811
+          ]
+        },
+        {
+          "position": 5,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 66,
+            "remove_content": 66,
+            "remove_uncertainty": 59344,
+            "fixed_prefill": 66
+          },
+          "content_logit_l2": 0.0017183562740683556,
+          "uncertainty_logit_l2": 204.99339294433594,
+          "current_probabilities": [
+            0.002573685022071004,
+            0.0034173326566815376,
+            0.9940090179443359
+          ],
+          "fixed_probabilities": [
+            0.13007353246212006,
+            0.057345807552337646,
+            0.8125806450843811
+          ]
+        },
+        {
+          "position": 6,
+          "parity_passed": true,
+          "max_logit_error": 0.0,
+          "next_token_ids": {
+            "unchanged": 73440,
+            "remove_content": 73440,
+            "remove_uncertainty": 73440,
+            "fixed_prefill": 73440
+          },
+          "content_logit_l2": 0.0029334789142012596,
+          "uncertainty_logit_l2": 228.55715942382812,
+          "current_probabilities": [
+            0.004921832587569952,
+            0.004990111105144024,
+            0.9900880455970764
+          ],
+          "fixed_probabilities": [
+            0.13007353246212006,
+            0.057345807552337646,
+            0.8125806450843811
+          ]
+        }
+      ],
+      "all_native_replay_passed": true,
+      "changed_next_token_counts": {
+        "remove_content": 0,
+        "remove_uncertainty": 5,
+        "fixed_prefill": 0
+      }
+    }
+  ],
+  "software_gradient_numeric_gate_passed": true,
+  "original_parameters_unchanged": true,
+  "optimizer_steps": 0,
+  "new_free_generated_answers": 0,
+  "memory_accuracy_measured": false,
+  "training_approved": false,
+  "deployment_approved": false,
+  "artifact_sha256": {
+    "checkpoint": "a8976841239f18520842e75551dfbc8681c27f6d25e0784fed03c1efcb5585d9",
+    "baseline": "cb6b2f6292352797b9e33ca4326a6836d9fed8eb8b37ed1423227bf4d36491ef",
+    "experiment": "455200d722a7ea6b2943fc2a3fbea1e1d0dff0fde968fa130948ed222b18b136"
+  },
+  "feature_package_digest": "8f5b2d2ae685a7995d45422e661a8f59811357186d0cff370211eb596d5f36a6",
+  "source_sha256": {
+    "availability_controls.py": "e8b609703c0a7e19ec70bf25f9fb843dfc4e31b58cd1a32946210b9637955d73",
+    "diagnose_availability_controls.py": "1bbe1ba1f4b2aa5409b289ea198bd14584a891b27187c16ca324aae286d96e57"
+  }
+}

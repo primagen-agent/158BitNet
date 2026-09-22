@@ -1,0 +1,8 @@
+{
+  "archive": "build/neural-memory-cg003-platform.tar.gz",
+  "sha256": "a067290e49411c44e9b98130b1af0525570dede509bfa3e0935c9f2e40846ad6",
+  "bytes": 36351649,
+  "source_files": 451,
+  "fixture_digest": "4912e5c8041f1901858b2b22c6ac33ce58176f282a7fe3f7870c88935cf43ae8",
+  "snapshot_digest": "7927bb3e90486be1fa02c795e6b71a834f68fc8d1abff1c474932782d1e331f9"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "DG-006",
+  "phase": "P1-availability-11",
+  "status": "registered_numeric_and_backend_diagnostic_not_training",
+  "scope": "Python content plus neural availability branch, native C continuous projection, v2 prompt, zero or one supplied episode. No learned reader or writer claim.",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "template_version": "gguf-chatml-v2",
+  "seed": 3180927,
+  "max_new_tokens": 6,
+  "context_capacity": 128,
+  "content_gain": 0.1,
+  "diagnostic_uncertainty_weight_std": 0.001,
+  "projection_gradient_steps": [0.01, 0.1],
+  "finite_difference_step": 0.001,
+  "forward_tolerance": {"atol": 0.00001, "rtol": 0.0001},
+  "derivative_tolerance": {"atol": 0.002, "rtol": 0.05},
+  "cases": [
+    {"id": "empty_private_en", "query": "Where does Nora live?", "sources": [], "next_token_text": "I"},
+    {"id": "empty_ordinary_en", "query": "What is two plus two?", "sources": [], "next_token_text": "Two"},
+    {"id": "supplied_source_zh", "query": "小安现在住在哪里？", "sources": ["小安现在住在苏州。"], "next_token_text": "小安"}
+  ],
+  "gates": [
+    "Disabled and default zero-initialized full module preserve ordinary C logits exactly",
+    "Empty source has exact zero content but nonzero generation gradient to uncertainty output weights",
+    "Every diagnostic residual and combined logit vector matches Torch within registered tolerance",
+    "Both registered uncertainty-output gradient perturbations lower real C NLL in descent and increase it in the opposed direction for each case",
+    "Central differences along normalized gradients match ordinary autograd within registered tolerance",
+    "v2 free generation appends actual predictions, traces fresh C context every step and retains every truncation and raw response"
+  ],
+  "constraints": {"optimizer_steps": 0, "kv_reuse": false, "internal_prefill_kv_buffers": true, "lora": false, "svd": false, "nas_ng": false, "locomo": false},
+  "failure_action": "Retain every failure and restore all parameter perturbations; do not tune seeds/steps/targets or launch training. Numeric success does not establish state classification or correct replies."
+}

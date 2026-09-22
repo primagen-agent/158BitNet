@@ -1,0 +1,268 @@
+{
+  "rows": [
+    {
+      "packet_id": "fb344b6f54f89c4e0a9e07ea31e89136ed7608add66382f0520d3012abd0e5f9",
+      "record_id": "joint-3415d75b34a68cb08833",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "2c0e5094faa2405750349971b4a031d7023d5ae09e5cc64deca8dd2b6bdc6d86",
+      "record_id": "joint-00358fb1f7c2b30e2c7d",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": false,
+        "unsolicited_memory_narration": true,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "e6b558262519b996ebe8f93f22df5d05484060fdc7c2fc302446ad3dbb784bf9",
+      "record_id": "joint-52b4b20ec52ee431532e",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "1398b821a1eaa83657fc2a347687d8b78aaecc57cc5bcb9ba67055c3e572a26f",
+      "record_id": "joint-4ff45be3a97c231edc81",
+      "route_target": 2,
+      "reviewer_a": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": false,
+        "unsolicited_memory_narration": true,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 2,
+        "semantic_pass": true,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "807a19fa1e0ae12a18f964eaabdb85e430f3b25d27b70ec6000a93b22aab8f28",
+      "record_id": "joint-c42056354c0b69813970",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "210b07f2801134a955cecc1498ad878d31e1b52b3f8279037dcc7debbb7e1933",
+      "record_id": "joint-5620a2bfcfca17ae14ce",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "e9efbc0d820f42bf1831e4c0014cefa50bfc9730971e940cda69ca1b6f91268c",
+      "record_id": "joint-aaefd8e262566e4a2353",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "062aa8690ab50588c9de20a9776c4f969c9842001e2db9750658308506e461c5",
+      "record_id": "joint-f2c8b739dffa4af42202",
+      "route_target": 0,
+      "reviewer_a": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 0,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "88c4805ef3d5ec455804abf9b1999feb29559fd39cae8f26d524ef7670df6d0c",
+      "record_id": "joint-cff41e673284fbf1c6d9",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "5f377978a7e208d31e15fc9e9ee9079f0fb94fbe35942dee262007553e156947",
+      "record_id": "joint-f417c9409407bcb8e962",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": true,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "5f33f739d52a916b485801d60eacdb4e8a57194f0050669a7884441472b751c6",
+      "record_id": "joint-a327d6559d03d72cb623",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": false
+      },
+      "agree": true
+    },
+    {
+      "packet_id": "9b4e3298234cf274b00b015128475ba85d42ddb903f78b550395dbd230c46c19",
+      "record_id": "joint-d52d5721c8e37ed4372f",
+      "route_target": 1,
+      "reviewer_a": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": true,
+        "acknowledges_missing_evidence": true
+      },
+      "reviewer_b": {
+        "route_target": 1,
+        "semantic_pass": false,
+        "natural_reply": false,
+        "unsolicited_memory_narration": false,
+        "acknowledges_missing_evidence": true
+      },
+      "agree": true
+    }
+  ],
+  "counts": {
+    "0": {
+      "denominator": 4,
+      "a_pass": 0,
+      "b_pass": 0,
+      "agreement": 4
+    },
+    "1": {
+      "denominator": 4,
+      "a_pass": 0,
+      "b_pass": 0,
+      "agreement": 4
+    },
+    "2": {
+      "denominator": 4,
+      "a_pass": 2,
+      "b_pass": 2,
+      "agreement": 4
+    }
+  },
+  "truncated": 4,
+  "total": 12,
+  "format": "dg023-review-score-v1",
+  "reviewer_disclosure": "two isolated same-family model instances, blind packets without gold/labels/routes"
+}

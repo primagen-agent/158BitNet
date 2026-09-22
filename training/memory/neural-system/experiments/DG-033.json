@@ -1,0 +1,5 @@
+{
+ "id": "DG-033",
+ "status": "completed_start_gap_attribution",
+ "finding": "route correct and constant (argmax=1); mode saturated (margins ~140) by LBFGS phase; teacher-prefix 268/268 was memorization of teacher token identity - free prefixes diverge at the value token (\"New York\" vs \"Riga\") and mode never flips; grounded gate blocker = START criterion built on teacher-token identity"
+}

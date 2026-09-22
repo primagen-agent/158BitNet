@@ -1,0 +1,1694 @@
+{
+  "format": "dg016-append-native-fixtures-v1",
+  "registration_sha256": "345ee04d6c97aa1edc82b1123c297d15070c025ab53a1bb33f0b594747fc8072",
+  "source_sha256": {
+    "append_value_transport.py": "24b2b9e9732d077f157cf447c07628edf1586dd3599e0f478c5a3cfbb7ccd784",
+    "check_append_value_transport.py": "b3baee8ebd6a4d0bbbc6218eb74a61b2c94056c26f2a619dcf0f63a5d4b5205b"
+  },
+  "origin": "oracle_fixture",
+  "optimizer_steps": 0,
+  "autonomous_recall_measured": false,
+  "natural_reply_quality_measured": false,
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "tokenizer_sha256": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+  "cross_step_kv_reuse": false,
+  "internal_prefill_kv_buffers": true,
+  "raw_root": "/Users/chersu/workdir/AI/158BitNet/build/neural-memory-dg016-native",
+  "protected_files_unchanged": {
+    "python/attach_context_memory_operation.py": "16392ad38d67c18f1d4bb3987fa515d149d82c9b3cd31ab2bddf201ad759ceb0",
+    "python/audit_availability_generation.py": "061573a344abae71e8abdf5313bfa1a442cdeae04f6d3e48fba63065258b19f1",
+    "python/audit_availability_supervision.py": "fae9598607ad19077302b49ad11d215af823de949fa981c91f543ef646d09a05",
+    "python/audit_joint_baseline.py": "a185fc7bfd80615561b338987f9983a1024e4ed06e3c10195d156ab2f2376c41",
+    "python/audit_joint_binding_data.py": "f86e45abf824fe0d0cac6eaf167284b5127d1be015d9dfdaec75b4927972982f",
+    "python/audit_neural_memory_generation.py": "7bed21515f7e28719d705cfb3e593741155b1be185e8df6f346e84f775a8cd68",
+    "python/audit_role_generation.py": "24419cf8725a7f24d59577be061fbf4bb4eaff2fc6b7a1dd9e890a5e484f35aa",
+    "python/availability_controls.py": "e8b609703c0a7e19ec70bf25f9fb843dfc4e31b58cd1a32946210b9637955d73",
+    "python/availability_supervision.py": "3e5cf4fbf64962bb909ee7e6ab06617799000b8998b5728c3358b3b9e0af5f6a",
+    "python/c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8",
+    "python/calibrate_availability_review.py": "a4a70bc2a7754618fe8dc0682dda868d415fe71609a3d5f66ff51b712dbe97d6",
+    "python/continuous_memory.py": "748c5daa140d71a01f9513dc4e5e925d8cff3101462bfc7317dca03243b73f34",
+    "python/diagnose_availability_controls.py": "1bbe1ba1f4b2aa5409b289ea198bd14584a891b27187c16ca324aae286d96e57",
+    "python/diagnose_availability_objectives.py": "83367edfac4bcca07f79840a638f6c70610baca4f62dcf97ee664fdeab04a53b",
+    "python/diagnose_continuous_memory.py": "c90f8ddd29d3e3332eb102953d10ea321726c03fc0e164de19bf60c2988d1de4",
+    "python/diagnose_joint_native_generation.py": "4e268be2dbecdfb57ea75e25aaa2ef7422db76f1ab129efc3165c62307ba117a",
+    "python/diagnose_memory_availability.py": "cdf270c595b7bfe43f4f086d698b54bdf35524384cbf50bddcebddee20c3bf1a",
+    "python/diagnose_memory_fusion.py": "0fe070c95aea4c56a2faa2778f9ff29d85131114e6652a3900f4111fad47e464",
+    "python/diagnose_native_cell_gradient.py": "aa7ec75e781e754a70a8eb6161561fe4efab1b827eb5a28c2a5cdd74a2f1cb8d",
+    "python/diagnose_native_free_generation.py": "5e49af5421038344748ad45a97a6e5b7bbc985dca298a0ddf07bc8a4f1412352",
+    "python/diagnose_native_generation_gradient.py": "e35374a932753af50339878891a7824d720496ac09dd0f5b8d3f1e895466373a",
+    "python/diagnose_native_memory_encoder.py": "a02c43236f53f43a5cea973d9f1386b849c4779a32a869b5603ef732656152cd",
+    "python/diagnose_native_prompt.py": "321e3e512ac8db6230dc501d4694b1936b37a7c9d1926d97033e5c7b7980c22d",
+    "python/diagnose_neural_memory_features.py": "097db65f646177733b998273390eb185dd7b1516d74495f1f949be2c7182785e",
+    "python/diagnose_neural_memory_operators.py": "6e17bae3654f0cef79a4866f080401804dc0e949847a6e10ab1a7f9b295a570c",
+    "python/diagnose_paired_memory_objectives.py": "8f921003a31ba22874a5174ad58418e199dfd2deddf201f67dff9adc70ec137c",
+    "python/diagnose_resident_generalization.py": "e6eb2d54bb939d011db6677a05a541bd74154699e50353969567c817ffe1cbdf",
+    "python/diagnose_resident_memory_set.py": "60fefccd3e406d7fba11048f74a5e3249c04be7496ef4ee82905278bb32c104c",
+    "python/diagnose_role_content_path.py": "abfdce4a63299e3ddb09d38687a0ae8a7c622bfa9bd970722818e0539c35677f",
+    "python/diagnose_token_read_interface.py": "b24d9a56b2ed819157b0e86b445e3f460b52322d18a3e96ae91062668c556961",
+    "python/diagnose_token_supervision.py": "7be57710442e4dc6aa50a905ecd22d25e548ffe425c2a6231f612a11aa639034",
+    "python/episode_memory.py": "acd7f0b0d057c8834b82a79c980c264936ec599b839c08a6c4ff0dbd99b09e2e",
+    "python/episode_memory_inputs.py": "3aa68b33252ad35f22ff150f905fe02fa1905ca55a0645d1229bc845a4feb0b5",
+    "python/eval_availability_baseline.py": "fc4f3c8dbd77735c879af0c1c20953f22ff396c09284f5ce2449a589244200b6",
+    "python/eval_availability_checkpoint.py": "78b20210ca3a33ad4750262ad9427a44955a6e20bcefa02c9d3056de7250c0f9",
+    "python/eval_joint_baseline.py": "b4378aea203c688c9305aaf4c2556cbe06a81e42e86ef9bac19f4c8f7df8a4bb",
+    "python/eval_memory_span_gate_format.py": "315250be805aa1f33de90982fbcdbf1859a0cb898780c6cd8431850ce2bd89c1",
+    "python/eval_role_checkpoint.py": "9cf169026c2775ec02b195bf07a10ba28d0cedd28a0bb28c14c371ad2aeef6a0",
+    "python/export_resident_identity.py": "198cdec90f30522e9fc251655987a7913155f4c8d260d12f86ecb85165103d78",
+    "python/export_typed_link_model.py": "f3e2807d710a8a4f49bc1a72496382f75524ea715ef56971dd53bb9159c4ab60",
+    "python/export_typed_link_parity_sample.py": "cb7fb4671f57cfaf577682c66efe2c7579a9fe6a438abad0ab69bae5e14aafa6",
+    "python/export_typed_pair_encoder.py": "7be10fdb3c7cd26762c2216f72a9b020ae774abf8f53c6c5d0c1e2d3ea0566d1",
+    "python/export_typed_pair_parity_sample.py": "a0aef69d92f8e46ba499037a17976a0a18fb5f4f747ee22edd9e499bd471a331",
+    "python/export_typed_query_activator.py": "4c1213a324351cd08a9b0b7452e97b4add044e4cc346f0564085bfaeea778001",
+    "python/export_typed_runtime_link_parity_sample.py": "953ba224d3dd26bf80705a233d94d61dce149de605ad369e87f0695c4cbbec33",
+    "python/export_typed_runtime_parity_sample.py": "1ce2792f31e79398540df4504bbbd1e9e45fc06189690bfef6d393b2640e0ddb",
+    "python/export_typed_writer_model.py": "e5cc6d148a89704ab0ca022b60c05739270cc83fdafd87a3183128afc87a782b",
+    "python/export_typed_writer_parity_sample.py": "8489a765f98c4397d1d1de61b87140c9bbecd1aba0be0ec16840d6ea690e5b6c",
+    "python/ggw.py": "e0b18c4af9e9de922bc0f6c9d10b0c64d3c906634db401f2b012974b16f8f208",
+    "python/joint_binding_schedule.py": "adb6ecdeb5b416d02001bb040d99b9e0f915b66f4e183f1c034271c2aa559bbb",
+    "python/joint_cuda_preflight.py": "189eec5bb8ee77921b591bf3d6bae81466005ac7f0a84df5ff79446c0982ab4e",
+    "python/joint_launch.py": "3086e1e16831503f6062f6d7a17f1b4ca7aa62ad1e367f626b0badffcae73c72",
+    "python/joint_memory_model.py": "d1348a5138713257936904b20f50c45ca926881835e5ba4a2836f54f22ce5fc3",
+    "python/joint_optimizer.py": "d444f799bbc29bfa63e47a7faddd3eac067b9369d6b8c1be71d9b93a7ee7ac60",
+    "python/joint_optimizer_preflight.py": "261d68a0a8449bfeaf068883b58840b1f4fd258aeb4342ee279a78d12afd942f",
+    "python/joint_training_data.py": "7de2a15fc76e7f64595c7ab1cb3aa3ff9ad8b9a0b610d18c2398b34f2c89d155",
+    "python/memory_availability.py": "4eb37b084a0420a4052aaf924bd648003517e14093782c79effa4a9f83a83633",
+    "python/memory_fusion.py": "c06698021d04e923a8e6b4fb08b7dd9289a21fc703479a930600ba9fe770f637",
+    "python/memory_role_separated.py": "2c212e3fe421aa5ae4888a51de8350484ec78b79847bdc0a86b4e500fa968764",
+    "python/memory_token_read.py": "f27efc6b37914fb3aeada7c2d032c3d112425652aa4cf9dde50b3ab8d025de23",
+    "python/model_identity.py": "26c8b43ebc696fa520577e1da2c56fb8d0946955814c4be1c85a928b95c738b5",
+    "python/native_cell_gradient.py": "445d131f7b289cc1085b8a60a4bec1e974d1d99d5160bace4de155718e005fbf",
+    "python/native_continuous_generation.py": "c594f0af6a65d7527de68bba093e89aa8742a6fb85124f3dd2bfeb58dfab2136",
+    "python/native_generation_bridge.py": "a2201a7325c39df76a85176a01973fee577417dcca1b0042cb9c27fdbfb785e9",
+    "python/native_joint_generation.py": "e44229eb749630d9f38922c9fc509321fc879aa39219209dd244339ae5614c06",
+    "python/native_memory_encoder.py": "5e8d8cee8ff5002d7b8ded73c3053b7fb48475d2c4ed1dfeabbdbae9dbdf90c5",
+    "python/native_prefix_bank.py": "ede73dacd36bb88320fce230adfb2b2c26a39088630bd6c681a9fc574ff886cf",
+    "python/native_role_generation.py": "eea2894c9d1ddb0e62215dbd58934699852350614f0e6ccc543a03e37204f8ab",
+    "python/native_token_generation.py": "a582f83f56cfd1c4b635d6d6bd670b9ccd165e039f6948d76b0f869e9fa882e0",
+    "python/native_token_payload.py": "518f396c0e734d25b2f38bee8f6622e122aaa4364deeab797dc47eb702133973",
+    "python/neural_memory_causality.py": "fcd387d7c0dbaba5570b1a7eb6715cd83f7ee0cd416ab7cf4d83871d5627fda9",
+    "python/neural_memory_contract.py": "c41fc03f10fc5e5f4fc3bb7e922b21795cb5b3f572de6f45e1ff59e256b4fd2c",
+    "python/neural_memory_generation.py": "f23ff36ce9260428369deedf62b1f711b1b2a562be3e1a0d6e46f13d62a93414",
+    "python/neural_memory_launch.py": "2aaeac203599267874feb007dc37d44815e8a55ee08d4d0438cea6b109011899",
+    "python/neural_memory_protocol.py": "2b886045196d0ede1b13369f0ff28fb5ff240c2830334fa475c1075762a94862",
+    "python/package_availability_training.py": "1783c2d97caab6cea1b36b4a649fd8611c239eacdd652303ad08f617b5cbb68a",
+    "python/preflight_joint_full.py": "513ebb8430d778c4246102af78d4fe107de6b9299ada6b63657f6c31c468cde5",
+    "python/prepare_availability_curriculum.py": "9f4875a42ec7eac3bedf5f627068c7a363a97197b2a12f7400337f598da99820",
+    "python/prepare_availability_features.py": "59c61c85b9b690ef436ebf58a519afba1f9df39f0d8228698f08e0ade558bf9e",
+    "python/prepare_dialogue_memory_curriculum.py": "baabb2e19e4ff71812e7bd40f331f0929604c2ef6c695ff62dc366d50ae43743",
+    "python/prepare_joint_binding_curriculum.py": "c91322dd0f1d7607703637b6ea9960c9703058fb2b04f75b14dd0b0b6306ce54",
+    "python/prepare_joint_training_features.py": "e1e1ed9b630fdc671d9f6c647a5944e15b98dec9775507fbb06e5e869fcf564f",
+    "python/prepare_memory_fusion_curriculum.py": "88b0ffae94477d71fe7e6dba404c0122376545fa33b3ddb2e679905c99cf0f79",
+    "python/prepare_memory_set_curriculum.py": "496fa8095f443215b340b0193c39412b912350e415de214d4b1a4ef257ee2421",
+    "python/prepare_mixed_memory_curriculum.py": "9d385c65948e9adb32b32e3ff7f1f43a6af1a074b770adea52fc1281c2d23c9e",
+    "python/prepare_natural_memory_curriculum.py": "e99a9d315ce0c82f3f4fa4e2d312b33b14cc19e97ecdf832e09d468786580e9b",
+    "python/prepare_natural_memory_eval.py": "8f2c25e2fb1d338e1a97928a665a2be916d0dacc64bbe1730964f9a2df084872",
+    "python/prepare_neural_memory_protocol.py": "1b0030b89ebefefdb8acc40929df8cb6c37ab68de8db051b7157c613a0288529",
+    "python/prepare_repeated_dialogue_curriculum.py": "eef0d2badf657e26d8b61735d2a37dacc1448c931032177e72638fc45b4428ab",
+    "python/prepare_typed_activation_curriculum.py": "a4ea5a40478ef2aae88c341148ce86ec00fc86452831b9b7da26bcd4f9c7a7d0",
+    "python/prepare_typed_memory_features.py": "8d3d3089d59f983a5d2256c0be1f01c37411876e3262a58c193f970ae77f40ce",
+    "python/qualify_joint_native.py": "ec7ce34085c0047f3e7799dc96db0a078cf34b04704ee8ee7a82cafa182dcbc0",
+    "python/qualify_role_separated_native.py": "04a99ad598cdb58ae47d58726254b8d0735ae38f32be90f332d82d443eed1d4d",
+    "python/rescore_memory_fusion.py": "a1abe4afc99c47abe2f35c1dedb163261201489cf1f1466ab4b767042d763fd9",
+    "python/review_availability_generation.py": "4edb2b3f0f7fbb4e5bbaf2971bf42636b373d0dd044c428c9d8df05c0c7392e4",
+    "python/review_joint_generation.py": "f1ea38a4921837731993677c7857b612558da291c12bdad1123edaac6ee4ce6c",
+    "python/review_neural_memory.py": "a72e7ff6b453a507e308ee4c8fe807b934922fd0830a05746f576a8084eabcbe",
+    "python/run_joint_training.py": "d37a480ef5d793a5821007e854692c5671278e50bac305064b7e4afdeca0eec7",
+    "python/token_memory_composition.py": "a5229c4d3aa1cc3ef369d0bffc9227368d2c8bf25d08a41a6efc70ca4ee2a27b",
+    "python/token_memory_supervision.py": "a852cc32124cf0aa0cf1ef77c7379cad3f10ec9dea2228c4d5f396218057fe9f",
+    "python/torch_backbone.py": "25ebea3b0e2ee4d4f1bab60bd2638c3aa1a5bea757cc81fbd6c210d1d9896ac6",
+    "python/train_availability_memory.py": "7c52b48736cb98a7c71444f3d7e86e87cfb92e639dd0c46843cc74079f4a1782",
+    "python/train_context_memory_operation.py": "64db7474ad53b635a9d999f1d6dabe1065816a3e69c8056fb1b60520b1d6ffa6",
+    "python/train_episode_memory.py": "88274e0dfb7512a444886500933940d622075cb704b443b9f210a1fd88dc0790",
+    "python/train_joint_memory.py": "4bb42e321118e716da4bc44593463f918b679efddebf93fec12a7e15772f0951",
+    "python/train_memory_fusion.py": "da7505a88cf5b5c93613d8fab24ebc6e073c79774fc570d3fd81f3d8c7e07973",
+    "python/train_memory_gate.py": "60b3a76879b9afc8dbbb8d53d3eae883566b69fb3aa381865eb35cc496a23e85",
+    "python/train_memory_span_gate.py": "0310838ae32c4870c75d747cc286e09ec9318c97ccc02e3e53cbbf84943d9416",
+    "python/train_natural_link_head.py": "22a0621ff773f93631cb05c7492dbe3e73f06e0dd04bcc8781d49288e10983f8",
+    "python/train_resident_identity.py": "34e4ddf7c10c2ef1eeb2ae3331b95e1939650e4242a1f1862953f7fde2709e5a",
+    "python/train_resident_memory_set.py": "d8d4ef57303c8f323ec49073bf564412f3d6b19bdef135c89e9ddd147c765e92",
+    "python/train_role_separated_memory.py": "43c4440f73cc9abebe8f7d10839e0db3881cf4c5d4735ab1268105d42d51f226",
+    "python/train_typed_anchor_keys.py": "c1c5638bc83617987b805d09904d244c0c0a3bac9f730518b137fe28ff67fca1",
+    "python/train_typed_memory_writer.py": "0e68cd373e83294df42905f4144b916fc18525d9d58616391c4cda3529bfb7c0",
+    "python/train_typed_pair_verifier.py": "ac4be4364a0b92058f212c0dacfc3f084b147aa58d16c8d988decc80719da458",
+    "python/train_typed_query_activator.py": "73fbe0519e49f8cedc8e9ec3e09f21822684fb07526efb25539307c23e51c8f9",
+    "python/train_typed_span_tagger.py": "0b33dd6c30d234e7e6528fccdc38d552fd071cb5d15546bc88d6a7ec921ff661",
+    "python/tune_typed_anchor_span_fusion.py": "1974f34e28c0d35fc1be4feafed45280e6149a98a374b475d1d4d8f072ab632b",
+    "python/typed_memory_training.py": "2612a7805a9418687b190bf6b832d90a9e21a1ba139f19c02e9353eb6c2eeae4",
+    "python/typed_writer_components.py": "b5e75841fa569e4832ec8991dea4329a6222ac22ce298771f47c1d01c5f522f4",
+    "python/validate_typed_version_memory.py": "5f9a96211090b495949670dcb90295deb2e5517472d9bbfd2d5b8037eab1cbb2",
+    "build/neural-memory-cg003-training-results/training/joint_aux/step-000000.pt": "f8f25d8404782d5bf245ea03ae5afa1182dc6113b0798bf665bd8c5dbf2c4e67",
+    "build/neural-memory-cg003-training-results/training/joint_aux/step-000050.pt": "fb4728d552c63d4ca6881b7141766240a1df3abf3c73e7b92a40d69475d3dc36",
+    "build/neural-memory-cg003-training-results/training/joint_aux/status.json": "c08da22f0bb525c7fc794b36eb77da8a1548583df2cb8dd91091ea3221e4672e",
+    "build/neural-memory-cg003-training-results/training/joint_product/step-000000.pt": "366196f2bcb1d65145a5e8130f39aecec86ac369efaf0754235462a1a27ea3e5",
+    "build/neural-memory-cg003-training-results/training/joint_product/step-000050.pt": "d40a254c82aa1602b5e1c2bfa63dc971f7079666539bf1fb9550e3a43f7cff8a",
+    "build/neural-memory-cg003-training-results/training/joint_product/status.json": "c818f8c99b6eab452a57259db1cc4accbdc9d9c637a025172a8770500aa8a593",
+    "python/value_transport.py": "49f5c1a6f8fd51cbfb9c77dd67330dbe323d12994ca1f48d8d5f01b97224bb4d",
+    "python/native_value_codec.py": "5d01272941a420964499a55124f710cc754ed0df07607e6604f6b0ef1d1b80f3",
+    "python/check_value_transport.py": "36e3543459903e55d0f49993d337c7e4cc3219947c2bf1a03e29769fe0628eb1",
+    "build/memory_continuous_probe": "4ce9aa3f21ef95f589fb996f2a43c30a917e038f3fc4e1285bd60769691288ce",
+    "build/memory_gradient_reference": "4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152"
+  },
+  "cases": [
+    {
+      "id": "ascii-riga",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "compiled_value_ids": [
+        59366,
+        15008
+      ],
+      "emitted_token_ids": [
+        59366,
+        15008
+      ],
+      "emitted_piece_hex": [
+        "52",
+        "696761"
+      ],
+      "expected_value_hex": "52696761",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            4599,
+            59358
+          ],
+          "base_argmax": 5,
+          "selected_token": 59366,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            59366
+          ],
+          "base_argmax": 7729,
+          "selected_token": 15008,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        },
+        {
+          "position": 2,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            59366,
+            15008
+          ],
+          "base_argmax": 5,
+          "selected_token": 5,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 5
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "9791bc5ee989860050008259a5f5d58f9c8f1a6eee0bd8268c34d782f18d1fb8",
+        "step-000-base.input": "46186b153119ee763f51b396bf2016d14dab94f956627944e0252c30e967deae",
+        "step-000-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-000-reference.bin": "9288274881ee2f2a4e24db4a09e7de683c66bbebf8800936d95da9a00912ac07",
+        "step-000-reference.input": "7e3ab4cf6e3a06cdde22611a4a815fcec6f877bc031a4f654dbf9d7c6b1274ab",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "58ea1319b1bc1af88d390bc14fac8836f0d713cfe8229e488c38466e98843974",
+        "step-001-base.input": "4c8bcf6c2fa8e8ae73270ae332d203a8512920feeb449f636f66b02449dd7adb",
+        "step-001-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-001-reference.bin": "a449446ae024babc8db57bb3001fa3ccc6cb8517c0bb11d5a5b8d24ed8f7efa0",
+        "step-001-reference.input": "ae090bdbf6a3cb98623f4e66dcb532a427e64876b09ceb51bc4ba4938055470d",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-002-base.bin": "f1f133beef1445b1d23e24206379a9293317ee5d1f64d778c991bc5d7eba2b31",
+        "step-002-base.input": "2eaa63bb9fecc9141c4d7a1574bf4ca3309db79ec91cada44ffc9460045a84e4",
+        "step-002-base.log": "9b685dbaea24238414aa07812e25dd4d5b5ee702acc0f75f05e38d2a580719a7",
+        "step-002-reference.bin": "8658a831c498991441cd3dc68f17191bd35c05c7add180561c37672ca52bf50e",
+        "step-002-reference.input": "1d7c443d973bfc856fa0b5ff41a9d230553b3f113af13ec83b2ef086812f7e49",
+        "step-002-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "ascii-quimper",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "compiled_value_ids": [
+        2208,
+        17713,
+        1349
+      ],
+      "emitted_token_ids": [
+        2208,
+        17713,
+        1349
+      ],
+      "emitted_piece_hex": [
+        "5175",
+        "696d70",
+        "6572"
+      ],
+      "expected_value_hex": "5175696d706572",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            4599,
+            59358
+          ],
+          "base_argmax": 5,
+          "selected_token": 2208,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            2208
+          ],
+          "base_argmax": 5872,
+          "selected_token": 17713,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        },
+        {
+          "position": 2,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            2208,
+            17713
+          ],
+          "base_argmax": 1388,
+          "selected_token": 1349,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 5
+        },
+        {
+          "position": 3,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            2208,
+            17713,
+            1349
+          ],
+          "base_argmax": 5,
+          "selected_token": 5,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 6
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "9791bc5ee989860050008259a5f5d58f9c8f1a6eee0bd8268c34d782f18d1fb8",
+        "step-000-base.input": "46186b153119ee763f51b396bf2016d14dab94f956627944e0252c30e967deae",
+        "step-000-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-000-reference.bin": "9288274881ee2f2a4e24db4a09e7de683c66bbebf8800936d95da9a00912ac07",
+        "step-000-reference.input": "7e3ab4cf6e3a06cdde22611a4a815fcec6f877bc031a4f654dbf9d7c6b1274ab",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "9f43e336753020e1553fec01106fdb7271d8b9310c6713ac6e326be9622c8053",
+        "step-001-base.input": "bd307bf2f97d660e75c363f4e6b1837d55353f77340368c90974a251c9c1a533",
+        "step-001-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-001-reference.bin": "38de887cc86c3b05df5d9520dbc2c399c102e807a3b24a0c3bc3a7e9f84bca9d",
+        "step-001-reference.input": "9a8e642d0ca9f930826753cc38b07c83cbac743fd7ae910d4fedbc73ca458313",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-002-base.bin": "fb91be1a53908ea0d3483b594315145d49fc1afa9dc5a36d10ad9f49915c6b38",
+        "step-002-base.input": "a9c28438c5d250032eb4f76ccc1df9612e8a08d3a47e2a7286a1e947b20e6288",
+        "step-002-base.log": "9b685dbaea24238414aa07812e25dd4d5b5ee702acc0f75f05e38d2a580719a7",
+        "step-002-reference.bin": "b7dca75c278ea14f6af4ab36277e37480c789801e16119d91e7f61ef7872d71a",
+        "step-002-reference.input": "1eabd91f092a3d1be07fd573f42ca3fa13b5ca7c60354a69bcdc18b52eb52f82",
+        "step-002-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-003-base.bin": "956cee51949e11158f0b77d9d083fd01e6444a1f4e6b9082d811415f29052617",
+        "step-003-base.input": "af3c1f0b79a75c1df325cf5a6faf8e6d62b846dbbc534364d3fed2afe970063e",
+        "step-003-base.log": "67725d0c2326fe782333d86b4ddd0a93e00c7b1264eadab66bb744ca95e0db74",
+        "step-003-reference.bin": "c60db6d445286c0183a7eb4745ddef706d96e855eb49701b38ddede6abc27a94",
+        "step-003-reference.input": "deafc6fdc554ec2900503568ecabca8313f80f6083426889c42e4c70033cc0fb",
+        "step-003-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "chinese",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        59320,
+        3522,
+        59390
+      ],
+      "canonical_prefix_ids": [
+        1,
+        59320,
+        3522,
+        59390
+      ],
+      "compiled_value_ids": [
+        59593,
+        59543
+      ],
+      "emitted_token_ids": [
+        59593,
+        59543
+      ],
+      "emitted_piece_hex": [
+        "e9878c",
+        "e58aa0"
+      ],
+      "expected_value_hex": "e9878ce58aa0",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            59320,
+            3522,
+            59390
+          ],
+          "base_argmax": 4942,
+          "selected_token": 59593,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            59320,
+            3522,
+            59390,
+            59593
+          ],
+          "base_argmax": 60959,
+          "selected_token": 59543,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 5
+        },
+        {
+          "position": 2,
+          "prefix_ids": [
+            1,
+            59320,
+            3522,
+            59390,
+            59593,
+            59543
+          ],
+          "base_argmax": 59976,
+          "selected_token": 59976,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 6
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "95233a4aa349bd9871f06d0b989b6cbe2b8447554e5c96e0fcae9f054c00fe35",
+        "step-000-base.input": "2f580857e7f6e7b33647244cf2b93a008cf61e80668806409350b3a6115a9a03",
+        "step-000-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-000-reference.bin": "370dc7bbcb2ab1c88a9dc3ea9fe31be71f5cd5bd085117650b98bb2edbf5558f",
+        "step-000-reference.input": "a67b64503216f7cab2bf347eb046b3cf107264a8725a39be27089a90aa9b118f",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "067e0693620b63521014bf0838855fc409f4e438700b04efa3e2c4fb1a6c6bd5",
+        "step-001-base.input": "c0ad9170b2fb9432a7c7c38bc152274b1bc0046f259a82e31b4a850f18909153",
+        "step-001-base.log": "9b685dbaea24238414aa07812e25dd4d5b5ee702acc0f75f05e38d2a580719a7",
+        "step-001-reference.bin": "f21c42d3b1738877aa9acdb2f9df31a6b50b4a65295e2ff431a5526ba961bf9d",
+        "step-001-reference.input": "47ba2b25a607080afdb7c12889b26f340cc34c80560ee9e44a19d38f73a70e32",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-002-base.bin": "961a274dbee06b8ec0b4c99e513426b4a9bb5f410e2ddb7bf37c62aba38ecec7",
+        "step-002-base.input": "ab4251aef7d29b7faadea94a19560513eb452802f4a689a3e329b77a855a06d8",
+        "step-002-base.log": "67725d0c2326fe782333d86b4ddd0a93e00c7b1264eadab66bb744ca95e0db74",
+        "step-002-reference.bin": "ca9adc98fb7e49155f4a47635c8d0ee145647924146e37182c09ed411261dd02",
+        "step-002-reference.input": "c27df9936e0d17423d47cd759aa50711f2815e5a8ea40f73355dc4f0a4a4fc30",
+        "step-002-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "unicode",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "compiled_value_ids": [
+        72690
+      ],
+      "emitted_token_ids": [
+        72690
+      ],
+      "emitted_piece_hex": [
+        "f09fa7a0"
+      ],
+      "expected_value_hex": "f09fa7a0",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            10868,
+            59358
+          ],
+          "base_argmax": 5,
+          "selected_token": 72690,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            72690
+          ],
+          "base_argmax": 5,
+          "selected_token": 5,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "ff5f06cae54275247226791edd556022343053499af0dc7d972905f2b2d64b36",
+        "step-000-base.input": "03b2bb63ee07a1dd9e68294b90d4c8933d52bafa7a22f3cb8fd93b6f84edccd4",
+        "step-000-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-000-reference.bin": "a43aec58f5daecb9357ca87f6f36232765a329d7fe4046e12526adcadbdc4df8",
+        "step-000-reference.input": "59011379ceb562c9ef867ca9536bb93a9cb5612a91d64984772864c18ec49ab9",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "cee69b78a91730c2aa1f88a3e888bbe58af5eb6b0e6c1a1415ed8a54de985ce9",
+        "step-001-base.input": "4464b0547ba327bc98f3336a4c8655eebf8e472021511876976ffbecd7c59585",
+        "step-001-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-001-reference.bin": "a216f769cf5a5f4401b425a4aab7c528c8aab5964edc0e8ae9b417489ae2341d",
+        "step-001-reference.input": "2e7800292bb7a7de1ec06bedfc8cb3fc884359201921ea8e5ad5dcea14a77a37",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "repeated",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "compiled_value_ids": [
+        1349,
+        7409,
+        7409
+      ],
+      "emitted_token_ids": [
+        1349,
+        7409,
+        7409
+      ],
+      "emitted_piece_hex": [
+        "6572",
+        "206572",
+        "206572"
+      ],
+      "expected_value_hex": "6572206572206572",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            10868,
+            59358
+          ],
+          "base_argmax": 5,
+          "selected_token": 1349,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            1349
+          ],
+          "base_argmax": 1410,
+          "selected_token": 7409,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        },
+        {
+          "position": 2,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            1349,
+            7409
+          ],
+          "base_argmax": 1352,
+          "selected_token": 7409,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 5
+        },
+        {
+          "position": 3,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            1349,
+            7409,
+            7409
+          ],
+          "base_argmax": 7409,
+          "selected_token": 7409,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 6
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "ff5f06cae54275247226791edd556022343053499af0dc7d972905f2b2d64b36",
+        "step-000-base.input": "03b2bb63ee07a1dd9e68294b90d4c8933d52bafa7a22f3cb8fd93b6f84edccd4",
+        "step-000-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-000-reference.bin": "a43aec58f5daecb9357ca87f6f36232765a329d7fe4046e12526adcadbdc4df8",
+        "step-000-reference.input": "59011379ceb562c9ef867ca9536bb93a9cb5612a91d64984772864c18ec49ab9",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "eebfb72553490ef65946a2ff386e43ae066e0797f24fc8a0bfd2d6dd0292a03a",
+        "step-001-base.input": "af777076508d21ca7182b8005c27ac197aae9c401dab1fc88ab501a13100a4fb",
+        "step-001-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-001-reference.bin": "c7fd90b847655f90fef1e9e40ff02917ea5f3c0e7ef07173210467b9ab73b343",
+        "step-001-reference.input": "1ea621244bb06fcfc660e857e6c5d112135c1c171258aa75b3dc2850f7434f97",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-002-base.bin": "7580d1049062757bee2d585cb013d8de341a9f444953d7b1a60ce7ec7e5ca4e8",
+        "step-002-base.input": "edfea484a541c16f72e51c184ac96ae2edf9c629432b68e9ae79a63631ae6c7f",
+        "step-002-base.log": "9b685dbaea24238414aa07812e25dd4d5b5ee702acc0f75f05e38d2a580719a7",
+        "step-002-reference.bin": "acb0596a27c3a7686e8b2a5b903df71e33f9393b6edfe26e8dfe98450888347a",
+        "step-002-reference.input": "36b03d3d223794b122d9eb27055d153c3ddafffc2850c0697c370faa9a3f7192",
+        "step-002-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-003-base.bin": "b6a74e3a49e515cb6157a943bde0919ce82959e75a6f1819f6e9bbe21a39e0d7",
+        "step-003-base.input": "d31e082787dcd93d8ad727df3fe132d85299ddf4ebb05cfdd17d2a18307d6ef7",
+        "step-003-base.log": "67725d0c2326fe782333d86b4ddd0a93e00c7b1264eadab66bb744ca95e0db74",
+        "step-003-reference.bin": "e688479e21a013922213a8e997c62dcd0e7f4b4a8117ae4683dabdae51101767",
+        "step-003-reference.input": "162ac7f59ebe1ed705fc11121c76c5702767f3d0ea45a1c85163e534365ee603",
+        "step-003-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "leading-space-value",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "compiled_value_ids": [
+        50719,
+        59324
+      ],
+      "emitted_token_ids": [
+        50719,
+        59324
+      ],
+      "emitted_piece_hex": [
+        "20526967",
+        "61"
+      ],
+      "expected_value_hex": "2052696761",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            4599,
+            59358
+          ],
+          "base_argmax": 5,
+          "selected_token": 50719,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            50719
+          ],
+          "base_argmax": 1402,
+          "selected_token": 59324,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        },
+        {
+          "position": 2,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            50719,
+            59324
+          ],
+          "base_argmax": 5,
+          "selected_token": 5,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 5
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "9791bc5ee989860050008259a5f5d58f9c8f1a6eee0bd8268c34d782f18d1fb8",
+        "step-000-base.input": "46186b153119ee763f51b396bf2016d14dab94f956627944e0252c30e967deae",
+        "step-000-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-000-reference.bin": "9288274881ee2f2a4e24db4a09e7de683c66bbebf8800936d95da9a00912ac07",
+        "step-000-reference.input": "7e3ab4cf6e3a06cdde22611a4a815fcec6f877bc031a4f654dbf9d7c6b1274ab",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "472c2f83ccf6ad3f4f0ece5510f50be92d1e6c50ddaf20a362eeaf15f63e2c7a",
+        "step-001-base.input": "b106455dd959bbac1449ef479bbbd550bee305a4dee4c3a047d08e58ac7c0768",
+        "step-001-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-001-reference.bin": "9d15b3d9e1a7bac5eae022b0d0146bc0a70b96798904d90ad08e6ca7243870b4",
+        "step-001-reference.input": "562b6b17e08eaa81f684df1e9c9607231cb9e8e7150eabb767da622b0a5921e5",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-002-base.bin": "a840833d3791d756a42caeea84bb11328cf3641fb9a3e713b392858d4c4287ca",
+        "step-002-base.input": "ba5ba5ea8bfa4c0dc4ce5620d18d6882992568661d24ed1fb1efb2364cff4cd5",
+        "step-002-base.log": "9b685dbaea24238414aa07812e25dd4d5b5ee702acc0f75f05e38d2a580719a7",
+        "step-002-reference.bin": "5bbec2a329d9cea25cf1cdc690552c82a9746f31e9556cd18bbf5c91a2faaf7b",
+        "step-002-reference.input": "67c32b1f189b9dbd1f87df3f3bdee1c8098a299d3dee27dab446643394b0caa2",
+        "step-002-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "quoted-value",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "compiled_value_ids": [
+        59354,
+        59366,
+        15008,
+        59354
+      ],
+      "emitted_token_ids": [
+        59354,
+        59366,
+        15008,
+        59354
+      ],
+      "emitted_piece_hex": [
+        "22",
+        "52",
+        "696761",
+        "22"
+      ],
+      "expected_value_hex": "225269676122",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            10868,
+            59358
+          ],
+          "base_argmax": 5,
+          "selected_token": 59354,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59354
+          ],
+          "base_argmax": 5,
+          "selected_token": 59366,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        },
+        {
+          "position": 2,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59354,
+            59366
+          ],
+          "base_argmax": 1988,
+          "selected_token": 15008,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 5
+        },
+        {
+          "position": 3,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59354,
+            59366,
+            15008
+          ],
+          "base_argmax": 59354,
+          "selected_token": 59354,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 6
+        },
+        {
+          "position": 4,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59354,
+            59366,
+            15008,
+            59354
+          ],
+          "base_argmax": 1410,
+          "selected_token": 1410,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 7
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "ff5f06cae54275247226791edd556022343053499af0dc7d972905f2b2d64b36",
+        "step-000-base.input": "03b2bb63ee07a1dd9e68294b90d4c8933d52bafa7a22f3cb8fd93b6f84edccd4",
+        "step-000-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-000-reference.bin": "a43aec58f5daecb9357ca87f6f36232765a329d7fe4046e12526adcadbdc4df8",
+        "step-000-reference.input": "59011379ceb562c9ef867ca9536bb93a9cb5612a91d64984772864c18ec49ab9",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "e8c7d1c47d738bffd5ec269c167da2eae715ed217044576533a199dd8dbc5685",
+        "step-001-base.input": "d47da27847bcee625b3bbd4395c104f7b36847139c8c380ad12327b6d6eb1248",
+        "step-001-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-001-reference.bin": "d909c5e6d63238e012547d98cf5492a2f4f198d0f270790d18e97b0724205287",
+        "step-001-reference.input": "710c3819bb25b7b530a9bfda76c0a0cecece21b2b045abb3b1acbebea92eede3",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-002-base.bin": "1af2aa73de142af436270ecb70928500a9cde3a71f433c0794e12c6b1fbcc553",
+        "step-002-base.input": "47fafc3c907b1c8ac1fe3a8316ac13d5473514a87086bba4d3b359cf826d07f6",
+        "step-002-base.log": "9b685dbaea24238414aa07812e25dd4d5b5ee702acc0f75f05e38d2a580719a7",
+        "step-002-reference.bin": "25553e0857c5a81968f4cd3db442b3f8969ff15be1f15d0dc2f291d7c47e4245",
+        "step-002-reference.input": "16189f1187a96218e7ba4592488897b0ed7235ca5f03c3d3a4c1f3280925f8ba",
+        "step-002-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-003-base.bin": "5802303c766f5c545bb942af7a3833c6c18f5eda26b552bf41210c1d597a1911",
+        "step-003-base.input": "d39175bf5e5048b2575a1897490654504093c83fa6d4e121eb3d890ab677514c",
+        "step-003-base.log": "67725d0c2326fe782333d86b4ddd0a93e00c7b1264eadab66bb744ca95e0db74",
+        "step-003-reference.bin": "62ae99366921696856e5a31aea147c380e64021021497311764ffcda4ca214e9",
+        "step-003-reference.input": "870cc97e6146fc1f9538d06495d0f4ad577c96609b3e6d4841f714ce48ecd981",
+        "step-003-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-004-base.bin": "72be3bc75ddfad0354c61df539e4c6afcfa1f5873393d2f9434f6f2478f3ad64",
+        "step-004-base.input": "80b1131587d90fb29bd1f450d52949c44daf4cf54858795bdd5d3fe55937686e",
+        "step-004-base.log": "02e9eb59a61cb0ffa94283e9403ab115bab4c9fa9876208e1b291a43e16c4612",
+        "step-004-reference.bin": "1513e7da7364239e60f01f6a40fc1d1700d232c137b0b088b07bab9a0b662e6c",
+        "step-004-reference.input": "15c5522ed25279c9519c7f9f92c389f09abef74065da4f79c42514f9b6491447",
+        "step-004-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "prefix-space-merge",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        4599,
+        59358,
+        59320
+      ],
+      "canonical_prefix_ids": [
+        1,
+        4599,
+        59358,
+        59320
+      ],
+      "compiled_value_ids": [
+        2208,
+        17713,
+        1349
+      ],
+      "emitted_token_ids": [
+        2208,
+        17713,
+        1349
+      ],
+      "emitted_piece_hex": [
+        "5175",
+        "696d70",
+        "6572"
+      ],
+      "expected_value_hex": "5175696d706572",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            59320
+          ],
+          "base_argmax": 5,
+          "selected_token": 2208,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            59320,
+            2208
+          ],
+          "base_argmax": 5872,
+          "selected_token": 17713,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 5
+        },
+        {
+          "position": 2,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            59320,
+            2208,
+            17713
+          ],
+          "base_argmax": 1388,
+          "selected_token": 1349,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 6
+        },
+        {
+          "position": 3,
+          "prefix_ids": [
+            1,
+            4599,
+            59358,
+            59320,
+            2208,
+            17713,
+            1349
+          ],
+          "base_argmax": 59342,
+          "selected_token": 59342,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 7
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "453b903dd2e8bbf06df21606cf3ba5802a641f2c09b962f06c8ce492fe7ff98f",
+        "step-000-base.input": "e773ba82f3df3fced62e5e82080bb0d67ac6b0f6effcc0aa34b82c0cb558886b",
+        "step-000-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-000-reference.bin": "43fbfb32a2f5f16859c6a5b4a283e79d7e08ab8272c92836ec79fb0ffa84b074",
+        "step-000-reference.input": "bdae0fff110c3e69311d1f84f50bd69bcfe266a8bd0d7daf69a3bfa3c717baa9",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "a7d7803cc0107837ab8d7a3a1bae804cff702063de5d375782757104f5741ece",
+        "step-001-base.input": "c51cbb0e8afbf722b234f0fd59cc246732447b2756022d97f64f3aea48962976",
+        "step-001-base.log": "9b685dbaea24238414aa07812e25dd4d5b5ee702acc0f75f05e38d2a580719a7",
+        "step-001-reference.bin": "98e99191a9558676a612261f8c799ed72a69696377dc14ae1c9473e3d3a52f24",
+        "step-001-reference.input": "ff8e2462f5a418d420505b0fad2a6584c693b2084913d2071cd054aebd07e154",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-002-base.bin": "7ec277425dcea59c4a9ab6c3f3c05727657623b5ab3b34576274e9bea406cf53",
+        "step-002-base.input": "c2a21dc44b2f7cd8eeb26691e12aab3567c8bb3d5d97b0bc453091aeae0e31b0",
+        "step-002-base.log": "67725d0c2326fe782333d86b4ddd0a93e00c7b1264eadab66bb744ca95e0db74",
+        "step-002-reference.bin": "90451e2aaa60031fcfc6a8ed15b517a9a480bbe20868320c9ad22deca9739860",
+        "step-002-reference.input": "e7edf5e26d0af970bbac7327b0fbb018718fea0e20a548bad505a9bc903bd945",
+        "step-002-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-003-base.bin": "5ef2d8ea6196042a2e8362e5ebeb1c8b9b8959b586b1edb923e947027c93c2ba",
+        "step-003-base.input": "caee219c0511f1091a86b1e0932f58711e29e49fa35b499a91abe867f0aec9db",
+        "step-003-base.log": "02e9eb59a61cb0ffa94283e9403ab115bab4c9fa9876208e1b291a43e16c4612",
+        "step-003-reference.bin": "dcd1dede4b1b6debcac4af053ee6930270ee9847010aafffbb8dea790dd96d20",
+        "step-003-reference.input": "b8f41218cc562206819ecea50d9251b74dee0adb8d8c416ab14d2d49bda7939b",
+        "step-003-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "prefix-letter-merge",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        1490
+      ],
+      "canonical_prefix_ids": [
+        1,
+        1490
+      ],
+      "compiled_value_ids": [
+        15008
+      ],
+      "emitted_token_ids": [
+        15008
+      ],
+      "emitted_piece_hex": [
+        "696761"
+      ],
+      "expected_value_hex": "696761",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            1490
+          ],
+          "base_argmax": 72,
+          "selected_token": 15008,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 2
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            1490,
+            15008
+          ],
+          "base_argmax": 59361,
+          "selected_token": 59361,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "b31c6c05e5df2a023e5097f81cc68c5e792f3a83d08e414139d756e3acf3ad3d",
+        "step-000-base.input": "2de8d9fe1e763c18c19ea22cd455b05f96fb7b8475f018626bd276a80613f0e6",
+        "step-000-base.log": "f34a3f042ef286f8df60d7e26c831282268210ce91a9375410df4b8b4357d12e",
+        "step-000-reference.bin": "ab191956a91feef8a59d4d006aad2a32a9b471a7aef07d7621d2e0fe3e3999f7",
+        "step-000-reference.input": "2944df3e80601abf5beb894363979438bcb9ddf326ea71d6bbeee07caa777a32",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "5ea2fc5d58244687b3b78817538df97260a5c5b5487f49b3f2ea1b63bede8edc",
+        "step-001-base.input": "88a8b633fae4b9259493a8806cceaa70a434de48948e21f289de8bdae00e0aa2",
+        "step-001-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-001-reference.bin": "e83ebc0859df7eb9641d507b61a1abee10af6dd1dbf23c00d6548701950b9401",
+        "step-001-reference.input": "907080fb929ac1f39b6a4787740318cea682425691af9909049d043add02c216",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "control-marker",
+      "expected": "reject_control",
+      "actual": "reject_control",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "compiled_value_ids": null,
+      "emitted_token_ids": [],
+      "emitted_piece_hex": [],
+      "expected_value_hex": "3c7c696d5f656e647c3e",
+      "error": "control token in value suffix",
+      "steps": [],
+      "raw_sha256": {}
+    },
+    {
+      "id": "over-budget",
+      "expected": "reject_budget",
+      "actual": "reject_budget",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        4599,
+        59358
+      ],
+      "compiled_value_ids": null,
+      "emitted_token_ids": [],
+      "emitted_piece_hex": [],
+      "expected_value_hex": "5175696d706572",
+      "error": "token budget exceeded before emission",
+      "steps": [],
+      "raw_sha256": {}
+    },
+    {
+      "id": "noncanonical-prefix",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        1490,
+        15008
+      ],
+      "canonical_prefix_ids": [
+        1,
+        50719,
+        59324
+      ],
+      "compiled_value_ids": [
+        73
+      ],
+      "emitted_token_ids": [
+        73
+      ],
+      "emitted_piece_hex": [
+        "21"
+      ],
+      "expected_value_hex": "21",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            1490,
+            15008
+          ],
+          "base_argmax": 59361,
+          "selected_token": 73,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            1490,
+            15008,
+            73
+          ],
+          "base_argmax": 5,
+          "selected_token": 5,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "5ea2fc5d58244687b3b78817538df97260a5c5b5487f49b3f2ea1b63bede8edc",
+        "step-000-base.input": "88a8b633fae4b9259493a8806cceaa70a434de48948e21f289de8bdae00e0aa2",
+        "step-000-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-000-reference.bin": "e83ebc0859df7eb9641d507b61a1abee10af6dd1dbf23c00d6548701950b9401",
+        "step-000-reference.input": "907080fb929ac1f39b6a4787740318cea682425691af9909049d043add02c216",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "56c6d596df57e17301409d3e5334589f7e4e09a075d6169d07b3f0a247477885",
+        "step-001-base.input": "0fc4a94da46766f7a3d961d2701df793d319f5e8bceec17f4b9320c4beb1e005",
+        "step-001-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-001-reference.bin": "ba9f84f6d4952f368795499f1b87a67c729732e1dca2804101bff824eb7da441",
+        "step-001-reference.input": "792b3ba2fc4ffc3fe40091a4e5d227165c8678682696656734a4df5f63ca0fef",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "multiline-value",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "compiled_value_ids": [
+        59366,
+        15008,
+        5,
+        2208,
+        17713,
+        1349
+      ],
+      "emitted_token_ids": [
+        59366,
+        15008,
+        5,
+        2208,
+        17713,
+        1349
+      ],
+      "emitted_piece_hex": [
+        "52",
+        "696761",
+        "0a",
+        "5175",
+        "696d70",
+        "6572"
+      ],
+      "expected_value_hex": "526967610a5175696d706572",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            10868,
+            59358
+          ],
+          "base_argmax": 5,
+          "selected_token": 59366,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59366
+          ],
+          "base_argmax": 1988,
+          "selected_token": 15008,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        },
+        {
+          "position": 2,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59366,
+            15008
+          ],
+          "base_argmax": 5,
+          "selected_token": 5,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 5
+        },
+        {
+          "position": 3,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59366,
+            15008,
+            5
+          ],
+          "base_argmax": 5,
+          "selected_token": 2208,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 6
+        },
+        {
+          "position": 4,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59366,
+            15008,
+            5,
+            2208
+          ],
+          "base_argmax": 3710,
+          "selected_token": 17713,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 7
+        },
+        {
+          "position": 5,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59366,
+            15008,
+            5,
+            2208,
+            17713
+          ],
+          "base_argmax": 59324,
+          "selected_token": 1349,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 8
+        },
+        {
+          "position": 6,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            59366,
+            15008,
+            5,
+            2208,
+            17713,
+            1349
+          ],
+          "base_argmax": 59342,
+          "selected_token": 59342,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 9
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "ff5f06cae54275247226791edd556022343053499af0dc7d972905f2b2d64b36",
+        "step-000-base.input": "03b2bb63ee07a1dd9e68294b90d4c8933d52bafa7a22f3cb8fd93b6f84edccd4",
+        "step-000-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-000-reference.bin": "a43aec58f5daecb9357ca87f6f36232765a329d7fe4046e12526adcadbdc4df8",
+        "step-000-reference.input": "59011379ceb562c9ef867ca9536bb93a9cb5612a91d64984772864c18ec49ab9",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "65a53e7595181509b934c5d9ce3c000188347e5d3aa82081517565c5ffabf233",
+        "step-001-base.input": "d1581cbf37a1a2e776ab1fec26b3ed725dbf40ccaba472dcae80ef79ec2c3daa",
+        "step-001-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-001-reference.bin": "8e1451d9e42254adfafa7e2399b094accdfac73dd4e0b142ba85a35d1cc712d4",
+        "step-001-reference.input": "0835d564b6d2f2fe8f15c684d1fc6f533e55ea042fece715bef1a976168b86a0",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-002-base.bin": "d52691287960f17d1d98a0b02a938fc22b3603125a0753954e9d7ebc07be49db",
+        "step-002-base.input": "f3ca10d01049a94eeb817dc86e8608f187ee50fd04798d0c6bcd2a28006c4b52",
+        "step-002-base.log": "9b685dbaea24238414aa07812e25dd4d5b5ee702acc0f75f05e38d2a580719a7",
+        "step-002-reference.bin": "88fd8431097958b913f368b707568022836259a9c9727b8fdf4176397d94837a",
+        "step-002-reference.input": "321a29da5b1c2d96e90882d7921ee26476ac04ee4e282462d6495e36d4ae73be",
+        "step-002-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-003-base.bin": "7123409e01c8b7cf385e04cfdeef795f4873b39f4f3a43748c468d38cb087256",
+        "step-003-base.input": "46272d97a0c6fe2df91e6846f36e6896f4a3c11553dbc6e82e0b08ad56e59b5e",
+        "step-003-base.log": "67725d0c2326fe782333d86b4ddd0a93e00c7b1264eadab66bb744ca95e0db74",
+        "step-003-reference.bin": "41866b2a885da0c87d19a747a2dd3be45f01c0398f756cb84af08db0091ab912",
+        "step-003-reference.input": "ff9a6a4c35f9b985ed1a5ac9362421912b068f0d99cc581683d7a1a1f3188d68",
+        "step-003-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-004-base.bin": "96a13b74ff02dbdfed7219fe1c52970a44a3fa68ec8a8322d1e4f39104ba6c4d",
+        "step-004-base.input": "ac2219a289b8dadfb1155150ebbc4cb5bb5eee66ee090d64b623be7a9b4532fd",
+        "step-004-base.log": "02e9eb59a61cb0ffa94283e9403ab115bab4c9fa9876208e1b291a43e16c4612",
+        "step-004-reference.bin": "c32b5d9a8afd05e130625517de0a88bb4fbedf308c549e8576e66aa94ae8165d",
+        "step-004-reference.input": "b22237a668b7a5341bcbfb99eb4716c140d0a55efe48d6625f4f76777d875e00",
+        "step-004-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-005-base.bin": "a003c4d3a2440371b759a21d23252e9f70e30e00a7808c459b6288c9bb87bb24",
+        "step-005-base.input": "d89535368a1ca5f514262dd015bb4855068dca8dcff0d292fd60a098c980ac6c",
+        "step-005-base.log": "6e67af190e7f55923d28327ef974189d1ce3ea2ed0de875eb02687ed5d759c87",
+        "step-005-reference.bin": "346c4fdacf3a582698ef9a2ee8c8f0c2a73e27948f98020b55cf8f06aa432917",
+        "step-005-reference.input": "d7cb36dc4dfc4f71c0c34993d8386b304064d237549c855a599c0d218b81f6cc",
+        "step-005-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-006-base.bin": "ce306c61b3f379e3081b08a76a2ace2ddc7cc5e50279aa69598440c2efb79ebd",
+        "step-006-base.input": "c847e4633937069a7e931bdcaa19bf9cdb4f361b06e3fceaf854d117af0b0750",
+        "step-006-base.log": "9d942d7800e6c9faf06fde7c57d4f89cf3f30dd76354902dc983e9944e2b0785",
+        "step-006-reference.bin": "4d10abe6dcb8ff0463692837c6aeae8887ada365fbcda7d7acf06d1eb09b3afd",
+        "step-006-reference.input": "ef855fe40ff55aae5239911b6a3ea76d29fae8f64401b2c42656264ae4252c35",
+        "step-006-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    },
+    {
+      "id": "whitespace-value",
+      "expected": "accept",
+      "actual": "accept",
+      "passed": true,
+      "origin": "oracle_fixture",
+      "initial_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "canonical_prefix_ids": [
+        1,
+        10868,
+        59358
+      ],
+      "compiled_value_ids": [
+        1345,
+        59366,
+        15008,
+        1345
+      ],
+      "emitted_token_ids": [
+        1345,
+        59366,
+        15008,
+        1345
+      ],
+      "emitted_piece_hex": [
+        "2020",
+        "52",
+        "696761",
+        "2020"
+      ],
+      "expected_value_hex": "2020526967612020",
+      "error": null,
+      "steps": [
+        {
+          "position": 0,
+          "prefix_ids": [
+            1,
+            10868,
+            59358
+          ],
+          "base_argmax": 5,
+          "selected_token": 1345,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 3
+        },
+        {
+          "position": 1,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            1345
+          ],
+          "base_argmax": 5,
+          "selected_token": 59366,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 4
+        },
+        {
+          "position": 2,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            1345,
+            59366
+          ],
+          "base_argmax": 1988,
+          "selected_token": 15008,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 5
+        },
+        {
+          "position": 3,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            1345,
+            59366,
+            15008
+          ],
+          "base_argmax": 5,
+          "selected_token": 1345,
+          "forced_value_token": true,
+          "returned_to_base": false,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 6
+        },
+        {
+          "position": 4,
+          "prefix_ids": [
+            1,
+            10868,
+            59358,
+            1345,
+            59366,
+            15008,
+            1345
+          ],
+          "base_argmax": 1360,
+          "selected_token": 1360,
+          "forced_value_token": false,
+          "returned_to_base": true,
+          "reference_bitwise_equal": true,
+          "fresh_context": true,
+          "initial_context_position": 0,
+          "prefill_tokens": 7
+        }
+      ],
+      "raw_sha256": {
+        "step-000-base.bin": "ff5f06cae54275247226791edd556022343053499af0dc7d972905f2b2d64b36",
+        "step-000-base.input": "03b2bb63ee07a1dd9e68294b90d4c8933d52bafa7a22f3cb8fd93b6f84edccd4",
+        "step-000-base.log": "029750a09024e4f5308ed1f0a04dbe770d171d03c653b2a61a2cdac28976b8dd",
+        "step-000-reference.bin": "a43aec58f5daecb9357ca87f6f36232765a329d7fe4046e12526adcadbdc4df8",
+        "step-000-reference.input": "59011379ceb562c9ef867ca9536bb93a9cb5612a91d64984772864c18ec49ab9",
+        "step-000-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-001-base.bin": "176ea6494b7cebe0f7219ba169cda8fb5e4392b2a03d9d5a703ae637b4f3bae4",
+        "step-001-base.input": "e665b0428c03a52c5fc676b874fbc41810f1d9098b84fbe40a08e7419d37d902",
+        "step-001-base.log": "7f9153d0ed11f299ed6ac8c6ada89d4f81a7e972fbf169b41385a8e988c7d97c",
+        "step-001-reference.bin": "fd61a78fb8fb2f8d6c7944ce101b0c856e5d3138142b9372e387e84ae4846dbe",
+        "step-001-reference.input": "3d63b1260a5dba1b867adec260ec961723396481a18176968c7bcb6b19b6289e",
+        "step-001-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-002-base.bin": "111db7ad034e016d6cc95d6f223b0fe6e8c65440ec29a54e56ad135a677c1b3d",
+        "step-002-base.input": "480ea4851573cd68aa4ef96a23a76e588cbdea72bfde0b30a1663c5de1687347",
+        "step-002-base.log": "9b685dbaea24238414aa07812e25dd4d5b5ee702acc0f75f05e38d2a580719a7",
+        "step-002-reference.bin": "6efdc69f6c11faa0c2addf1b0088fffdbf6f8176b3ccecd8b6f568b4ee6b5b90",
+        "step-002-reference.input": "4cb52cca36edb4720105ad9347745d8f8ece8636d25337b6a0e7bbc2631465f8",
+        "step-002-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-003-base.bin": "1dcb71cc03a332ab503ed756d02a58f9e57c02cf90d3fde3a5a86e8ebdc1a222",
+        "step-003-base.input": "9acefe394152e10aed533418d475f5d34713fc5f88f2cf0ca6ffb37a59e19731",
+        "step-003-base.log": "67725d0c2326fe782333d86b4ddd0a93e00c7b1264eadab66bb744ca95e0db74",
+        "step-003-reference.bin": "d3aea2a1f5767c899f3be2cc9d0443f73e656e6eb9705a55bcbbdec3507e7fdf",
+        "step-003-reference.input": "a91bbdd9bad4e912ae8836f8ea44d09b2a12573d710a757267abf6add3d3eaa6",
+        "step-003-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0",
+        "step-004-base.bin": "d651073708c72d0b3e1c62cf24b40ddf611ce1f545eb26cecb154401eb312891",
+        "step-004-base.input": "9d7ca71f84c0a8262a97200a65d85d9f6379413c29c30b30159447f9ac6896d9",
+        "step-004-base.log": "02e9eb59a61cb0ffa94283e9403ab115bab4c9fa9876208e1b291a43e16c4612",
+        "step-004-reference.bin": "82b913555ac42ba0e8986fc33be9c206444838cd5ab12b134dee9c567d3a31e7",
+        "step-004-reference.input": "73fa03a5c3fb978b41de5c1d984ee440c141f8b76fd8560bc123d157a850bd0c",
+        "step-004-reference.log": "d5ea21cbb326e6b268d9ac875de7a30ac6212e473f8cd11bd29e759355813eb0"
+      }
+    }
+  ],
+  "C_prefixes": 44,
+  "C_calls": 88,
+  "passed": true
+}

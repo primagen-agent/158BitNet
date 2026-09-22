@@ -1,6 +1,9 @@
 #ifndef BITNET_INTERNAL_H
 #define BITNET_INTERNAL_H
 
+void bitnet_gguf_rms_norm_impl(float *, const float *, const float *, int, float);
+float bitnet_gguf_dot_impl(const float *, int, const float *, int, int);
+
 #include <stdint.h>
 #include "gguf.h"
 #include "bitnet.h"

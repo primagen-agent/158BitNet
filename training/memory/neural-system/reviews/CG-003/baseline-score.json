@@ -1,0 +1,402 @@
+{
+  "total": 24,
+  "pass": 8,
+  "fail": 16,
+  "needs_review": 0,
+  "evaluation_level": "predicted_component",
+  "producer_id": "cg003-baseline",
+  "confirmed_success_fraction": 0.3333333333333333,
+  "adjudication_complete": true,
+  "promotion_eligible": false,
+  "promotion_note": "Software workflow only; calibration and stage gates still required",
+  "independent_worlds": 1,
+  "groups": {
+    "correct/en": {
+      "total": 2,
+      "pass": 0,
+      "fail": 2,
+      "needs_review": 0
+    },
+    "correct/zh": {
+      "total": 2,
+      "pass": 0,
+      "fail": 2,
+      "needs_review": 0
+    },
+    "empty/en": {
+      "total": 2,
+      "pass": 0,
+      "fail": 2,
+      "needs_review": 0
+    },
+    "empty/zh": {
+      "total": 2,
+      "pass": 0,
+      "fail": 2,
+      "needs_review": 0
+    },
+    "ordinary_empty/en": {
+      "total": 2,
+      "pass": 2,
+      "fail": 0,
+      "needs_review": 0
+    },
+    "ordinary_empty/zh": {
+      "total": 2,
+      "pass": 2,
+      "fail": 0,
+      "needs_review": 0
+    },
+    "ordinary_source/en": {
+      "total": 2,
+      "pass": 2,
+      "fail": 0,
+      "needs_review": 0
+    },
+    "ordinary_source/zh": {
+      "total": 2,
+      "pass": 2,
+      "fail": 0,
+      "needs_review": 0
+    },
+    "role_swap/en": {
+      "total": 2,
+      "pass": 0,
+      "fail": 2,
+      "needs_review": 0
+    },
+    "role_swap/zh": {
+      "total": 2,
+      "pass": 0,
+      "fail": 2,
+      "needs_review": 0
+    },
+    "value_swap/en": {
+      "total": 2,
+      "pass": 0,
+      "fail": 2,
+      "needs_review": 0
+    },
+    "value_swap/zh": {
+      "total": 2,
+      "pass": 0,
+      "fail": 2,
+      "needs_review": 0
+    }
+  },
+  "worlds": {
+    "jb-008": {
+      "total": 24,
+      "pass": 8,
+      "fail": 16,
+      "needs_review": 0
+    }
+  },
+  "cases": [
+    {
+      "id": "joint-663653f43a8b231bf0f8",
+      "world_id": "jb-008",
+      "scenario": "correct",
+      "language": "en",
+      "status": "fail",
+      "reasons": [
+        "missing_required_claim",
+        "unsupported_or_misattributed_claim"
+      ]
+    },
+    {
+      "id": "joint-b1a596ab210a303eef2b",
+      "world_id": "jb-008",
+      "scenario": "role_swap",
+      "language": "en",
+      "status": "fail",
+      "reasons": [
+        "unsupported_or_misattributed_claim",
+        "unjustified_certainty"
+      ]
+    },
+    {
+      "id": "joint-dc5a52b237be6ce999e6",
+      "world_id": "jb-008",
+      "scenario": "value_swap",
+      "language": "en",
+      "status": "fail",
+      "reasons": [
+        "missing_required_claim",
+        "unsupported_or_misattributed_claim"
+      ]
+    },
+    {
+      "id": "joint-591068d2575878842ab9",
+      "world_id": "jb-008",
+      "scenario": "empty",
+      "language": "en",
+      "status": "fail",
+      "reasons": [
+        "unsupported_or_misattributed_claim",
+        "unjustified_certainty"
+      ]
+    },
+    {
+      "id": "joint-03e545f484f3b75740e4",
+      "world_id": "jb-008",
+      "scenario": "ordinary_source",
+      "language": "en",
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "id": "joint-c8bb0fb44331c8835d95",
+      "world_id": "jb-008",
+      "scenario": "ordinary_empty",
+      "language": "en",
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "id": "joint-bfb110d5a7d357d12712",
+      "world_id": "jb-008",
+      "scenario": "correct",
+      "language": "en",
+      "status": "fail",
+      "reasons": [
+        "missing_required_claim",
+        "unsupported_or_misattributed_claim"
+      ]
+    },
+    {
+      "id": "joint-390fe8a95032c25999fb",
+      "world_id": "jb-008",
+      "scenario": "role_swap",
+      "language": "en",
+      "status": "fail",
+      "reasons": [
+        "unsupported_or_misattributed_claim",
+        "unjustified_certainty"
+      ]
+    },
+    {
+      "id": "joint-7e9180785cb56f532152",
+      "world_id": "jb-008",
+      "scenario": "value_swap",
+      "language": "en",
+      "status": "fail",
+      "reasons": [
+        "missing_required_claim",
+        "unsupported_or_misattributed_claim"
+      ]
+    },
+    {
+      "id": "joint-73d9b85138386d3eecd2",
+      "world_id": "jb-008",
+      "scenario": "empty",
+      "language": "en",
+      "status": "fail",
+      "reasons": [
+        "unsupported_or_misattributed_claim",
+        "unjustified_certainty"
+      ]
+    },
+    {
+      "id": "joint-7cda17f85e128b10062c",
+      "world_id": "jb-008",
+      "scenario": "ordinary_source",
+      "language": "en",
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "id": "joint-e0462989593caaaed832",
+      "world_id": "jb-008",
+      "scenario": "ordinary_empty",
+      "language": "en",
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "id": "joint-1298dd37f224157a8f76",
+      "world_id": "jb-008",
+      "scenario": "correct",
+      "language": "zh",
+      "status": "fail",
+      "reasons": [
+        "missing_required_claim",
+        "unsupported_or_misattributed_claim"
+      ]
+    },
+    {
+      "id": "joint-d9879156842513c1ca1a",
+      "world_id": "jb-008",
+      "scenario": "role_swap",
+      "language": "zh",
+      "status": "fail",
+      "reasons": [
+        "unsupported_or_misattributed_claim",
+        "unjustified_certainty"
+      ]
+    },
+    {
+      "id": "joint-48795bbfa39e0bbb7c18",
+      "world_id": "jb-008",
+      "scenario": "value_swap",
+      "language": "zh",
+      "status": "fail",
+      "reasons": [
+        "missing_required_claim",
+        "unsupported_or_misattributed_claim"
+      ]
+    },
+    {
+      "id": "joint-a0f983766cc86e3ce2db",
+      "world_id": "jb-008",
+      "scenario": "empty",
+      "language": "zh",
+      "status": "fail",
+      "reasons": [
+        "unsupported_or_misattributed_claim",
+        "unjustified_certainty"
+      ]
+    },
+    {
+      "id": "joint-5716af73c5e8dfa5ec57",
+      "world_id": "jb-008",
+      "scenario": "ordinary_source",
+      "language": "zh",
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "id": "joint-8a34c9570cfe601fa274",
+      "world_id": "jb-008",
+      "scenario": "ordinary_empty",
+      "language": "zh",
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "id": "joint-285dd32d6f509d59b087",
+      "world_id": "jb-008",
+      "scenario": "correct",
+      "language": "zh",
+      "status": "fail",
+      "reasons": [
+        "missing_required_claim",
+        "unsupported_or_misattributed_claim"
+      ]
+    },
+    {
+      "id": "joint-0c8035ce7bda956751d7",
+      "world_id": "jb-008",
+      "scenario": "role_swap",
+      "language": "zh",
+      "status": "fail",
+      "reasons": [
+        "unsupported_or_misattributed_claim",
+        "unjustified_certainty"
+      ]
+    },
+    {
+      "id": "joint-5d9f011142cadea7ca56",
+      "world_id": "jb-008",
+      "scenario": "value_swap",
+      "language": "zh",
+      "status": "fail",
+      "reasons": [
+        "missing_required_claim",
+        "unsupported_or_misattributed_claim"
+      ]
+    },
+    {
+      "id": "joint-f97cb40850ae99026fb8",
+      "world_id": "jb-008",
+      "scenario": "empty",
+      "language": "zh",
+      "status": "fail",
+      "reasons": [
+        "unsupported_or_misattributed_claim",
+        "unjustified_certainty"
+      ]
+    },
+    {
+      "id": "joint-c213440e7ec9562bc985",
+      "world_id": "jb-008",
+      "scenario": "ordinary_source",
+      "language": "zh",
+      "status": "pass",
+      "reasons": []
+    },
+    {
+      "id": "joint-151d996139f9247e0b85",
+      "world_id": "jb-008",
+      "scenario": "ordinary_empty",
+      "language": "zh",
+      "status": "pass",
+      "reasons": []
+    }
+  ],
+  "denominators": {
+    "grounded": {
+      "total": 8,
+      "pass": 0,
+      "fail": 8,
+      "needs_review": 0
+    },
+    "role_swap_negative": {
+      "total": 4,
+      "pass": 0,
+      "fail": 4,
+      "needs_review": 0
+    },
+    "empty": {
+      "total": 4,
+      "pass": 0,
+      "fail": 4,
+      "needs_review": 0
+    },
+    "normal": {
+      "total": 8,
+      "pass": 8,
+      "fail": 0,
+      "needs_review": 0
+    }
+  },
+  "value_pairs": {
+    "total": 4,
+    "pass": 0,
+    "fail": 4,
+    "needs_review": 0,
+    "pairs": [
+      {
+        "language": "en",
+        "relation": "home_city",
+        "status": "fail"
+      },
+      {
+        "language": "en",
+        "relation": "work_city",
+        "status": "fail"
+      },
+      {
+        "language": "zh",
+        "relation": "home_city",
+        "status": "fail"
+      },
+      {
+        "language": "zh",
+        "relation": "work_city",
+        "status": "fail"
+      }
+    ]
+  },
+  "mechanically_invalid_ids": [],
+  "pilot_gates_passed": false,
+  "baseline_sha256": "4389fc1c29a28f81353dac9ecc52bec8bb024fd54c658ceecc8485db5874433d",
+  "report_sha256": "4389fc1c29a28f81353dac9ecc52bec8bb024fd54c658ceecc8485db5874433d",
+  "review_sha256": {
+    "training/memory/neural-system/reviews/CG-003/reviewer-a.jsonl": "78e814d41a91cf4294443fc102c546e8b056ed09c1c84bb4367f4c0798ad955f",
+    "training/memory/neural-system/reviews/CG-003/reviewer-b.jsonl": "ef28b7519148151f02f482d2d9da04f1cb7bb8f45e8a0c87c091aaec9938ce07"
+  },
+  "source_sha256": "f1ea38a4921837731993677c7857b612558da291c12bdad1123edaac6ee4ce6c",
+  "independence_limit": "Isolated reviewers of the same model family, not human or cross-family validation",
+  "additional_training_approved": false
+}

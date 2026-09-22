@@ -1,0 +1,1038 @@
+{
+  "format": "cg003-optimizer-preflight-v1",
+  "host": "pcm-6cb311adc5a8",
+  "torch": "2.13.0+cu130",
+  "gpu": "NVIDIA GeForce RTX 5070",
+  "real_model_optimizer_steps": 0,
+  "tiny_fixture_only": true,
+  "real_first_batch": [
+    {
+      "arm": "joint_aux",
+      "clipped_accumulated_gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 3.0318915378302336e-08
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 3.0042428988963366e-08
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 6.882473826408386e-06
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 6.116926670074463e-06
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 2.1529558580368757e-08
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 2.87545844912529e-08
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 1.0314397513866425e-06
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 3.688037395477295e-07
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 4.678033292293549e-06
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 6.355345249176025e-06
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 2.126675099134445e-06
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 3.6135315895080566e-07
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 2.30446457862854e-05
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 1.8309801816940308e-06
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 1.7702404875308275e-08
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 1.1368683772161603e-08
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 7.554888725280762e-06
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 2.7352944016456604e-06
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 6.198883056640625e-06
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 2.250541001558304e-06
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "clipped_accumulated_gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 2.219167072325945e-08
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 9.611540008336306e-09
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 4.688277840614319e-06
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 3.95067036151886e-06
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 1.5774276107549667e-08
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 1.9572325982153416e-08
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 3.5157427191734314e-07
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 1.2636883184313774e-07
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 1.6121193766593933e-06
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 2.1867454051971436e-06
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 6.831251084804535e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 1.1612428352236748e-07
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 7.398426532745361e-06
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 5.878973752260208e-07
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 5.682522896677256e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 3.754394128918648e-09
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 6.6123902797698975e-06
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 2.3730099201202393e-06
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 5.46872615814209e-06
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 1.971609890460968e-06
+        }
+      },
+      "passed": true
+    }
+  ],
+  "tiny_loops": [
+    {
+      "arm": "joint_aux",
+      "steps_cpu_cuda": [
+        50,
+        50
+      ],
+      "parameters": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 1.280568540096283e-09
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 4.470348358154297e-08
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 4.470348358154297e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 3.725290298461914e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 1.862645149230957e-09
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 3.725290298461914e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.state_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.state_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.state_head.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.state_head.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 1.4007091522216797e-06
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 3.241002559661865e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 3.725290298461914e-09
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "steps_cpu_cuda": [
+        50,
+        50
+      ],
+      "parameters": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 1.3969838619232178e-09
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 9.685754776000977e-08
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 1.6763806343078613e-08
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 4.470348358154297e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 3.725290298461914e-09
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 2.3283064365386963e-09
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 1.862645149230957e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 4.656612873077393e-10
+        },
+        "roles.state_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.state_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.state_head.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.state_head.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 8.344650268554688e-07
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 2.0721927285194397e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 0.0
+        }
+      },
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "source_snapshot_sha256": "16868b3f64d86c70471a8abfedfa4cb11131fc4dd87c1b676c89bdb7db47533b",
+  "source_sha256": {
+    ".github/workflows/ci-x86.yml": "c6c9a1b3299bbefd0538197f3f7084e42e2d3de6faf294040bb21899affa2978",
+    ".gitignore": "75278e5dd6344f9d0f705485ac95a2e49e9a04de81293c76051dbaf8c4196c09",
+    "CMakeLists.txt": "0773ca6440f9c1aa8a16a765951ca5de50bced3691bce26459152b9c02585079",
+    "README.md": "0eff175e170e189a43086e98f67f3a856b41376c481209c9d6d38656babfa9b8",
+    "examples/minimal_generate.c": "0edcec6fc82ba32c515fd80c5aeadb58733a7981436c8deeea73c505643eaad1",
+    "examples/openai_server.c": "f7f1e0166eda128e54879386e5736c76040e07d52d020df427f43b2715c211a0",
+    "include/bitnet.h": "a93f68331118a433eb29137f694fcb469b37335b9bb1c3e5e287aea0d918260d",
+    "python/attach_context_memory_operation.py": "16392ad38d67c18f1d4bb3987fa515d149d82c9b3cd31ab2bddf201ad759ceb0",
+    "python/audit_availability_generation.py": "061573a344abae71e8abdf5313bfa1a442cdeae04f6d3e48fba63065258b19f1",
+    "python/audit_availability_supervision.py": "fae9598607ad19077302b49ad11d215af823de949fa981c91f543ef646d09a05",
+    "python/audit_joint_baseline.py": "a185fc7bfd80615561b338987f9983a1024e4ed06e3c10195d156ab2f2376c41",
+    "python/audit_joint_binding_data.py": "f86e45abf824fe0d0cac6eaf167284b5127d1be015d9dfdaec75b4927972982f",
+    "python/audit_neural_memory_generation.py": "7bed21515f7e28719d705cfb3e593741155b1be185e8df6f346e84f775a8cd68",
+    "python/audit_role_generation.py": "24419cf8725a7f24d59577be061fbf4bb4eaff2fc6b7a1dd9e890a5e484f35aa",
+    "python/availability_controls.py": "e8b609703c0a7e19ec70bf25f9fb843dfc4e31b58cd1a32946210b9637955d73",
+    "python/availability_supervision.py": "3e5cf4fbf64962bb909ee7e6ab06617799000b8998b5728c3358b3b9e0af5f6a",
+    "python/c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8",
+    "python/calibrate_availability_review.py": "a4a70bc2a7754618fe8dc0682dda868d415fe71609a3d5f66ff51b712dbe97d6",
+    "python/continuous_memory.py": "748c5daa140d71a01f9513dc4e5e925d8cff3101462bfc7317dca03243b73f34",
+    "python/diagnose_availability_controls.py": "1bbe1ba1f4b2aa5409b289ea198bd14584a891b27187c16ca324aae286d96e57",
+    "python/diagnose_availability_objectives.py": "83367edfac4bcca07f79840a638f6c70610baca4f62dcf97ee664fdeab04a53b",
+    "python/diagnose_continuous_memory.py": "c90f8ddd29d3e3332eb102953d10ea321726c03fc0e164de19bf60c2988d1de4",
+    "python/diagnose_joint_native_generation.py": "4e268be2dbecdfb57ea75e25aaa2ef7422db76f1ab129efc3165c62307ba117a",
+    "python/diagnose_memory_availability.py": "cdf270c595b7bfe43f4f086d698b54bdf35524384cbf50bddcebddee20c3bf1a",
+    "python/diagnose_memory_fusion.py": "0fe070c95aea4c56a2faa2778f9ff29d85131114e6652a3900f4111fad47e464",
+    "python/diagnose_native_cell_gradient.py": "aa7ec75e781e754a70a8eb6161561fe4efab1b827eb5a28c2a5cdd74a2f1cb8d",
+    "python/diagnose_native_free_generation.py": "5e49af5421038344748ad45a97a6e5b7bbc985dca298a0ddf07bc8a4f1412352",
+    "python/diagnose_native_generation_gradient.py": "e35374a932753af50339878891a7824d720496ac09dd0f5b8d3f1e895466373a",
+    "python/diagnose_native_memory_encoder.py": "a02c43236f53f43a5cea973d9f1386b849c4779a32a869b5603ef732656152cd",
+    "python/diagnose_native_prompt.py": "321e3e512ac8db6230dc501d4694b1936b37a7c9d1926d97033e5c7b7980c22d",
+    "python/diagnose_neural_memory_features.py": "097db65f646177733b998273390eb185dd7b1516d74495f1f949be2c7182785e",
+    "python/diagnose_neural_memory_operators.py": "6e17bae3654f0cef79a4866f080401804dc0e949847a6e10ab1a7f9b295a570c",
+    "python/diagnose_paired_memory_objectives.py": "8f921003a31ba22874a5174ad58418e199dfd2deddf201f67dff9adc70ec137c",
+    "python/diagnose_resident_generalization.py": "e6eb2d54bb939d011db6677a05a541bd74154699e50353969567c817ffe1cbdf",
+    "python/diagnose_resident_memory_set.py": "60fefccd3e406d7fba11048f74a5e3249c04be7496ef4ee82905278bb32c104c",
+    "python/diagnose_role_content_path.py": "abfdce4a63299e3ddb09d38687a0ae8a7c622bfa9bd970722818e0539c35677f",
+    "python/diagnose_token_read_interface.py": "b24d9a56b2ed819157b0e86b445e3f460b52322d18a3e96ae91062668c556961",
+    "python/diagnose_token_supervision.py": "7be57710442e4dc6aa50a905ecd22d25e548ffe425c2a6231f612a11aa639034",
+    "python/episode_memory.py": "acd7f0b0d057c8834b82a79c980c264936ec599b839c08a6c4ff0dbd99b09e2e",
+    "python/episode_memory_inputs.py": "3aa68b33252ad35f22ff150f905fe02fa1905ca55a0645d1229bc845a4feb0b5",
+    "python/eval_availability_baseline.py": "fc4f3c8dbd77735c879af0c1c20953f22ff396c09284f5ce2449a589244200b6",
+    "python/eval_availability_checkpoint.py": "78b20210ca3a33ad4750262ad9427a44955a6e20bcefa02c9d3056de7250c0f9",
+    "python/eval_joint_baseline.py": "b4378aea203c688c9305aaf4c2556cbe06a81e42e86ef9bac19f4c8f7df8a4bb",
+    "python/eval_memory_span_gate_format.py": "315250be805aa1f33de90982fbcdbf1859a0cb898780c6cd8431850ce2bd89c1",
+    "python/eval_role_checkpoint.py": "9cf169026c2775ec02b195bf07a10ba28d0cedd28a0bb28c14c371ad2aeef6a0",
+    "python/export_resident_identity.py": "198cdec90f30522e9fc251655987a7913155f4c8d260d12f86ecb85165103d78",
+    "python/export_typed_link_model.py": "f3e2807d710a8a4f49bc1a72496382f75524ea715ef56971dd53bb9159c4ab60",
+    "python/export_typed_link_parity_sample.py": "cb7fb4671f57cfaf577682c66efe2c7579a9fe6a438abad0ab69bae5e14aafa6",
+    "python/export_typed_pair_encoder.py": "7be10fdb3c7cd26762c2216f72a9b020ae774abf8f53c6c5d0c1e2d3ea0566d1",
+    "python/export_typed_pair_parity_sample.py": "a0aef69d92f8e46ba499037a17976a0a18fb5f4f747ee22edd9e499bd471a331",
+    "python/export_typed_query_activator.py": "4c1213a324351cd08a9b0b7452e97b4add044e4cc346f0564085bfaeea778001",
+    "python/export_typed_runtime_link_parity_sample.py": "953ba224d3dd26bf80705a233d94d61dce149de605ad369e87f0695c4cbbec33",
+    "python/export_typed_runtime_parity_sample.py": "1ce2792f31e79398540df4504bbbd1e9e45fc06189690bfef6d393b2640e0ddb",
+    "python/export_typed_writer_model.py": "e5cc6d148a89704ab0ca022b60c05739270cc83fdafd87a3183128afc87a782b",
+    "python/export_typed_writer_parity_sample.py": "8489a765f98c4397d1d1de61b87140c9bbecd1aba0be0ec16840d6ea690e5b6c",
+    "python/ggw.py": "e0b18c4af9e9de922bc0f6c9d10b0c64d3c906634db401f2b012974b16f8f208",
+    "python/ggwshim.c": "b9f88f305322206160b29c9888308f47aa4b8d6af25936a40243e1b38e51cba6",
+    "python/joint_binding_schedule.py": "adb6ecdeb5b416d02001bb040d99b9e0f915b66f4e183f1c034271c2aa559bbb",
+    "python/joint_cuda_preflight.py": "189eec5bb8ee77921b591bf3d6bae81466005ac7f0a84df5ff79446c0982ab4e",
+    "python/joint_launch.py": "3086e1e16831503f6062f6d7a17f1b4ca7aa62ad1e367f626b0badffcae73c72",
+    "python/joint_memory_model.py": "d1348a5138713257936904b20f50c45ca926881835e5ba4a2836f54f22ce5fc3",
+    "python/joint_optimizer.py": "d444f799bbc29bfa63e47a7faddd3eac067b9369d6b8c1be71d9b93a7ee7ac60",
+    "python/joint_optimizer_preflight.py": "261d68a0a8449bfeaf068883b58840b1f4fd258aeb4342ee279a78d12afd942f",
+    "python/joint_training_data.py": "7de2a15fc76e7f64595c7ab1cb3aa3ff9ad8b9a0b610d18c2398b34f2c89d155",
+    "python/memory_availability.py": "4eb37b084a0420a4052aaf924bd648003517e14093782c79effa4a9f83a83633",
+    "python/memory_fusion.py": "c06698021d04e923a8e6b4fb08b7dd9289a21fc703479a930600ba9fe770f637",
+    "python/memory_role_separated.py": "2c212e3fe421aa5ae4888a51de8350484ec78b79847bdc0a86b4e500fa968764",
+    "python/memory_token_read.py": "f27efc6b37914fb3aeada7c2d032c3d112425652aa4cf9dde50b3ab8d025de23",
+    "python/model_identity.py": "26c8b43ebc696fa520577e1da2c56fb8d0946955814c4be1c85a928b95c738b5",
+    "python/native_cell_gradient.py": "445d131f7b289cc1085b8a60a4bec1e974d1d99d5160bace4de155718e005fbf",
+    "python/native_continuous_generation.py": "c594f0af6a65d7527de68bba093e89aa8742a6fb85124f3dd2bfeb58dfab2136",
+    "python/native_generation_bridge.py": "a2201a7325c39df76a85176a01973fee577417dcca1b0042cb9c27fdbfb785e9",
+    "python/native_joint_generation.py": "e44229eb749630d9f38922c9fc509321fc879aa39219209dd244339ae5614c06",
+    "python/native_memory_encoder.py": "5e8d8cee8ff5002d7b8ded73c3053b7fb48475d2c4ed1dfeabbdbae9dbdf90c5",
+    "python/native_prefix_bank.py": "ede73dacd36bb88320fce230adfb2b2c26a39088630bd6c681a9fc574ff886cf",
+    "python/native_role_generation.py": "eea2894c9d1ddb0e62215dbd58934699852350614f0e6ccc543a03e37204f8ab",
+    "python/native_token_generation.py": "a582f83f56cfd1c4b635d6d6bd670b9ccd165e039f6948d76b0f869e9fa882e0",
+    "python/native_token_payload.py": "518f396c0e734d25b2f38bee8f6622e122aaa4364deeab797dc47eb702133973",
+    "python/neural_memory_causality.py": "fcd387d7c0dbaba5570b1a7eb6715cd83f7ee0cd416ab7cf4d83871d5627fda9",
+    "python/neural_memory_contract.py": "c41fc03f10fc5e5f4fc3bb7e922b21795cb5b3f572de6f45e1ff59e256b4fd2c",
+    "python/neural_memory_generation.py": "f23ff36ce9260428369deedf62b1f711b1b2a562be3e1a0d6e46f13d62a93414",
+    "python/neural_memory_launch.py": "2aaeac203599267874feb007dc37d44815e8a55ee08d4d0438cea6b109011899",
+    "python/neural_memory_protocol.py": "2b886045196d0ede1b13369f0ff28fb5ff240c2830334fa475c1075762a94862",
+    "python/package_availability_training.py": "1783c2d97caab6cea1b36b4a649fd8611c239eacdd652303ad08f617b5cbb68a",
+    "python/preflight_joint_full.py": "513ebb8430d778c4246102af78d4fe107de6b9299ada6b63657f6c31c468cde5",
+    "python/prepare_availability_curriculum.py": "9f4875a42ec7eac3bedf5f627068c7a363a97197b2a12f7400337f598da99820",
+    "python/prepare_availability_features.py": "59c61c85b9b690ef436ebf58a519afba1f9df39f0d8228698f08e0ade558bf9e",
+    "python/prepare_dialogue_memory_curriculum.py": "baabb2e19e4ff71812e7bd40f331f0929604c2ef6c695ff62dc366d50ae43743",
+    "python/prepare_joint_binding_curriculum.py": "c91322dd0f1d7607703637b6ea9960c9703058fb2b04f75b14dd0b0b6306ce54",
+    "python/prepare_joint_training_features.py": "e1e1ed9b630fdc671d9f6c647a5944e15b98dec9775507fbb06e5e869fcf564f",
+    "python/prepare_memory_fusion_curriculum.py": "88b0ffae94477d71fe7e6dba404c0122376545fa33b3ddb2e679905c99cf0f79",
+    "python/prepare_memory_set_curriculum.py": "496fa8095f443215b340b0193c39412b912350e415de214d4b1a4ef257ee2421",
+    "python/prepare_mixed_memory_curriculum.py": "9d385c65948e9adb32b32e3ff7f1f43a6af1a074b770adea52fc1281c2d23c9e",
+    "python/prepare_natural_memory_curriculum.py": "e99a9d315ce0c82f3f4fa4e2d312b33b14cc19e97ecdf832e09d468786580e9b",
+    "python/prepare_natural_memory_eval.py": "8f2c25e2fb1d338e1a97928a665a2be916d0dacc64bbe1730964f9a2df084872",
+    "python/prepare_neural_memory_protocol.py": "1b0030b89ebefefdb8acc40929df8cb6c37ab68de8db051b7157c613a0288529",
+    "python/prepare_repeated_dialogue_curriculum.py": "eef0d2badf657e26d8b61735d2a37dacc1448c931032177e72638fc45b4428ab",
+    "python/prepare_typed_activation_curriculum.py": "a4ea5a40478ef2aae88c341148ce86ec00fc86452831b9b7da26bcd4f9c7a7d0",
+    "python/prepare_typed_memory_features.py": "8d3d3089d59f983a5d2256c0be1f01c37411876e3262a58c193f970ae77f40ce",
+    "python/qualify_joint_native.py": "ec7ce34085c0047f3e7799dc96db0a078cf34b04704ee8ee7a82cafa182dcbc0",
+    "python/qualify_role_separated_native.py": "04a99ad598cdb58ae47d58726254b8d0735ae38f32be90f332d82d443eed1d4d",
+    "python/rescore_memory_fusion.py": "a1abe4afc99c47abe2f35c1dedb163261201489cf1f1466ab4b767042d763fd9",
+    "python/review_availability_generation.py": "4edb2b3f0f7fbb4e5bbaf2971bf42636b373d0dd044c428c9d8df05c0c7392e4",
+    "python/review_joint_generation.py": "f1ea38a4921837731993677c7857b612558da291c12bdad1123edaac6ee4ce6c",
+    "python/review_neural_memory.py": "a72e7ff6b453a507e308ee4c8fe807b934922fd0830a05746f576a8084eabcbe",
+    "python/run_joint_training.py": "d37a480ef5d793a5821007e854692c5671278e50bac305064b7e4afdeca0eec7",
+    "python/tok_probe.c": "c078a021077a900c070f66c22ebb3f3a788b0ca78164465dc0367c04473f2b25",
+    "python/token_memory_composition.py": "a5229c4d3aa1cc3ef369d0bffc9227368d2c8bf25d08a41a6efc70ca4ee2a27b",
+    "python/token_memory_supervision.py": "a852cc32124cf0aa0cf1ef77c7379cad3f10ec9dea2228c4d5f396218057fe9f",
+    "python/torch_backbone.py": "25ebea3b0e2ee4d4f1bab60bd2638c3aa1a5bea757cc81fbd6c210d1d9896ac6",
+    "python/train_availability_memory.py": "7c52b48736cb98a7c71444f3d7e86e87cfb92e639dd0c46843cc74079f4a1782",
+    "python/train_context_memory_operation.py": "64db7474ad53b635a9d999f1d6dabe1065816a3e69c8056fb1b60520b1d6ffa6",
+    "python/train_episode_memory.py": "88274e0dfb7512a444886500933940d622075cb704b443b9f210a1fd88dc0790",
+    "python/train_joint_memory.py": "4bb42e321118e716da4bc44593463f918b679efddebf93fec12a7e15772f0951",
+    "python/train_memory_fusion.py": "da7505a88cf5b5c93613d8fab24ebc6e073c79774fc570d3fd81f3d8c7e07973",
+    "python/train_memory_gate.py": "60b3a76879b9afc8dbbb8d53d3eae883566b69fb3aa381865eb35cc496a23e85",
+    "python/train_memory_span_gate.py": "0310838ae32c4870c75d747cc286e09ec9318c97ccc02e3e53cbbf84943d9416",
+    "python/train_natural_link_head.py": "22a0621ff773f93631cb05c7492dbe3e73f06e0dd04bcc8781d49288e10983f8",
+    "python/train_resident_identity.py": "34e4ddf7c10c2ef1eeb2ae3331b95e1939650e4242a1f1862953f7fde2709e5a",
+    "python/train_resident_memory_set.py": "d8d4ef57303c8f323ec49073bf564412f3d6b19bdef135c89e9ddd147c765e92",
+    "python/train_role_separated_memory.py": "43c4440f73cc9abebe8f7d10839e0db3881cf4c5d4735ab1268105d42d51f226",
+    "python/train_typed_anchor_keys.py": "c1c5638bc83617987b805d09904d244c0c0a3bac9f730518b137fe28ff67fca1",
+    "python/train_typed_memory_writer.py": "0e68cd373e83294df42905f4144b916fc18525d9d58616391c4cda3529bfb7c0",
+    "python/train_typed_pair_verifier.py": "ac4be4364a0b92058f212c0dacfc3f084b147aa58d16c8d988decc80719da458",
+    "python/train_typed_query_activator.py": "73fbe0519e49f8cedc8e9ec3e09f21822684fb07526efb25539307c23e51c8f9",
+    "python/train_typed_span_tagger.py": "0b33dd6c30d234e7e6528fccdc38d552fd071cb5d15546bc88d6a7ec921ff661",
+    "python/tune_typed_anchor_span_fusion.py": "1974f34e28c0d35fc1be4feafed45280e6149a98a374b475d1d4d8f072ab632b",
+    "python/typed_memory_training.py": "2612a7805a9418687b190bf6b832d90a9e21a1ba139f19c02e9353eb6c2eeae4",
+    "python/typed_writer_components.py": "b5e75841fa569e4832ec8991dea4329a6222ac22ce298771f47c1d01c5f522f4",
+    "python/validate_typed_version_memory.py": "5f9a96211090b495949670dcb90295deb2e5517472d9bbfd2d5b8037eab1cbb2",
+    "scripts/build_android.sh": "7bab60066eef0eac915d8201f122bdecdb7ed069f18cdef0c032259a7cd6127b",
+    "scripts/download_training_artifact.py": "6499c2d243f9af751fd7975a82b07df74dd84af1009f6219345bb3ea9a4d3f73",
+    "scripts/package_joint_preflight.py": "2505f2b1902b63dd593053b22b415771790d7e407c0daec2d15103be3c02f6f1",
+    "scripts/package_joint_training.py": "806e54ce790e89d94d0d2c863a73d2a1bd0697a789bd625c0ba130132c54f22b",
+    "scripts/perf_summarize.py": "a509022edc0346d1cc210e9ec55f460ddee25dc70a5e83e88f6994d99413e4d7",
+    "scripts/perf_sweep.sh": "4c77e2855e832a0ae9b284a6d3c603ba5a5d8cbe787870c3d34bd9f505084fca",
+    "scripts/train_context_memory.sh": "071e1a09be7c1093497c3853522cff3ac291788fc68499be8186426496a3eb76",
+    "scripts/train_dialogue_memory.sh": "bd095a9e7bd13174b4cf2b3e7b7f9e507edc75e7693eb7cf8872dada3006d0a7",
+    "scripts/train_memory_fusion.sh": "57f0c639bc23734c2e76b0ac1a82add5f43a1f825f675d8d7c6261f1a20bf7d0",
+    "scripts/train_memory_gate.sh": "2b2ad1f8ffcc702a9773bfb5c8a45365739b505c9c6e320f2e225ebf0666b4d9",
+    "scripts/train_memory_span_gate.sh": "72601b5aa34ff529ec31f77070437440b883070681c733b36a0740cc28c80fa4",
+    "scripts/train_mixed_memory.sh": "09a7fdf709467a18adbaf7eee1bac0ba8e16a7fdc49db1f02f4bff9f27c2e3cb",
+    "scripts/train_natural_memory.sh": "98696452657c10652ecb21357b33f247775011280ce2da3aec1b0766c3646549",
+    "scripts/train_resident_memory_set.sh": "587aeaed22fbfe6f02c01d219914e863eea6558afaab49343ea999cd9e36f287",
+    "scripts/transfer_training_archive.py": "4da330e0512c82c10c175771d09172308b2d6b5b0b78529086b6d9ba17202bb6",
+    "src/bitnet.c": "d434728fd1db00db0e3ba4429f59bf2acdedba328256e1f74af02b928582be63",
+    "src/bitnet_dispatch.c": "90ab242a844d866ba18f4536b415af3ffda44b3d960302b991d278f24ba17a1a",
+    "src/bitnet_dispatch.h": "e29074b5b9e719751932e4706eaed195368b5f8eb9d64db25f58c247df66a087",
+    "src/bitnet_internal.h": "e18f843ec2602b326530fd4e341b4e9b39adce613d461868bc8b72bcdfc3ea8a",
+    "src/bitnet_metal.h": "27ba047700f9512181f3a2f80c315323bf5d3fb63ac6e48b081ac8857242b3db",
+    "src/bitnet_metal.mm": "5a4909be233fb59472db35c32b639c92d9dff1ac3a2e80be58d4720224c9e5dd",
+    "src/cpu_detect.c": "f95c54389a311893924d49b69f13088784c3aaa2e56e1b080e7532564a189501",
+    "src/cpu_detect.h": "a76222796d8eb418add847896f7772b17543e116c397a92efe955aafd6384244",
+    "src/gguf.c": "87ecc736ec4b065b880d562f9dadfaa4a37e881d28579c2932a87817d1bcf9d4",
+    "src/gguf.h": "2b3e5af3ea7cdd0d36e685d5a539ce35899071c9bd8e7f197a17c376ec44b9f7",
+    "src/metis/episodic_store.c": "54f1ac997beb31373821a8755a071ec140337a505ac0837d745cc5e03f93dd09",
+    "src/metis/episodic_store.h": "bd273b998c9baec5fc27d6fcc6f084849cbe2e04202acc3febbc6be2b93e1ff5",
+    "src/metis/event_store.c": "25c95fc7e0f44a9ca1c76022b3a689858db280f7f6abed51f529126b544b5841",
+    "src/metis/event_store.h": "eb23a58dc9f12fa822f2d923e1f299242d46b387aa3c577ca2a2430070698a39",
+    "src/metis/memory_controller.c": "3c67817cb1cdf547b792bb7bf658107ec85ebb4f27a0f7ba4503e93968ceef50",
+    "src/metis/memory_controller.h": "02466505f8007b2e4cd301232b3cff1f605ffc937d9ab2732d9e2874ff4abe7e",
+    "src/metis/memory_snapshot.c": "70bfda4f2f57b898ce1150716afadd6be5ae6386db477039d7a600f1d4f3de01",
+    "src/metis/memory_snapshot.h": "476a916150560ac2de8e38cbd1b81e607ac8a351486844b1c77a142f37b89b1e",
+    "src/metis/resident_identity.c": "e6d77b2398b7f447a6c70634cb4cf6a0cd57d9fd95a2fcd6608ecbe45c25c119",
+    "src/metis/resident_identity.h": "fb2b38411ef80dfda76e2492aa0d7533654b02c7a89f8cce254f369bc706a758",
+    "src/metis/typed_link_model.c": "44255601cb4d4158c52cb88d81acfe11a799bf01be1b2c0caf1b590522a7bbe0",
+    "src/metis/typed_link_model.h": "2be9e8a22cd3c8c1b22f9bf332811fe0b5a21b8459e011c860bbdcad3c80b1ad",
+    "src/metis/typed_pair_encoder.c": "d0070b1cda3232ac53d5fc952cee860e379ca46700eedd11b9f19c0735865965",
+    "src/metis/typed_pair_encoder.h": "1a8718e18df301d13a781ea60d5a652afa59f5e5962eaf380886381442a905f5",
+    "src/metis/typed_query_activator.c": "57532130d97cf3a5d0791842270de37fd3284d5295578b12b46cffb24c61c627",
+    "src/metis/typed_query_activator.h": "3f103683c89b48b8516bb0ad49745ad8ae98dd532e6225869a93992b66df9ec2",
+    "src/metis/typed_writer_model.c": "6b766af6537ccb4413dadb139e955be898aaae66aa370e1258c9e4c93e14a281",
+    "src/metis/typed_writer_model.h": "e8ef546c172eb12a3dcd520c25250a951c41c6fb36ac38d2420a64bf3c27e32f",
+    "src/ops.c": "98137f23d07fcf926f6a52d08771e85d5cb7c73358e1319cb3d154975d05f65e",
+    "src/ops.h": "e1cf75d0a85c47db7d657c2456e3c9999b6d94ce2f4303bdf88d6952b6500999",
+    "src/quant_q4k.c": "d77b0b64189014125e7307c8dc5154b54aa1a8a97aa1679a0d844916b195008a",
+    "src/quant_q4k.h": "5a1ca90d6bb074a097893374b530358eb72f9a681bf59acfaeca7f79f9c54b94",
+    "src/quant_q6k.c": "8dbf948df7a44ed8200bae060adf308c23e1cbf18ae63e6208544f869f78679a",
+    "src/quant_q6k.h": "8094a582793213b1c2e8a3013a76f11eea886142e5fcc4b27e3903ffba37f452",
+    "src/quant_tq2_0.c": "cc1f098671db22f112039bf947c27f110aad380a470877e423e6734cba499423",
+    "src/quant_tq2_0.h": "2edd299ec2404beb602fbf864695804a4b5ce446a8f96048933f8616a0f2ca51",
+    "src/sampler.c": "4d30d3bb708acb48aed7831f164a3d64276e8a1d5b2379f84f0268a48a4bc6b9",
+    "src/sampler.h": "74b024cea8e7560f488587082bfec294db97e4af998fd9209376b6d838e738f3",
+    "src/sha256.c": "5d8b810fc97b8c2c9c1072b20cf581781e242eab7e578e57b9335187e381c2f0",
+    "src/sha256.h": "a910f9a0e4d2069ef0a5be8b1bbdfc22aa3df8325e7e46b9be7a822a626ba31d",
+    "src/tensor.c": "568d234715856ac076043f96aa53096d91174e5294453de67ef6f35c61b5e2e2",
+    "src/tensor.h": "06b44ff4742683d04641202a23fe794ea189f0be964380256bbcc6484184e5a0",
+    "src/third_party/cJSON/cJSON.c": "347f3063f1ad17efe22221f58f0a90ff308d530850eedc54925a75002a3125fa",
+    "src/third_party/cJSON/cJSON.h": "4b233410845076ec631cc75a5d8f336af116e88a1502c0f85539b769ace60438",
+    "src/third_party/mongoose/mongoose.c": "9d65ab21a89c20c436f1f0c6b2fc28396b7dd3a47c9bb38ae0859b54a8b7bc50",
+    "src/third_party/mongoose/mongoose.h": "e0dd28512feb2d01fb189170bf68a6ac98111c183b51d92bf41f153f171984d1",
+    "src/thread_config.c": "5eafbfea159cb4687a8114df954f852024a9f99509dc461f40d715b16fda5f8a",
+    "src/thread_config.h": "5909b5eeace3cee8f71fee22322de142500c611559ad432f4b3a64259ad4d9be",
+    "src/tokenizer.c": "09b3c09729091f7d4f02d16379cbe2003cfb68773eec1da7e618a8c7ef580607",
+    "src/tokenizer.h": "c631d23f5a4cc6537d8c05f1c8b84fac45d5ec2a99664380ba813f97060a64e0",
+    "src/x86/bitnet_hotpath_x86.c": "d769fb685af7d0dca65f3069361bbf4ade851ed4c6f6808bbcaf23e064caa45e",
+    "src/x86/bitnet_hotpath_x86.h": "1840270b292aaf05ccc43443755899fa1600e9df442cc7eda0fe4d427bfe14bd",
+    "src/x86/kernel_registry.c": "7eea56cf18f58435493dfb6d131754fdbed34ed7eebda63efc8d44e711f84280",
+    "src/x86/kernel_registry.h": "e8621d39649a5f6c810251dc9578c5a1607c83210216012a50151ca705c91c79",
+    "src/x86/ops_x86.c": "e09f72aff85033eb66c587ba4b49dc98b3d604cc4d037a75390368412f56a078",
+    "src/x86/ops_x86.h": "d29d7d949573082d30abd3fddb69753b1e49bacb4f8042155548dc2be51ba149",
+    "src/x86/quant_q6k_x86.c": "4a11507e5d2499696b143c2df5b8d947fa8b0996d53175d80ffa969bcc360c2d",
+    "src/x86/quant_q6k_x86.h": "11edda38603c582e5549c88aa86b27e2c454a56064eef7c959fa9d46256713d3",
+    "src/x86/quant_tq2_0_x86.c": "da8a7b4077339d46ebeea40a365c6931b058029d11603b1fa1aaf603475ba56d",
+    "src/x86/quant_tq2_0_x86.h": "f9499bf06d081f82f28f0fe23199bcea8186c23da3894d1691fd44523cb2ec82",
+    "tests/diagnose_resident_c.py": "8c44f861a48dad88ec6ea7f610525cd9c35bce623663fa14ad8d2f307779d66d",
+    "tests/eval_locomo.py": "043d5f83f93fc2962abe5e041cb83a9adeb35eba65b6a6b7c4e813652c0f91aa",
+    "tests/eval_memory_chat_holdout.py": "9d7826cd25d5c8bb59756f65d645fb0050bd0a4f10f07439d77f492a4d46115a",
+    "tests/eval_memory_gate_http.py": "fdf82d5a7505d3af452bb71fad4bf8b9a589d7ef2a13ba94409acf3559b45abd",
+    "tests/eval_resident_http.py": "ed396fc883be38f8c03d508c8cbfaf735d5ea3a2a4d49e0c49bfa9fdbc7ed4e5",
+    "tests/eval_typed_link_c.py": "6ae5c05d3b77f2a0d82b400bbadeed392f441ae517c99e57fad55f2402b0a259",
+    "tests/eval_typed_memory_lifecycle.py": "04295d25d1244da6c7ab49bdaca901650df1d9e202ee4e898a0279313ca85487",
+    "tests/fixtures/memory_chat_holdout_v1.json": "5d2b2402d16d7e5b71cd4de71c1e2764f936224e22565a84e198184945c14dce",
+    "tests/fixtures/memory_gate_safety_v1.json": "a29af15a202a55b0de32f57ac13f690fb51b1ae933b4081c6890403c044ad990",
+    "tests/test_api_smoke.c": "0811cd765d1ae5af5fd91b2c890bbb2b8917f8c49a8431f73e159926297ca277",
+    "tests/test_availability_calibration.py": "a0f1893ca3686b6331438e88e640d132c512c08866a78e1ab43c81bb235740e3",
+    "tests/test_availability_controls.py": "33ea494f8902172d20eb3a428dd9b136fc85d16ad12eb41d554201665d62419f",
+    "tests/test_availability_generation_review.py": "39a1637b3b7a563578ba0ef9e40c472c1df90e3b7b7d54dd4eb33e777590a7d8",
+    "tests/test_availability_supervision.py": "538bbd5bd88552a048d27ccf1225703ea8ce5aaff4eec85c43f7c92cd59954e0",
+    "tests/test_availability_training.py": "3f4b2056cab435ef1f0e9c2749d68a136f2ffd775c686e60d7db7984af9073fb",
+    "tests/test_benchmark.c": "e089cbbaef566a4776c85722a557908ccbe29505bb0cc3da82727578426825cb",
+    "tests/test_bw_analysis.c": "5faff8e072da8d4428be35fdd23dccb3bb7f7a358da17098d872f34227127094",
+    "tests/test_concurrent_eval.c": "b529e7bbe8cad713e0823ab4e663c018a6b21a439dafc9df47b5cbdb4bbab86d",
+    "tests/test_context_memory_operation.py": "54f728d78e0b68b65993e4a9078a353573d1295bd5fd2b6a6403f1539a63441a",
+    "tests/test_continuous_memory.py": "5f93b5e81dd35a5a8e52da58fb5eb3529c7286cec346d264a164a897b32aa076",
+    "tests/test_cpu_detect.c": "a580f82086214c73cd31e1f292af1bf0b8e53331161b0c9c1e4c2df9191825a0",
+    "tests/test_dequant_bench.c": "37981a74c96d8bcc60396710646a7ebc966d6ca361a5c7a148c0c2ed8f28e7e1",
+    "tests/test_dialogue_memory_curriculum.py": "a2dd0c51d8d42939e75893861fd15e89713412d9d38ad21dee724257735e4446",
+    "tests/test_dispatch_init.c": "c10f8a1d7cb1ea8d4954c6edb0128191333f4c19d715e3dc0ffd7f87f6ec7460",
+    "tests/test_emb_debug.c": "cf1aa3ceabe9774c96e10bfa765b2daae21d753a4617fc4b0b73be15c3cd23fe",
+    "tests/test_episodic_store.c": "f7bb6632915d9bcf7a615b047e357ec117d42d9d7b3f26eb0db12fca6768bc00",
+    "tests/test_event_store.c": "880af0aa598e83e5d523c0cf2bb5e481ddc7d2a4f92644c69d2113cda65d7116",
+    "tests/test_export_typed_writer_model.py": "b190e5c946cd56d6d84e90863a427055cd57f98dafb2e5cdb0e9b0fe96e77486",
+    "tests/test_generation_controls.c": "697b2dbc359591c7df9d94da37ea58ab28ef7eca4bff3d865e8f55aab0b280b6",
+    "tests/test_gguf.c": "946f06761b3e9b0c514c38f5f5875ebb00983ecad2e85a6dd35d2bd743f3db0b",
+    "tests/test_i2s_bench.c": "7a9f160b9ebd59b4c84cffb4dfc5694857d844b6fab897ceb995b9183c7dbe54",
+    "tests/test_i2s_correctness.c": "57d32012ebe924868b12369c7135a09489c05e24e64c952a4fb036a20bc1946f",
+    "tests/test_joint_binding_curriculum.py": "6aae3741fca8b966a2dbdcc91d7688381d473436390e1a7ac56cecd33bce6be6",
+    "tests/test_joint_full_preflight.py": "d7ca76fc64437590be623f05b99c09777b9d676c0f949fadd466ef2368511368",
+    "tests/test_joint_optimizer.py": "34c1d59d028c30246221f661b9378b44568d4734016c9c1b4180f4e6bf8e6102",
+    "tests/test_joint_platform_preflight.py": "a07dcf1e722467d026ce26ac8242e678b533999617d4fac2eec959c82c7f15e1",
+    "tests/test_joint_review_launch.py": "61a731c0ea4e800f4e6b689a6f7071e580e5d2d6f672ca8fba38181963c97de6",
+    "tests/test_joint_training_core.py": "507a59eceadf7da8191c8c9cbb7415748b1cd567a0488f2a643ff66f83f38b4c",
+    "tests/test_kv_cache.c": "2855e87f054aebb57670c2693bf7f65ff4e4adc9cce71eeb59c3048f1e54efe8",
+    "tests/test_locomo_evaluation.py": "26c8c3fc30f421a35181c9fa1bdb8820a6310664743bc5a279d51f973850ba64",
+    "tests/test_logits_compare.c": "f5bf618e02dcb7d156026858bfa22419e6150204692e4efec14d3c7a1dcb7d73",
+    "tests/test_lora_loader.c": "9e01ee91a7f545dbf48a808488409450b1ae39e1fed72829ea72f18dfc986d16",
+    "tests/test_memory_availability.py": "38e908f07937bf9568114d92ad9051b1f9a157634039b5bcaac20a8f1da361ac",
+    "tests/test_memory_controller.c": "afce056c0e4e3b23d82e740c03f4427a442f234bd3e23f67eda4e63d01be2dcf",
+    "tests/test_memory_fusion.py": "0d7c74f5c770ad63953197856f9985c43feafefa97fd8a014e117424fec71ecd",
+    "tests/test_memory_gate_diagnostic.py": "6694a717f6c452ca04c3823fd141aa75dfbf714b3f6771439797dac46ac863c5",
+    "tests/test_memory_gate_parity.c": "cac5664e486a306f947932e1ad1ae8eefdd80701b253197393e6b5330c217b77",
+    "tests/test_memory_gate_training.py": "a13bec1d3f710e9675c49bb494c5acac6007a70bb6324e5bd72c67136cd122df",
+    "tests/test_memory_review_regressions.py": "715f5122371bff2138f35290434a657dc565f8ad958e25a786213085d8877625",
+    "tests/test_memory_snapshot.c": "458b5127c2e721e7c9c78a56a88f8a2ce05f98e082322140e1415752e5387fc0",
+    "tests/test_memory_span_gate.py": "e0bfa2c1bdc5d5af23895efca92b1ab3dc603a1f028e3d10e4676ad94d174f1e",
+    "tests/test_memory_token_read.py": "4f460608b1b8943e64e777d32a11a2d0541eb93a5f1dc99679c1446c440cb1df",
+    "tests/test_metal_i2s_correctness.c": "e8ab05f0ca74fbf683fdeeff06a36ff7369d909685e26359869c2a143a7c2a51",
+    "tests/test_mixed_memory_training.py": "d46576825139bff86a6a09370f01cce26268a3a1e8d3c7bda978e8453ad9c770",
+    "tests/test_native_cell_gradient.py": "1356da7af78f6a6eb3f93d6a6df0ea566ca0c2017e5334d5cd7790bd30bfb656",
+    "tests/test_native_continuous_generation.py": "72f7255f8c731c6a9b846a42fb8aac7974a1da0e78abba91ffcab88478bde1d3",
+    "tests/test_native_generation_bridge.py": "553785c938a7aa54a3acae74c373af380eb3474d5e72932b4fda3d918e1d5a7d",
+    "tests/test_native_memory_encoder.py": "a596dcc7572eb7402f6705a7b5d6c7b716f6d089e5637d5c352b378497428de0",
+    "tests/test_native_prompt.py": "b8a94de72f32e968c1fb5ea5ac6eb05661125ac94a85c8c153598307552e76be",
+    "tests/test_native_role_generation.py": "caef11dddcd990f6ec5f4332bfadab5ba6bc3213ff98df95f10a2de381e79664",
+    "tests/test_native_token_generation.py": "b85a130da2a54aca44f8674a74c26dff8ff6863e288834f44a7f16772c336fd3",
+    "tests/test_natural_memory_curriculum.py": "2cfd3353727ccdf1e2fe76cd459d0ecf55630d3b1ff04d40c14de3bd83114fac",
+    "tests/test_neural_memory_data.py": "35c8ffbff3861417f8112265ac3d0d98454f0a0538d2daec099efb53bae72cc5",
+    "tests/test_neural_memory_features.py": "6a74fe4a15855576d4682edc111583e50264818c3e690ddb2629c0cfa19ddd3b",
+    "tests/test_neural_memory_generation.py": "277b3457a3c2a70f9ac3e85444a605cd5a23f47377943e0cb0f083aab48979e1",
+    "tests/test_neural_memory_operators.py": "d9e6c2f517a6ad8f648f61100315df5ad7856af6d60265c1f363663047e5b25d",
+    "tests/test_neural_memory_protocol.py": "22c3ab769cdc877a2be40842ce45bf92e29431402b4280e5db7a11b6e9680a1f",
+    "tests/test_neural_memory_review.py": "8445f0c0b75decf625db3d69eedc2c74fe7c7aacf7002d5a9d9b0b5df46a9427",
+    "tests/test_openai_server_api.py": "d0aecf2431bfdc3e681cf47d932588e4c872c5c000481f248205879cb9d32cf4",
+    "tests/test_openai_server_default_config.py": "189ecafd406c6526b6cb3b08d2fdff6e3eeb0168e4d356e7877cd36943f79238",
+    "tests/test_openai_server_lora_api.py": "8f536242e49ee8d6e23751f740c46201a3b5e4782b563467b2371f1a0634406c",
+    "tests/test_openai_server_multiturn_quality.py": "591b2b8698209d4ad42bdeb968a46660cb7e962c687f4948f52942d153f3220a",
+    "tests/test_openai_server_typed_autonomous_e2e.py": "90029addf619566674c7847f6284d246f099fc628894fcabfffb4d20301575ac",
+    "tests/test_openai_server_typed_chat_auto_memory.py": "b453e908435be8aa621e662f447936dabdc4052825ef77a4eee9645a996d3979",
+    "tests/test_openai_server_typed_cold_start.py": "68a0a3bfc47e63856114bd17f1a94ff5ebdef5a61c53f09d6d6f1c9965d768c2",
+    "tests/test_openai_server_utf8.c": "a8212b26e3ca08b6c2a49a06ef2743cdcb61b078145185d43e289db821cc5b39",
+    "tests/test_ops.c": "8a9a670401e921407bc449e8d7c2c888c2e1a2388ec593de99e35997c36bc697",
+    "tests/test_paired_memory_objectives.py": "e6ef03a70c3365322780759688123f2af28970723ce630f2e70441d79ce237c7",
+    "tests/test_prepare_typed_activation_curriculum.py": "734e87ae9e4236433d95a1217e02b7c1a4efa25318740ca23579755e85edb716",
+    "tests/test_profile_decode.c": "1cc458625ea38fd879ba541b7c717bb638f515c0998cb9d97e157d41b366ee9f",
+    "tests/test_profile_multiturn.c": "db892a65aab5f6d5ac67a7c96f78489494453a6a6247ee00fa482421b52cac43",
+    "tests/test_profile_once.c": "260871837837bff37e6b0c731516da339182dda76b3f2095000d51d2fb315496",
+    "tests/test_q6k_layout.c": "c5158648ee4112fb5e01fb775eb4bbd242502fd51fa3579ad94e22c66c3d16f9",
+    "tests/test_q6k_output_bench.c": "155cbaa5871db88d0f1ed1e5c954c55acdd68185180dcc63b4124305af89aa48",
+    "tests/test_quant_tq2_0.c": "ea361456c16265e54bf6b70b3944805ae7272949105ed92bfe19d79e5454be92",
+    "tests/test_repeated_dialogue_curriculum.py": "f740863e7481a284d00dea24ccdf8e755a15441fc0b00e1b592cc31ed6f6081c",
+    "tests/test_resident_generalization.py": "26fa4097f71734d1b13798a2725047fa06708a1be33e8f495c4659baeeecb2d9",
+    "tests/test_resident_identity.py": "1cad3d5b820250f15bf5e653a397068b6054df5741c285c74e2d8a3a63cecc7f",
+    "tests/test_resident_identity_export.py": "72f8c1da0a6770a938e178e8f1e36f587bf85ca1a3c44a96321285e76942d6b2",
+    "tests/test_resident_identity_parity.c": "a52e5091cb66e64a08014ec4eacfc42ce4b127d1275d6d337babc48f2a729a3a",
+    "tests/test_resident_memory_set.py": "d084acd11cdee397ac351fe9442b9211d01d0ae7ed01702e005eb5be7f457e22",
+    "tests/test_resident_state.c": "1f649432e1b2c450ddd041170a1de2540748bfa143672d5edb356cada200153b",
+    "tests/test_role_content_path.py": "6566cac46423aceb35ef01de645fb125aa52351d4d64aa52db8af0f0e5add96f",
+    "tests/test_role_separated_memory.py": "f7a1f64df680bb2e93c044845f97afb5af03f755245f913289cad77616b9d7ce",
+    "tests/test_step_compare.c": "effa342e5fab62312723a17c7ca8a1aeffb67fdafb0b3ddda40fb7cb21c05ffc",
+    "tests/test_thread_config.c": "b772606fb97a012b475e26dbf9db447c69bcbe7399a5b1d46b78a1b6857be3ad",
+    "tests/test_token_debug.c": "2702210435d69d248a64ab8b69e74ef5b0dcef7c1c6695b976fee2c6cb8c2e0d",
+    "tests/test_token_memory_supervision.py": "996afc0cea20f8a4c8dfad32842b51a0d98bd6ef7c469bebef25f8f4b4c03c5c",
+    "tests/test_tokenizer.c": "adfeeb9ce65c804dae1ef21ada8d8f4e4691469840aaf7476f4e1e4bee553080",
+    "tests/test_tq2_kernel_bench.c": "f3981a96b98c4bf9d7a6810966230b249ffd896894f0b76a24b69fd46fecf178",
+    "tests/test_tq2_model_bench.c": "e3031bd8fdec38224a2b83a6e8d1d85eaca24f718ade34367b6f2655cc7a164f",
+    "tests/test_typed_anchor_keys.py": "cfeacf32a131e52358b67d42bd59644ac0a85f35682bbfa9cd3092759f391a16",
+    "tests/test_typed_anchor_span_fusion.py": "aa7f1d073c552297dd3782e67d4cb812194747e90dc6bdc96cf70c03a295fa4a",
+    "tests/test_typed_link_model.c": "0dad84d28614fbc782f2986f6b6412ab0053c5ed3fb459395da3d0ee2c820164",
+    "tests/test_typed_link_parity.c": "fbe6a2dfde4b11a13542e4d95f516aa2135ad81d2d46d54337a46ad0601b6701",
+    "tests/test_typed_memory_writer.py": "19325f85e7421b2555ba119cf8f88965f975e5b150e5ad7852eefecf62b33b86",
+    "tests/test_typed_pair_parity.c": "51b0944cedd620b565cec0711fbdb47d54c7da6874443975a607b5195ef57d1f",
+    "tests/test_typed_pair_verifier.py": "4c771e92acff8e90c4e4143ddfd6a5140ece25e82301d998fdef3ded12d55818",
+    "tests/test_typed_query_activator.py": "b2de173627770c9d27a97de400ca8fbad619960d472d2e58016a00c73a835ba8",
+    "tests/test_typed_runtime_link_parity.c": "de45e0cb71e96e99bf9c1e39da57824c80e398d60ac48697d6d1acbf0d1de94f",
+    "tests/test_typed_runtime_parity.c": "6e5df1260fd7cc69c777955946cd94dee3b8a7e6f2073d767188eaf130ea99cf",
+    "tests/test_typed_span_tagger.py": "23bc500952ecfc70c8af8be8cea7ccc236a3716304921c5be5cd334d621c6a04",
+    "tests/test_typed_version_memory.py": "9a2f0d2623ff841b92714334ff979bc346ee5db3ff46231be81b03f5f52effb7",
+    "tests/test_typed_writer_parity.c": "f57613f3783f0fd3d5162ce6325dd47bbd0583d814be87a07239eb1eb2fc719b",
+    "tools/gguf_inspect.c": "6c57b82dc93d3f4a6ad1d2f093d09ab62a5e1eb47dd89b1c24f03890c829257a",
+    "tools/memory_continuous_probe.c": "a97b69ca32d6e99fff5f103b76a2fc6f9666bf1ad7507d8672670a48dbf402f5",
+    "tools/memory_feature_probe.c": "9b10eb44c345741b296e2cb804040a87c615a811a5815069be5780363201a17c",
+    "tools/memory_gradient_probe.c": "7a74cd318b8235dc99c53c93bd295822c36f6eb2c2bc948c6f0b561462eaaa68",
+    "tools/memory_operator_probe.c": "513a6abcd3acbf7789e132e8927506ba80bf8b371fe9c75fa1cfdcfe289950e7",
+    "tools/memory_prefix_probe.c": "11d64deff09409a989178e86429ef1f0b80a94c4193d2c1e68d12fb3e5ae6af2",
+    "tools/resident_probe.c": "eb688310cdfcaad5937cbc9c8bae9c979f4608fd2d53eb01158728941de553f5",
+    "tools/train_xiaoli_lora.c": "91cbbce8f4f8171284afdc09749dceaf4962d472075da7217337c862b437f680",
+    "training/memory/fusion-gate1/README.md": "b4bd59c91b83dcd5e74e8520cad021f1f2fe513b9a87aa3e0073adb275f09492",
+    "training/memory/fusion-gate1/results.json": "09386a46dcbd2d2a96c42b19c606bff0f442803d253dff38775c415534cc5102",
+    "training/memory/neural-system/AVAILABILITY.md": "ff9e6cdd82bc22c4d1a3b3d3d1b1a99db736a7c177e9f6639f4c659c12ec6fd8",
+    "training/memory/neural-system/CAUSAL_GENERATION.md": "aafdc25518845ac6c56d44622597ed96f3aea0ee94211f33dafb2181c8683038",
+    "training/memory/neural-system/CG001_FOLLOWUP.md": "9b1cc7ed3939a1cfbdac1dc43d64f7178100ab50369bdf9bfc454e051de03028",
+    "training/memory/neural-system/CONTENT_PATH_DIAGNOSIS.md": "f3aff26b4569040ad99de42a1d7a23e996aac8281ceed523e2d2547fabe99c7d",
+    "training/memory/neural-system/CONTINUOUS_MEMORY.md": "74986b784ba6202e6d30246348c0fdd5a3a29adc1e89a2f4388a91f06272a577",
+    "training/memory/neural-system/CONTROLLED_READ.md": "b5da85c0f901cd306acfd421037e47a4f90bfa93271bd35d65f9df746d9a0a76",
+    "training/memory/neural-system/DESIGN.md": "c578a41966e97e5f3cc5181c02729be4b5a35671a4fa9ba28fa0d8415dc0c6c0",
+    "training/memory/neural-system/FULL_FEATURE_PREFLIGHT.md": "d033412357852db782679cc43ed672ec439ffa4ea1db812121a35ea9c49f8979",
+    "training/memory/neural-system/GENERATION_GRADIENT.md": "c20c5a9c00fde6c92e369f255ebadce73c442cd7be840b68daf663732c4da971",
+    "training/memory/neural-system/JOINT_BINDING_NATIVE.md": "315229f4b457841d9d6f337971b31acbf917c89a18a0824abe7df44ba56732cd",
+    "training/memory/neural-system/JOINT_BINDING_TRAINING.md": "521b67148a89f09a0763c0db506055541ac5b78034111940506b413902ba67e3",
+    "training/memory/neural-system/JOINT_TRAINING_IMPLEMENTATION.md": "0df1686ebc784ab2b5ecfafa9b56a6042c914f78dc624fe8f1a41f3b120605fe",
+    "training/memory/neural-system/NATIVE_GENERATION.md": "80edc42b5df8f8a7e4aefd8261239e6e7ce0eb777f31ccb2d63b44d461aad059",
+    "training/memory/neural-system/NUMERICAL_CONTRACT.md": "318aa69c510948d43586434c1b6806ee95dbd7946870bb6fd8b3c4044ee11b50",
+    "training/memory/neural-system/OPTIMIZER_AND_BASELINE.md": "1a211a19e9b57b46c112ef81cb41e10e1156f1ca48e3fe3d084b914b29ace602",
+    "training/memory/neural-system/PAIRED_OBJECTIVE_DIAGNOSIS.md": "a06c36f8ea84a0563f875b304509a75b10bc7b162f97d1ddbc2255db4ab0e2f4",
+    "training/memory/neural-system/PLAN.md": "d9a6569f30dec0815c331bc89d86c852789650907d8d842d8c97249f678c07bb",
+    "training/memory/neural-system/PLATFORM_PREFLIGHT.md": "8e4e9182cb78d231445b647d61e4f501cbb22d094bf17c723d36c810275e0557",
+    "training/memory/neural-system/PROTOCOL.md": "8a66ed369afd3a7cd2e9b4b7c47f73af35bd57fd77767dd6a2f560262534cb4e",
+    "training/memory/neural-system/QUANTIZATION_CELL.md": "e4c5023dd2292b885d895bd2148ffa5d48191a10f5739f768079afd437199cfc",
+    "training/memory/neural-system/REVIEW_AND_PARITY.md": "9cb4dc2914dcaf632a6e559b8ae20ce4080f61060c99f4b44aff62be060031ae",
+    "training/memory/neural-system/ROLE_SEPARATED_TRAINING.md": "dc4a133c4131a9e76f8530a5e30033588382c21aff1d05dcd3b835725c168d78",
+    "training/memory/neural-system/TOKEN_READ_INTERFACE.md": "d69af1d13f8f460e80efa227bd3dc0e14e26d9aba2e43a3efdf762f5b8c53e9e",
+    "training/memory/neural-system/TOKEN_SUPERVISION.md": "bad800212bd5ec1089fc12704690cc2202a132bd856dda8ca32c7dcf0acc4eba",
+    "training/memory/neural-system/TRAINING_DATA.md": "8c5777ebc76a53830f948398143ab884d5077211277b308c2590d143ca7c4de5",
+    "training/memory/neural-system/TRAINING_RUNTIME.md": "b1f1f3bb9f307bba449854cb7827bf39cd1b77d448269e7095a79e464bb30db7",
+    "training/memory/neural-system/calibration/AV-001/PROCESS.md": "b8bfb1e1b25048a503cbf9542a770de8881efeb6a3223ea8cf9c187adfe7e9e4",
+    "training/memory/neural-system/calibration/AV-001/blind.json": "c26536b6632a54bdc1efa0cd7adb04c42c697beaa370787c6fedafcbaca2e357",
+    "training/memory/neural-system/calibration/AV-001/fixtures-private.json": "9073c9067f8925e960ae5b4a68899c0767d76387432fb11abc54c21f15d95ceb",
+    "training/memory/neural-system/calibration/AV-001/reviewer-a.jsonl": "35f381301c97579f00ba81adbb0e3eea916b2a89af592e5d08de029653173af7",
+    "training/memory/neural-system/calibration/AV-001/reviewer-b.jsonl": "3b7cfd8e8bdccf84a8e46c399f17b052718a933c48501a020e70b3ccca5d0c49",
+    "training/memory/neural-system/calibration/AV-001/score.json": "804414751f6d9d701bb7205418da7008d85a020d1e226c89550cadbc1fa33eeb",
+    "training/memory/neural-system/checks/CG-001-cuda-preflight.json": "f91238ac1b5ad0d81b3455e92d9f38453bd2c2cdc3d3e525747c35953691795f",
+    "training/memory/neural-system/checks/CG-001-launch.json": "e5b7101a8bc1c7769f06fe06a826a412971f8c24b1ccefb5e99da743087c896d",
+    "training/memory/neural-system/checks/CG-001-step50.json": "1b18a24f0dcd72996009ace719e0a57f05b892c11eb41c0c60c1ca796ce3eb34",
+    "training/memory/neural-system/checks/CG-002-cpu-preflight.json": "31b5ec7bd458ca65cb78007fab5e60b0357b5e01ea5a25e9dbe139c6fc68c42b",
+    "training/memory/neural-system/checks/CG-002-cuda-preflight.json": "8bd900b6f5fb42284c2c8fa9e13212a2bd926fdf850ca0fd0eb2012aaf12836c",
+    "training/memory/neural-system/checks/CG-002-launch.json": "404aeadc7b9b24d60deac444a2c8571532e9f13c7f16610b4cc9e98f8a67688d",
+    "training/memory/neural-system/checks/CG-002-native.json": "a91525167e45b1bbac25ce30cd6ebcc47b9681722905aa95c95e039f7c8462ca",
+    "training/memory/neural-system/checks/CG-002-step50.json": "7f9f3be0c5e848235b0f1ebdf48e561a127fa386210677182f6e18f4468937eb",
+    "training/memory/neural-system/checks/CG-003-baseline-audit.json": "6f4d7c8305e599f392f969e8451851012664d87ecc9cf21592a28e374c00a194",
+    "training/memory/neural-system/checks/CG-003-cpu-preflight.json": "14cc783abd4c9768051294b965a094024b6ea411b2bd4c3ab7a625ad364affcf",
+    "training/memory/neural-system/checks/CG-003-cuda-fixtures.json": "a971f36d7d80363fc98091ce93e143a310163e621cb5cc444d1be38ed0c5fb59",
+    "training/memory/neural-system/checks/CG-003-cuda-preflight.json": "469213c04cf2053983606891e4e3a4d949ac01257303fbf62c68b3f31a82325a",
+    "training/memory/neural-system/checks/CG-003-data.json": "f191a6aa27c5f6420d8fb8e0f318b562986ec9d1298eda766a1092ff51b8601f",
+    "training/memory/neural-system/checks/CG-003-feature-inventory.json": "cf3c09cf61ed77a4d4d85c6848349ba69f88a18786dabbd13f011a9884d48e32",
+    "training/memory/neural-system/checks/CG-003-full-features.json": "80b18785a3da2960ad75d84f3664e659f9c5d069960c734317286ee235f785fd",
+    "training/memory/neural-system/checks/CG-003-full-preflight.json": "23c8f35ef07339ee9ea0bdaf632e77d2c0d99f33f5429aad1f09f99457bb9ec6",
+    "training/memory/neural-system/checks/CG-003-native-preflight.json": "b74bf5f4980b4d3995f2d5a04a272088d0e7f0e6ecf545983d8351ee42a37438",
+    "training/memory/neural-system/checks/CG-003-platform-archive.json": "d6f405ae171bc0865c47a09ff4b3c6792dcf31e28753100918e37dee9a9e8db5",
+    "training/memory/neural-system/checks/CG-003-platform-source.json": "f9df0d1cc1450a3c20d5adbbab05b414f8643f89ca4e23c050207a0be23af8bf",
+    "training/memory/neural-system/checks/CG-003-smoke-features.json": "a384b19240e843ca4c83c16095c93928fbd9448b9deb360212518b1cebeae038",
+    "training/memory/neural-system/checks/DG-001-result.json": "939a5df4b732f8e1ce095e53d828d02a8a176c111742fe4108e53c7f56093ba2",
+    "training/memory/neural-system/checks/DG-002-result.json": "6867a6016b872e2041586d7bdc3620db90845ce28a92e36feb3403a7f3c2971a",
+    "training/memory/neural-system/checks/DG-003-result.json": "a928102a1c1988d4d1f37971456e24d6c070941d8b14b4a1bd051b17f45ed1c9",
+    "training/memory/neural-system/checks/DG-004-result.json": "3fa7007385ce1fe2ccd1026659b08e1f461a1e8328dafc0b35bec01554889289",
+    "training/memory/neural-system/checks/DG-005-result.json": "aae501d0efd9cc350c734c53c368043dd20f83fecb75c54be06de4777ec23d88",
+    "training/memory/neural-system/checks/DG-006-result.json": "d7d8bd7f9cceec8cd0ad90ffe2d869f09be95e80d38885092cbf3836f40543c4",
+    "training/memory/neural-system/checks/DG-007-result.json": "cd16a11b277bc79546d3df2d61b2a09c8174e93ef3d975f650bfd845b1f51f7c",
+    "training/memory/neural-system/checks/DG-008-result.json": "5e15feae16a1a8d7dfbe7d3910c1c1658f37526cda8a0ce9e05c3c6f2798bcfb",
+    "training/memory/neural-system/checks/DG-009-result.json": "3bdc53af624b1fce5deea95b4f40d2dda8824e29ba33dbe07bb5337e4188e5eb",
+    "training/memory/neural-system/checks/DG-010-result.json": "29c34cc12523991fd53166f57218eb70dc6bbe9ec74fc35963ff089ccaf1d7f5",
+    "training/memory/neural-system/checks/DG-011-result.json": "b882cd85c285ffe4f24d765baec00a6153d36e22c4e854c0f57fa63dec8b006d",
+    "training/memory/neural-system/checks/DG-012-audit.json": "41ae64c923ef3e33aa3f1a79aa19e8220420cad8c6d3520cedc99e48bc18ac85",
+    "training/memory/neural-system/checks/DG-012-result.json": "a5840084f58b24f2fffe4b3a1d3dde98c548a4939e397e9d12fe9ee657df5426",
+    "training/memory/neural-system/checks/P1-causal-generation-v2.json": "77937225d4e1f04c184c356fc70c3b6c37c9bbc3f1310e6243e57627be9d23e2",
+    "training/memory/neural-system/checks/P1-causal-generation.json": "f45a50fd67733bbb9ae8830fe9abdf65cf716a5e6bc4d9b95ab7361171f89d33",
+    "training/memory/neural-system/checks/P1-feature-parity.json": "68f668df9f9ebd2ffc8dd782e86351268e24f7e42279d28e2c5f629c713c9c63",
+    "training/memory/neural-system/checks/P1-native-encoder.json": "2241986b25e2b1d5be8f4ca285c03ce40c6070ba451b039eaaa952d43dc851f4",
+    "training/memory/neural-system/checks/P1-operator-parity.json": "afec34dd6a6e36b518b990f021ca94c6edc1580cfd0da5990dc672ec5a4378a5",
+    "training/memory/neural-system/checks/P1-supervision-audit.json": "b6f60e493d294737d85bcffc09583616a734a3e71b10c1ca7b2ea7aa7e7e29d4",
+    "training/memory/neural-system/data/CG-001-pilot.json": "0fc5ec27bc17bdc34432c7a544d9426b9dcbba5955dfe1206fa1fa96b17d3cef",
+    "training/memory/neural-system/data/CG-001-pilot.manifest.json": "bb2827f09972039c5ab869ce1272b59924acfa9c7e66e7659ac45690154d3452",
+    "training/memory/neural-system/data/JB-001/dev.index.jsonl": "77db64734b6e13da71c4d26cd7deabc451ce9007c686fef31cc6b89524d320e3",
+    "training/memory/neural-system/data/JB-001/dev.inputs.jsonl": "15167878ab79daa81f18e1970eed80227c2659b6913d0f42abdcac5ce115f488",
+    "training/memory/neural-system/data/JB-001/dev.labels.jsonl": "e4535b50d56e11c461e97a843cf754bb185245c9f6969bf4e25f5dd7db3e6a90",
+    "training/memory/neural-system/data/JB-001/dev.pairs.jsonl": "2aaa6eb9b2d5830af7098fd4716328fc227476e342a65c904176345e6ccae13d",
+    "training/memory/neural-system/data/JB-001/manifest.json": "5406820bb35c65622883a2c791d4fb52a89ea7ef0d89e068fbbf677e0acbce6c",
+    "training/memory/neural-system/data/JB-001/test.index.jsonl": "5b54ca147598ee3fc68b482375a87588da624b4af83964ede1471b0a3400639f",
+    "training/memory/neural-system/data/JB-001/test.inputs.jsonl": "44eb3e32b585d6233e38432e7427deed4bc40caa29bb555b61f693f6cf911dc7",
+    "training/memory/neural-system/data/JB-001/test.labels.jsonl": "d571ebc19f201836b8a32732a97819fdeeeaeeacca886bf485bcdfd23f1c4432",
+    "training/memory/neural-system/data/JB-001/test.pairs.jsonl": "30f3f7693c001f4fa918655d510ac0373a99c65c220f5d550025b693082b19d1",
+    "training/memory/neural-system/data/JB-001/train.index.jsonl": "fc56cd710cfc4ad5f5e38254ad6190928bb48637aeca9b2af051b5a170177acf",
+    "training/memory/neural-system/data/JB-001/train.inputs.jsonl": "a3fd2e6f20b78a830d15214dc80e867cba1c85fa3b47dc75d7174587a3823b0b",
+    "training/memory/neural-system/data/JB-001/train.labels.jsonl": "ef536e0ad66232694eaaa1b817d3c18b213d6c339a96ad0b6ef234cd486f083b",
+    "training/memory/neural-system/data/JB-001/train.pairs.jsonl": "d55b708d2f999971662d0d7ba9b8ff9dc85ebff63b67f6f9e9348f75116944cc",
+    "training/memory/neural-system/data/JB-001.json": "ec7a3c19bffdfde750123d84a7a029e5f6f075dd7f561d03171cebb83ca20d09",
+    "training/memory/neural-system/data/P1-feature-probes.json": "067809a87d6c7ebce4a12f8a55779b1c8519b6bb934c3beea10eab579778b713",
+    "training/memory/neural-system/data/P1-smoke.json": "b0904c9eaf1a2cc02f68c323c123dcd161fd05b2c74a29deef0d0563bfc4bc74",
+    "training/memory/neural-system/data/P1-smoke.manifest.json": "3930c948bf92d68d87dd093d2b9c9da942f705363781cbcf1e4ef01a9dcc35e2",
+    "training/memory/neural-system/experiments/CG-001-step50-generation.json": "b7f253f9dfdbe8e65feb38cdb41382eed41aa601b10c4a0a3403b1e7d1243ee4",
+    "training/memory/neural-system/experiments/CG-001.json": "e12d9701233c0679493ddd11208d1de129e8ea03bf2a70ea6c40a0c59977b0cc",
+    "training/memory/neural-system/experiments/CG-002-step50-generation.json": "0eb65c27ecf5303cd9373847ecd540f124dbd1ff1c567c82b017b63d33a2252b",
+    "training/memory/neural-system/experiments/CG-002.json": "eb74b1e3651462f448504e1e79915758330ce3b0d63fea9ba9168443dd8bf473",
+    "training/memory/neural-system/experiments/CG-003-budget-approval.json": "36d92a69dfa153a04d0c34c56dbf3a7dcdc0dd611ca85b0ce0fdf227e5ff942a",
+    "training/memory/neural-system/experiments/CG-003-full-preflight.json": "9ebdf2ee1b5c0c5c45f83bdb9fb5e4045b941b0d7d5888c2cf3943b3519df24d",
+    "training/memory/neural-system/experiments/CG-003-optimizer-preflight.json": "719986543518f6dbaddf0c22d46c32df34ea635cbaf6003d7c499638f5c88ae1",
+    "training/memory/neural-system/experiments/CG-003-platform-preflight.json": "dd4fb92c15a138b0a43a63bc03a8ec2eaa1903fc30465c4efbcb53147772d4c8",
+    "training/memory/neural-system/experiments/CG-003.json": "acd851f179043a928e98708bb63a9a32b740bec2b204419536ca5f4942112765",
+    "training/memory/neural-system/experiments/DG-001.json": "9309227aaeaf5ff93233301b832c631d5cbe4a4a259edb80490ab9756160ac08",
+    "training/memory/neural-system/experiments/DG-002.json": "ebffa9cc1375d57dcee4a44cf410a813f6c0b08a8c75d0ddafe952d82ad5593c",
+    "training/memory/neural-system/experiments/DG-003.json": "6ecd59bbe6d238c98bc897e22c81e60231f30c8c81493b6a27cceef61973d440",
+    "training/memory/neural-system/experiments/DG-004.json": "09dda37448960d2d3639887ef1a4e87f2cfd3deaf069e82675c72e84c807381d",
+    "training/memory/neural-system/experiments/DG-005.json": "0b1d1fe5117c5db12333683eac9ed27af977859d8c8cf4a03e4ba16bbd8a2750",
+    "training/memory/neural-system/experiments/DG-006.json": "ce904a2f88c146d3c56c99ce35bd3d1f2e353b8118168d8c31a26f718820d7ba",
+    "training/memory/neural-system/experiments/DG-007.json": "455200d722a7ea6b2943fc2a3fbea1e1d0dff0fde968fa130948ed222b18b136",
+    "training/memory/neural-system/experiments/DG-008.json": "56dcf747afd591f9d37a4b9e1eeb7f181203ff9067647b917f969138bffad9b2",
+    "training/memory/neural-system/experiments/DG-009.json": "a46642018a4782732d523b235ef5c3c61f3814706f9bd9a814614851819836e8",
+    "training/memory/neural-system/experiments/DG-010.json": "b2b6eae64e9636354d4b5bdbd630b7032a2f97adb4753dcb0f6e92d85d003372",
+    "training/memory/neural-system/experiments/DG-011.json": "00c50947f4e9da020fb0ce4fb2bf0175343092203954b79c1cbd2506959424cb",
+    "training/memory/neural-system/experiments/DG-012.json": "b5b85034ae4a0cc1c2ffd6b7ce60d3917f4ab4ea53328cb89050937a6b0eba85",
+    "training/memory/neural-system/experiments/EP-001.json": "d323644680b89dc9f4118f4fc2067fb51f8dcc4d45fe904a2a06a84a86ead270",
+    "training/memory/neural-system/reviews/CG-001/PROCESS.md": "1348979fede9a7a3fa6e43df7bcb838d359564eff1424551ec7e76fd51b767cd",
+    "training/memory/neural-system/reviews/CG-001/baseline.json": "cb6b2f6292352797b9e33ca4326a6836d9fed8eb8b37ed1423227bf4d36491ef",
+    "training/memory/neural-system/reviews/CG-001/blind.json": "51706fc654e03555c1a649db775a2e62ea9821aac318cfeccdc4dda5374f6b9b",
+    "training/memory/neural-system/reviews/CG-001/native-audit.json": "c7fefe550638b79d1bcdb7cdf7c413f8fad58a3bf8da9771a294d422f1d7515d",
+    "training/memory/neural-system/reviews/CG-001/objective-diagnostic.json": "5b221b6a84a5a66b770f522800d3c85b8fa471f19e5bdf0dddf6105ded49fe20",
+    "training/memory/neural-system/reviews/CG-001/reviewer-a.jsonl": "04795edb7f820ded6da02ff25dd9ff4170d3e76bfff72b889c444ff041ebd5e6",
+    "training/memory/neural-system/reviews/CG-001/reviewer-b.jsonl": "5c06bcdb9bbb7e48c7dfa94d80f2d518e3faaab7a191e313f429075c61a54006",
+    "training/memory/neural-system/reviews/CG-001/score.json": "312e46c91f014f0269bde8e528d4febeb1b4d03674ed9bdbb7f75b204a1a8560",
+    "training/memory/neural-system/reviews/CG-001/step50.json": "a3e24f573fe5a539904fbeaf367965de324b672c0e092a1eb3b2a8b12eb623a4",
+    "training/memory/neural-system/reviews/CG-002/PROCESS.md": "5e4297d36883e8ddd1824fe6bd95cb5aba50a6b9e2b5d7a0df2a6886633b99c2",
+    "training/memory/neural-system/reviews/CG-002/blind.json": "29ab32421681e815f72dc0770cc93c3d5f9208a98d6cb74121a33f7890cd7b0f",
+    "training/memory/neural-system/reviews/CG-002/generation.json": "328cbfdf40de69f3bb9056066768797d10696ed5850df422a6934f3c930b76b0",
+    "training/memory/neural-system/reviews/CG-002/native-audit.json": "d72da8de7a15951d0715ee6579afbdf5260fc6a3b70465bc89a75611d10157c7",
+    "training/memory/neural-system/reviews/CG-002/reviewer-a.jsonl": "cff41617be50cb345923c969f3a6260f84ec9de8705e5b252d5a9efbc0ee5180",
+    "training/memory/neural-system/reviews/CG-002/reviewer-b.jsonl": "4816777c05b68fa1f2654698cacbc2f638deda430c00b52174ebecd3f6f2a304",
+    "training/memory/neural-system/reviews/CG-002/score.json": "7cc4277ee6beb7c4a2851e6c7ced60e11dbc1b555c8bedca3fc56b92ee2471ad",
+    "training/memory/neural-system/reviews/CG-003/baseline-blind.json": "f633f506c2deac71df9343f9c27ae960fa16b37fd53874fae221dd15127eff4d",
+    "training/memory/neural-system/reviews/CG-003/baseline-score.json": "0a2f41e253ecdab23b74a721c58d4641664a7d506daa2e027c65a4cd822949d3",
+    "training/memory/neural-system/reviews/CG-003/baseline.json": "4389fc1c29a28f81353dac9ecc52bec8bb024fd54c658ceecc8485db5874433d",
+    "training/memory/neural-system/reviews/CG-003/reviewer-a.jsonl": "78e814d41a91cf4294443fc102c546e8b056ed09c1c84bb4367f4c0798ad955f",
+    "training/memory/neural-system/reviews/CG-003/reviewer-b.jsonl": "ef28b7519148151f02f482d2d9da04f1cb7bb8f45e8a0c87c091aaec9938ce07",
+    "training/memory/resident-0.5b/README.md": "342b956c056682148957b8fcd45e00a03fe3afe0743004b6e2288465ea18286e",
+    "training/memory/resident-0.5b/corpora/query/train.jsonl": "8cc92ab726cdb984a40b933bcd7f2b850e2814cc717a3bf5e8e35dec0a15fed7",
+    "training/memory/resident-0.5b/corpora/query/valid.jsonl": "3864b29e982ff9487e6f434100e816c7ef7de7c6f4c34c2e779256fdfe40100a",
+    "training/memory/resident-0.5b/corpora/resident/generation_manifest.json": "2a19fc4c091dddacf7d0c234082f506ef4ea1839e7d4fa9c5af3ebc2f0fe7983",
+    "training/memory/resident-0.5b/corpora/resident/train.jsonl": "5ead2b1e64d46ada1cd0135cfbf2b27b72844dbf4620750bf98c4775c6552ee8",
+    "training/memory/resident-0.5b/corpora/resident/train_supervision.json": "d712879c7b3f904865c8aa65ac17a6c1af253e3d0bd07cb47b2c52874992246d",
+    "training/memory/resident-0.5b/corpora/resident/valid.jsonl": "8b352c38ec96185892c55b311e2377f6e1accdea9a592e020f60f54b1c2ed29c",
+    "training/memory/resident-0.5b/corpora/writer/manifest.json": "f47c9c3371817e9938649e124ee3858aeef3533efcf2da2d449b9ebfdd422cd2",
+    "training/memory/resident-0.5b/corpora/writer/train.jsonl": "b589c3d120d4fbea60602d282a296feec59e7fae5f81e954f1631ad31f726254",
+    "training/memory/resident-0.5b/corpora/writer/valid.jsonl": "95836ed3cb8cef78a9c058dd40b4ddcaa3a9efe05c905bb58a406d3f5fde6de0",
+    "training/memory/resident-0.5b/manifest.json": "76f3c063f0a7470527c90ea27861da36f6ed52adef9c379c641b4504ce65142c",
+    "training/memory/resident-0.5b/retrain_query_from_features.py": "a3d58e2f5c1ef514fd3528bf29fe0b9712594da43b0b923765cb688a84bb8576",
+    "training/memory/resident-0.5b/retrain_resident_and_writer.sh": "f754bb288a64ef259fca17258b7da9c575aac76df847837b21b30a8f883086ba",
+    "training/memory/resident-0.5b/verify.py": "92b681d2309e8e3b3fbda9df15cbdf7058ae1e24763091ed336e227317d90645"
+  },
+  "feature_package_digest": "d299ad9f59c5a8500d751ee71b4f9139232cec9f80a2607e14953442e883b6fb",
+  "memory_accuracy_measured": false
+}

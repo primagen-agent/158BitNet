@@ -1,0 +1,10 @@
+{
+  "id": "CG-003-optimizer-preflight",
+  "real_model_optimizer_steps": 0,
+  "real_batch": "First frozen schedule step, four pairs, both policies, CPU and CUDA. Intercept actual optimizer step before update; compare clipped accumulated gradients.",
+  "gradient_tolerance": {"atol": 0.0001, "rtol": 0.001},
+  "tiny_fixture": "Hidden 8, vocab 13, seed 43 artificial inputs; identical initialization seed 1013, two policies, actual 50-step CPU/CUDA loop and checkpoint roundtrip. No real dataset or candidate selection.",
+  "tiny_weight_tolerance": {"atol": 0.0001, "rtol": 0.001},
+  "precision": "float32, no AMP or TF32",
+  "on_failure": "Preserve results and block training; do not silently relax thresholds or change seed"
+}

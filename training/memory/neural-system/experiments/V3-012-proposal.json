@@ -1,0 +1,19 @@
+{
+ "id": "V3-012",
+ "status": "trained_value_quality_unresolved",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "hypothesis": "EV-007 zh uncertainty replies are contaminated by value fragments because the uncertainty branch (like mode before V3-010) never saw canonical-segmentation prefixes; value fragments in copies remain wrong because value/fact supervision is still too weak on canonical prefixes.",
+ "changes": {
+  "branch_canon": "canonical-prefix frames (first 3 positions) for a bounded subset (~100) of route-2 items, branch CE added",
+  "value_weight": "fact+value+boundary weight on canonical prefixes raised 2x->4x",
+  "base": "V3-011 ckpt-420 frozen trunk + readouts + branch"
+ },
+ "evaluation": "EV-008 same panel/gates",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-20",
+  "via": "user reply 继续"
+ },
+ "result": "EV-008: value copies still wrong (New York CityAarhus - base value followed by appended copy; Ianskina fragments; kangkaikai repetition loop); zh uncertainty contamination persists (请稍等一下reda - the 100-item/3-position branch augmentation was insufficient); mode 268/268 preserved; overtrigger 0, truncation 3/24. The 4x value weighting did not fix span selection - the fine-span heads choose wrong spans on free prefixes. Honest read: value quality needs deeper supervision (per-position copy supervision on natural prefixes = full P2B machinery), not weighting."
+}

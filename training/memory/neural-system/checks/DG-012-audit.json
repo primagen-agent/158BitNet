@@ -1,0 +1,23 @@
+{
+  "cases": 6,
+  "active_cases": 4,
+  "disabled_cases": 2,
+  "actual_decode_positions": 126,
+  "decoder_C_calls_excluding_input_encoder": 338,
+  "all_raw_file_hashes_verified": 1038,
+  "all_natural_initial_prefixes_verified": true,
+  "all_actual_prefix_chains_verified": true,
+  "all_reply_routes_and_probabilities_fixed": true,
+  "positions_with_copy": 0,
+  "branch_only_qualifications": 4,
+  "actual_max_composition_error": 0.0000133514404296875,
+  "truncated_cases": 4,
+  "utf8_complete_cases": 6,
+  "positive_active_support_routes": 0,
+  "positive_active_cases": 2,
+  "negative_active_insufficient_routes": 2,
+  "negative_active_cases": 2,
+  "semantic_review_complete": false,
+  "memory_accuracy_measured": false,
+  "raw_report_sha256": "c475de46bfa9b1daa64806ba83c4122cb1902bd00378f83aa7d6614e432e3207"
+}

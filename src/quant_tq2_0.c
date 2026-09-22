@@ -1,5 +1,6 @@
 #include "quant_tq2_0.h"
 #include "thread_config.h"
+#include "quant_q8k.h"
 
 #include <math.h>
 #include <pthread.h>
@@ -2684,6 +2685,8 @@ typedef struct {
     atomic_int completed;     /* number of workers finished */
     atomic_int stop;          /* 1 = shutdown */
     atomic_int park;          /* 1 = avoid busy-waiting while another pool runs */
+    void (*row_compute)(void *, int, int);
+    void *row_opaque;
 } tq2_lut_thread_pool_t;
 
 static tq2_lut_thread_pool_t g_lut_pool = {
@@ -2696,7 +2699,7 @@ static tq2_lut_thread_pool_t g_lut_pool = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     0, 0, 0, 0, 0, 0, 0, 0, 0,
     NULL, NULL, NULL,
-    0, 0, 0, 0, 0
+    0, 0, 0, 0, 0, NULL, NULL
 };
 static pthread_once_t g_lut_pool_once = PTHREAD_ONCE_INIT;
 
@@ -2850,6 +2853,14 @@ static void tq2_lut_compute_rows_tiled_scales(const uint8_t *bytes, const uint8_
 
 static void tq2_lut_pool_run_chunks(void) {
     for (;;) {
+        if (g_lut_pool.dispatch_type == 4) {
+            int first = atomic_fetch_add_explicit(&g_lut_pool.next_row, 16, memory_order_relaxed);
+            if (first >= g_lut_pool.out_count) break;
+            int last = first + 16;
+            if (last > g_lut_pool.out_count) last = g_lut_pool.out_count;
+            g_lut_pool.row_compute(g_lut_pool.row_opaque, first, last);
+            continue;
+        }
         /* I2S dispatch: work-stealing at group granularity (4 rows per group) */
         if (g_lut_pool.dispatch_type == 1 || g_lut_pool.dispatch_type == 2 ||
             g_lut_pool.dispatch_type == 3) {
@@ -3254,6 +3265,26 @@ static void init_lut_pool_once(void) {
     /* Mark all workers as "completed" so first dispatch doesn't deadlock */
     atomic_store_explicit(&g_lut_pool.completed, g_lut_pool.n_threads, memory_order_release);
     g_lut_pool.initialized = 1;
+}
+
+int bitnet_quant_run_rows(void (*compute)(void *, int, int), void *opaque, int rows) {
+    if (!compute || rows <= 0) return -1;
+    (void)pthread_once(&g_lut_pool_once, init_lut_pool_once);
+    if (g_lut_pool.n_threads <= 1 || rows < 32) { compute(opaque, 0, rows); return 0; }
+    while (atomic_load_explicit(&g_lut_pool.completed, memory_order_acquire) < g_lut_pool.n_threads)
+        BITNET_SPIN_HINT();
+    g_lut_pool.dispatch_type = 4;
+    g_lut_pool.row_compute = compute;
+    g_lut_pool.row_opaque = opaque;
+    g_lut_pool.out_count = rows;
+    atomic_store_explicit(&g_lut_pool.park, 0, memory_order_release);
+    atomic_store_explicit(&g_lut_pool.next_row, 0, memory_order_relaxed);
+    atomic_store_explicit(&g_lut_pool.completed, 0, memory_order_release);
+    atomic_fetch_add_explicit(&g_lut_pool.generation, 1, memory_order_release);
+    tq2_lut_pool_run_chunks();
+    while (atomic_load_explicit(&g_lut_pool.completed, memory_order_acquire) < g_lut_pool.n_threads)
+        BITNET_SPIN_HINT();
+    return 0;
 }
 
 /* Hybrid spin-wait: spin briefly for low latency, then back off to avoid wasting CPU */

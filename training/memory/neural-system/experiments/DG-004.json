@@ -1,0 +1,36 @@
+{
+  "id": "DG-004",
+  "phase": "P1-native-generation-10",
+  "status": "registered_backend_diagnostic_not_training",
+  "scope": "Fresh-prefix C backbone and C continuous output projection, Python random neural fusion. Not a trained model, complete C memory module or HTTP deployment.",
+  "seed": 3180926,
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "max_new_tokens": 16,
+  "context_capacity": 128,
+  "initial_gain": 0.1,
+  "cases": [
+    {"id": "english", "query": "Where does Nora live?", "source": "Nora lives in Bern."},
+    {"id": "chinese", "query": "小安现在住在哪里？", "source": "小安现在住在苏州。"}
+  ],
+  "conditions": ["reference", "disabled", "empty", "zero_gain", "active_untrained"],
+  "gates": [
+    "Every continuous C invocation reports fresh context position 0 and final position equal to the complete prefix length",
+    "Disabled, empty and zero-gain logits match ordinary C reference bit-for-bit at every generated prefix, with identical generated tokens and finish behavior",
+    "Active neural residual has finite nonzero values and native projection; repeated base forward remains bit-identical",
+    "Each step appends exactly the preceding actual predicted token, never target text or source text",
+    "EOS and im_end come from the real C tokenizer; stop tokens are excluded from visible bytes but retained in the raw token record",
+    "Truncation and partial UTF-8 are explicit; real tokenizer byte replays test stop and partial-byte handling separately from natural model behavior"
+  ],
+  "constraints": {
+    "optimizer_steps": 0,
+    "kv_reuse": false,
+    "internal_prefill_kv_buffers": true,
+    "lora": false,
+    "svd": false,
+    "nas_ng": false,
+    "locomo": false,
+    "automatic_writer": false,
+    "learned_multi_event_activation": false
+  },
+  "failure_action": "Preserve all outputs and failed checks. Do not tune the seed or prompt for better answers, relax gates or authorize CG-001 training on this result."
+}

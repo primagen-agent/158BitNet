@@ -1,0 +1,18 @@
+{
+ "id": "V3-010",
+ "status": "value_path_activated",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "root_cause": "DG-033+tokenization check: mode head was trained only on encode_value (anchored-suffix) segmentations; free generation produces canonical segmentation of the same text (teacher [Bre,nn,a] vs base [B,ren,na]) - the hidden states at semantically identical positions differ, so the saturated mode head never flips START in free generation",
+ "fix": "mode training augmentation: for each supported trajectory, build a canonical-segmentation copy of the pre-value prefix (tokenize the same text with the canonical tokenizer path, extract C hiddens for those prefixes, keep identical START labels). Train route/mode readouts (frozen trunk, LBFGS with class-balanced weights to avoid saturation, margin cap via label smoothing 0.05) on teacher+canonical variants together. Branch untouched.",
+ "training": {
+  "init": "from V3-009 ckpt-400 frozen trunk",
+  "steps_requested": "LBFGS 10 iters",
+  "data": "892 items + ~268 canonical-prefix variants (needs ~1500 new C prefix forwards, ~30-60 min)",
+  "hardware": "local Mac arm64"
+ },
+ "evaluation": "EV-006 same panel/gates",
+ "decision": "START fires in free generation -> grounded gate finally measurable; still not -> START must be decoupled from prefix hidden entirely (route+span-driven), registered next",
+ "user_approval": {},
+ "result": "canonical augmentation: mode START 268/268 on canonical prefixes (teacher 268/268 preserved); EV-006: value-copy path exercised for the first time in free generation (cursor tokens from source payloads appear); remaining failures are value-selection/termination quality, not activation"
+}

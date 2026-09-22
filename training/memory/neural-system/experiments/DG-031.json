@@ -1,0 +1,6 @@
+{
+ "id": "DG-031",
+ "status": "completed_fine_loss_audit",
+ "finding": "fine_loss route term is exactly CE(route_logits,gold); static-loss mode term is always zero for compiled targets (idle_mode=None) - mode trains only via the trainer idle-CE loop",
+ "artifact": "python/fine_span_supervision.py:23-36"
+}

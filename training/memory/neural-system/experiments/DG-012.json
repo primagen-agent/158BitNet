@@ -1,0 +1,15 @@
+{
+  "id": "DG-012",
+  "status": "registered_joint_binding_native_generation_diagnostic",
+  "seed": 1011,
+  "max_new_tokens": 24,
+  "context_capacity": 128,
+  "panel": "Estelle/Fabian/Graz, EN and ZH. Same question and same source character inventory: correct Estelle-home plus Fabian-likes versus crossed Fabian-home plus Estelle-likes. Both independent presence labels true; only joint subject-relation binding differs. Four active and two disabled-correct-source runs.",
+  "source_selection": "one supplied compound episode, not automatic writer/event activation",
+  "generation": "Only initial natural prompt then actual greedy predictions. Fresh ordinary C reference and fresh C continuous probe at every position. No prefix bank, no gold answer prefix, no cross-step KV reuse. Reader/copy mixture remains Python.",
+  "qualification": "At initial prefix of each active case, separately check both continuous specialists and supported copy mixture against Torch head projection at atol 1e-5 rtol 1e-4 and identical top1. These are branch-only numerical checks, not oracle-routed generation. Actual generation always follows predicted fixed initial route.",
+  "reporting": "Retain all replies, truncations, initial routes, copies actually used, branch-only qualifications and paired input checks. Untrained reader/factor heads plus existing CG-002 content/uncertainty specialists. No success claim from the new initialization or from rejecting both sides.",
+  "optimizer_steps": 0,
+  "training_approved": false,
+  "deployment_approved": false
+}

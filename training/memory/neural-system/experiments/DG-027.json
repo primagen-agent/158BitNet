@@ -1,0 +1,17 @@
+{
+  "id":"DG-027",
+  "status":"registered_route_head_attribution",
+  "optimizer_steps":0,
+  "deployment_approved":false,
+  "scope":"Zero-update attribution of the EV-001 route collapse. Replay the reader's route head over all 892 V3-001 training items at checkpoints 000(init)/010/020/030/040/050 using the cached v3 feature package; no new training, no generation, no serving.",
+  "questions":{
+    "q1_collapse_shape":"gold-route x predicted-route confusion matrix per checkpoint over the full 892 items at their static prefix(0) frames",
+    "q2_confidence":"route softmax margins (top1-top2) per checkpoint; near-uniform margins indicate an undertrained readout, confident margins indicate a learned-degenerate solution",
+    "q3_trajectory":"when across steps 0-50 did predictions move; did route CE on gold decrease while argmax collapsed (objective conflict) or stay flat (undertrained)",
+    "q4_loss_scale":"relative magnitude of the route term vs span/mode terms of fine_loss on a fixed sample at step 50"
+  },
+  "gates":"Deterministic replay (same seeds/binding as training where applicable); checkpoint digests recorded; feature package manifest hash verified; no weight changes (digests before/after).",
+  "decision_rule":"If route CE decreases materially while argmax stays degenerate -> loss-conflict: propose loss reweighting before any budget extension. If route CE stays high and margins near-uniform -> undertrained: propose a budget extension request. Mixed evidence is reported as such without forcing a single cause.",
+  "limits":"Static-prefix route head only; idle-position mode predictions and the uncertainty branch are out of scope here. Conclusions attribute the collapse mechanism, not memory ability.",
+  "stop":"No gate relaxation, no retraining, no budget consumption; findings feed the next user decision."
+}

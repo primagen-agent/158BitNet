@@ -1,0 +1,627 @@
+{
+  "scope": "fixed 16-case single-supplied-episode component, two development worlds",
+  "reviewers": [
+    "cg001-blind-a",
+    "cg001-blind-b"
+  ],
+  "independence_limit": "isolated contexts of same model family; not human or cross-family validation",
+  "promotion_eligible": false,
+  "additional_training_approved": false,
+  "runs": {
+    "baseline": {
+      "total": 16,
+      "pass": 3,
+      "fail": 13,
+      "needs_review": 0,
+      "evaluation_level": "predicted_component",
+      "producer_id": "baseline",
+      "confirmed_success_fraction": 0.1875,
+      "adjudication_complete": true,
+      "promotion_eligible": false,
+      "promotion_note": "Software workflow only; calibration and stage gates still required",
+      "independent_worlds": 2,
+      "groups": {
+        "empty/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "empty/zh": {
+          "total": 2,
+          "pass": 1,
+          "fail": 1,
+          "needs_review": 0
+        },
+        "ordinary_original/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "ordinary_original/zh": {
+          "total": 2,
+          "pass": 2,
+          "fail": 0,
+          "needs_review": 0
+        },
+        "original/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "original/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "swapped_values/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "swapped_values/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        }
+      },
+      "worlds": {
+        "av-000": {
+          "total": 8,
+          "pass": 2,
+          "fail": 6,
+          "needs_review": 0
+        },
+        "av-001": {
+          "total": 8,
+          "pass": 1,
+          "fail": 7,
+          "needs_review": 0
+        }
+      },
+      "cases": [
+        {
+          "id": "case-d68ac9d7b2b39fe94695",
+          "world_id": "av-001",
+          "scenario": "original",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-2841cfa9cf20f00891d1",
+          "world_id": "av-001",
+          "scenario": "swapped_values",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-410cc79e7fc060c0b6a0",
+          "world_id": "av-001",
+          "scenario": "empty",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "case-c61340e0ba8151f9ee09",
+          "world_id": "av-001",
+          "scenario": "ordinary_original",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-5e76236adb954331887e",
+          "world_id": "av-001",
+          "scenario": "original",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-0955f6c759b8d1cc160d",
+          "world_id": "av-001",
+          "scenario": "swapped_values",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-6cc67c267bdfa8a934a1",
+          "world_id": "av-001",
+          "scenario": "empty",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "case-d39632cf838459875bff",
+          "world_id": "av-001",
+          "scenario": "ordinary_original",
+          "language": "zh",
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "id": "case-0afeea181bfe2cce15ae",
+          "world_id": "av-000",
+          "scenario": "original",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-8994b1d24f644a20010b",
+          "world_id": "av-000",
+          "scenario": "swapped_values",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-087dc07d3baa42a10ac1",
+          "world_id": "av-000",
+          "scenario": "empty",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "case-e917740be7f368e54dc4",
+          "world_id": "av-000",
+          "scenario": "ordinary_original",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-d3cf42c1d8ad5b74a82c",
+          "world_id": "av-000",
+          "scenario": "original",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-ed876424f9d365d8bc64",
+          "world_id": "av-000",
+          "scenario": "swapped_values",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-b9c87f9a2d4ab9867564",
+          "world_id": "av-000",
+          "scenario": "empty",
+          "language": "zh",
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "id": "case-50832826530d9fede5b3",
+          "world_id": "av-000",
+          "scenario": "ordinary_original",
+          "language": "zh",
+          "status": "pass",
+          "reasons": []
+        }
+      ],
+      "incomplete_generation_ids": [],
+      "paired_controls": {
+        "value_swap": {
+          "total": 4,
+          "pass": 0,
+          "fail": 4,
+          "needs_review": 0,
+          "pairs": [
+            {
+              "world_id": "av-000",
+              "language": "en",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-000",
+              "language": "zh",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-001",
+              "language": "en",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-001",
+              "language": "zh",
+              "status": "fail"
+            }
+          ]
+        },
+        "remove_memory": {
+          "total": 4,
+          "pass": 0,
+          "fail": 4,
+          "needs_review": 0,
+          "pairs": [
+            {
+              "world_id": "av-000",
+              "language": "en",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-000",
+              "language": "zh",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-001",
+              "language": "en",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-001",
+              "language": "zh",
+              "status": "fail"
+            }
+          ]
+        }
+      }
+    },
+    "step50": {
+      "total": 16,
+      "pass": 1,
+      "fail": 15,
+      "needs_review": 0,
+      "evaluation_level": "predicted_component",
+      "producer_id": "step50",
+      "confirmed_success_fraction": 0.0625,
+      "adjudication_complete": true,
+      "promotion_eligible": false,
+      "promotion_note": "Software workflow only; calibration and stage gates still required",
+      "independent_worlds": 2,
+      "groups": {
+        "empty/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "empty/zh": {
+          "total": 2,
+          "pass": 1,
+          "fail": 1,
+          "needs_review": 0
+        },
+        "ordinary_original/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "ordinary_original/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "original/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "original/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "swapped_values/en": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        },
+        "swapped_values/zh": {
+          "total": 2,
+          "pass": 0,
+          "fail": 2,
+          "needs_review": 0
+        }
+      },
+      "worlds": {
+        "av-000": {
+          "total": 8,
+          "pass": 1,
+          "fail": 7,
+          "needs_review": 0
+        },
+        "av-001": {
+          "total": 8,
+          "pass": 0,
+          "fail": 8,
+          "needs_review": 0
+        }
+      },
+      "cases": [
+        {
+          "id": "case-d68ac9d7b2b39fe94695",
+          "world_id": "av-001",
+          "scenario": "original",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-2841cfa9cf20f00891d1",
+          "world_id": "av-001",
+          "scenario": "swapped_values",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-410cc79e7fc060c0b6a0",
+          "world_id": "av-001",
+          "scenario": "empty",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "case-c61340e0ba8151f9ee09",
+          "world_id": "av-001",
+          "scenario": "ordinary_original",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-5e76236adb954331887e",
+          "world_id": "av-001",
+          "scenario": "original",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-0955f6c759b8d1cc160d",
+          "world_id": "av-001",
+          "scenario": "swapped_values",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-6cc67c267bdfa8a934a1",
+          "world_id": "av-001",
+          "scenario": "empty",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "case-d39632cf838459875bff",
+          "world_id": "av-001",
+          "scenario": "ordinary_original",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-0afeea181bfe2cce15ae",
+          "world_id": "av-000",
+          "scenario": "original",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-8994b1d24f644a20010b",
+          "world_id": "av-000",
+          "scenario": "swapped_values",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        },
+        {
+          "id": "case-087dc07d3baa42a10ac1",
+          "world_id": "av-000",
+          "scenario": "empty",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "unsupported_or_misattributed_claim",
+            "unjustified_certainty"
+          ]
+        },
+        {
+          "id": "case-e917740be7f368e54dc4",
+          "world_id": "av-000",
+          "scenario": "ordinary_original",
+          "language": "en",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-d3cf42c1d8ad5b74a82c",
+          "world_id": "av-000",
+          "scenario": "original",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-ed876424f9d365d8bc64",
+          "world_id": "av-000",
+          "scenario": "swapped_values",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim"
+          ]
+        },
+        {
+          "id": "case-b9c87f9a2d4ab9867564",
+          "world_id": "av-000",
+          "scenario": "empty",
+          "language": "zh",
+          "status": "pass",
+          "reasons": []
+        },
+        {
+          "id": "case-50832826530d9fede5b3",
+          "world_id": "av-000",
+          "scenario": "ordinary_original",
+          "language": "zh",
+          "status": "fail",
+          "reasons": [
+            "missing_required_claim",
+            "unsupported_or_misattributed_claim"
+          ]
+        }
+      ],
+      "incomplete_generation_ids": [],
+      "paired_controls": {
+        "value_swap": {
+          "total": 4,
+          "pass": 0,
+          "fail": 4,
+          "needs_review": 0,
+          "pairs": [
+            {
+              "world_id": "av-000",
+              "language": "en",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-000",
+              "language": "zh",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-001",
+              "language": "en",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-001",
+              "language": "zh",
+              "status": "fail"
+            }
+          ]
+        },
+        "remove_memory": {
+          "total": 4,
+          "pass": 0,
+          "fail": 4,
+          "needs_review": 0,
+          "pairs": [
+            {
+              "world_id": "av-000",
+              "language": "en",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-000",
+              "language": "zh",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-001",
+              "language": "en",
+              "status": "fail"
+            },
+            {
+              "world_id": "av-001",
+              "language": "zh",
+              "status": "fail"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "source_sha256": "4a85a27c0895f3f46a979429811cd53abfd25318fe7ff3a1465c3eb6f1566f4a",
+  "review_sha256": {
+    "build/cg001-blind-judge-a.jsonl": "04795edb7f820ded6da02ff25dd9ff4170d3e76bfff72b889c444ff041ebd5e6",
+    "build/cg001-blind-judge-b.jsonl": "5c06bcdb9bbb7e48c7dfa94d80f2d518e3faaab7a191e313f429075c61a54006"
+  },
+  "prediction_reports_sha256": {
+    "build/neural-memory-cg001-baseline/baseline.json": "cb6b2f6292352797b9e33ca4326a6836d9fed8eb8b37ed1423227bf4d36491ef",
+    "build/neural-memory-cg001-step50-generation/generation.json": "a3e24f573fe5a539904fbeaf367965de324b672c0e092a1eb3b2a8b12eb623a4"
+  }
+}

@@ -1,0 +1,235 @@
+{
+  "experiment": "CG-002",
+  "status": {
+    "optimizer_steps": 50,
+    "status": "awaiting_fixed_panel_native_generation_review",
+    "automatic_continuation": false,
+    "memory_accuracy_measured": false,
+    "deployment_approved": false
+  },
+  "checkpoints": {
+    "0": {
+      "path": "/home/ubuntu/158bitnet-locomo/build/cg002-stage-3c02eb07/run-first50/step-000000.pt",
+      "sha256": "0e85ac1936617b7b03023b784770b14c9730711c6bbac9366b5d2091a75c941e",
+      "bytes": 50392749
+    },
+    "50": {
+      "path": "/home/ubuntu/158bitnet-locomo/build/cg002-stage-3c02eb07/run-first50/step-000050.pt",
+      "sha256": "eb6b9a551c616d08a2aa0e8d183a63233c87a3c10e296f290a7b48b99dea716d",
+      "bytes": 151143069
+    }
+  },
+  "state_order": [
+    "no_memory_needed",
+    "supported",
+    "insufficient"
+  ],
+  "diagnostics": {
+    "0": {
+      "state_correct": 90,
+      "total": 256,
+      "confusion": [
+        [
+          50,
+          3,
+          11
+        ],
+        [
+          42,
+          0,
+          22
+        ],
+        [
+          86,
+          2,
+          40
+        ]
+      ],
+      "scenario_state_accuracy": {
+        "original": {
+          "correct": 0,
+          "total": 16
+        },
+        "swapped_values": {
+          "correct": 0,
+          "total": 16
+        },
+        "paraphrase": {
+          "correct": 0,
+          "total": 16
+        },
+        "update_current": {
+          "correct": 0,
+          "total": 16
+        },
+        "empty": {
+          "correct": 0,
+          "total": 16
+        },
+        "wrong_subject": {
+          "correct": 7,
+          "total": 16
+        },
+        "wrong_relation": {
+          "correct": 7,
+          "total": 16
+        },
+        "conflict": {
+          "correct": 3,
+          "total": 16
+        },
+        "hypothetical": {
+          "correct": 7,
+          "total": 16
+        },
+        "negated": {
+          "correct": 4,
+          "total": 16
+        },
+        "quoted": {
+          "correct": 7,
+          "total": 16
+        },
+        "historical_only": {
+          "correct": 5,
+          "total": 16
+        },
+        "ordinary_empty": {
+          "correct": 16,
+          "total": 16
+        },
+        "ordinary_original": {
+          "correct": 10,
+          "total": 16
+        },
+        "ordinary_wrong_subject": {
+          "correct": 9,
+          "total": 16
+        },
+        "ordinary_conflict": {
+          "correct": 15,
+          "total": 16
+        }
+      },
+      "branch_means": {
+        "base_preservation_kl": 0.0,
+        "content_oracle_ce": 3.8647212758660316,
+        "uncertainty_oracle_ce": 2.1115751415491104
+      }
+    },
+    "50": {
+      "state_correct": 192,
+      "total": 256,
+      "confusion": [
+        [
+          40,
+          24,
+          0
+        ],
+        [
+          0,
+          64,
+          0
+        ],
+        [
+          0,
+          40,
+          88
+        ]
+      ],
+      "scenario_state_accuracy": {
+        "original": {
+          "correct": 16,
+          "total": 16
+        },
+        "swapped_values": {
+          "correct": 16,
+          "total": 16
+        },
+        "paraphrase": {
+          "correct": 16,
+          "total": 16
+        },
+        "update_current": {
+          "correct": 16,
+          "total": 16
+        },
+        "empty": {
+          "correct": 16,
+          "total": 16
+        },
+        "wrong_subject": {
+          "correct": 0,
+          "total": 16
+        },
+        "wrong_relation": {
+          "correct": 8,
+          "total": 16
+        },
+        "conflict": {
+          "correct": 8,
+          "total": 16
+        },
+        "hypothetical": {
+          "correct": 16,
+          "total": 16
+        },
+        "negated": {
+          "correct": 8,
+          "total": 16
+        },
+        "quoted": {
+          "correct": 16,
+          "total": 16
+        },
+        "historical_only": {
+          "correct": 16,
+          "total": 16
+        },
+        "ordinary_empty": {
+          "correct": 16,
+          "total": 16
+        },
+        "ordinary_original": {
+          "correct": 8,
+          "total": 16
+        },
+        "ordinary_wrong_subject": {
+          "correct": 8,
+          "total": 16
+        },
+        "ordinary_conflict": {
+          "correct": 8,
+          "total": 16
+        }
+      },
+      "branch_means": {
+        "base_preservation_kl": 0.051607405948942454,
+        "content_oracle_ce": 3.0760752204805613,
+        "uncertainty_oracle_ce": 0.7165024690330029
+      }
+    }
+  },
+  "training_audit": {
+    "optimizer_steps": 50,
+    "sampled_rows": 200,
+    "unique_training_rows": 181,
+    "all_samples_from_training_split": true
+  },
+  "synchronization": {
+    "source_files_verified": 359,
+    "source_archive_sha256": "3c02eb07a68197b0717399b9687dfbd6023e726e86d2c1c17cb3ea99a7858245",
+    "explicit_metadata_overlay_sha256": "fccf63f4ec327cdd0b5e29c5fbe1672ac0efcb4237481d5e849ac68268424650",
+    "overlay_files": {
+      "checks/CG-002-cuda-preflight.json": "8bd900b6f5fb42284c2c8fa9e13212a2bd926fdf850ca0fd0eb2012aaf12836c",
+      "checks/CG-002-launch.json": "404aeadc7b9b24d60deac444a2c8571532e9f13c7f16610b4cc9e98f8a67688d",
+      "experiments/CG-002.json": "9d413491256cabf442b2ea52c2e7be6fc987649a058dff9d83a47bb86386eeb0"
+    }
+  },
+  "raw_report": {
+    "local": "build/neural-memory-cg002-run-report.json",
+    "remote": "/home/ubuntu/158bitnet-locomo/build/cg002-stage-3c02eb07/run-first50/result.json",
+    "sha256": "06db139902a02da064983b40aaf12a89da8b3ab663f97c3ee044640142ff22f3"
+  },
+  "interpretation": "State and teacher-forced branch metrics only; no CG-002 free-generation accuracy yet. Wrong-subject state 0/16 remains a blocking risk."
+}

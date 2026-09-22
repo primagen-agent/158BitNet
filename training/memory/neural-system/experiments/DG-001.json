@@ -1,0 +1,23 @@
+{
+  "id": "DG-001",
+  "status": "registered_numeric_diagnostic_not_training",
+  "phase": "P1-gradient-06",
+  "hypothesis": "Exact native logits with an explicitly surrogate suffix backward may yield useful descent directions for memory fusion parameters.",
+  "scope": "Last-layer post-attention, last prefix position only; one next-token NLL; not recall, free generation, all-layer training or HTTP deployment.",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "seed": 3180922,
+  "target_selection": "First non-whitespace C-tokenizer piece of next_token_text, one token only; no reference-answer prefix enters inference.",
+  "initial_fusion_gain": 0.1,
+  "backward_variants": ["dense_suffix", "q8_ste_suffix"],
+  "gain_perturbations": [0.001, 0.01, 0.05, 0.1],
+  "cases": [
+    {"id": "home_en", "query": "Where does Mara live?", "source": "Mara lives in Lima.", "next_token_text": "Lima"},
+    {"id": "home_zh", "query": "小林住在哪里？", "source": "小林住在杭州。", "next_token_text": "杭州"},
+    {"id": "drink_en", "query": "What is Cleos favorite drink?", "source": "Cleos favorite drink is cocoa.", "next_token_text": "cocoa"}
+  ],
+  "fixed_constraints": {"backbone_frozen": true, "optimizer_steps": 0, "kv_reuse": false, "lora": false, "svd": false, "nas_ng": false, "locomo": false},
+  "forward_gate": "Bridged logits must be byte-exact native logits; zero and disabled injection must equal the ordinary C library; nonzero injection must affect native logits.",
+  "gradient_gate": "Finite nonzero fusion gradients; for every case and backward variant, predicted descent must lower native NLL beyond 1e-6 and opposed direction must have higher NLL at at least 3 of 4 preregistered perturbations. Flat or ambiguous changes count as failures, not exclusions.",
+  "failure_action": "Preserve every perturbation and reject promotion if any gate fails. Do not change perturbations, drop cases or start training.",
+  "limitations": "Surrogate backward is not the exact derivative of a quantized C program. Passing only licenses further diagnostics, never a memory accuracy claim."
+}

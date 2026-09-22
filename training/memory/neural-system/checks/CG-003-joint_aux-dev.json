@@ -1,0 +1,1157 @@
+{
+  "measurement": "state_and_teacher_forcing_not_memory_accuracy",
+  "rows": [
+    {
+      "id": "joint-fa27ba4af69d9b305e8e",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.8509629923295607
+    },
+    {
+      "id": "joint-b8e946f76b80bb0008ac",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.9425960945815388
+    },
+    {
+      "id": "joint-6634aa10d136e46a1777",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 1.7751611396168763
+    },
+    {
+      "id": "joint-102a18467aea9551eeca",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 5.4664352153522815
+    },
+    {
+      "id": "joint-8ba47b0792b49b968a43",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 5.004424950222368
+    },
+    {
+      "id": "joint-0c64e0009806e17ff411",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.2472475798177622
+    },
+    {
+      "id": "joint-c816ac41c9ab6438a16b",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.1947269610137543
+    },
+    {
+      "id": "joint-e6b03e02533b7f19d089",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.2807459762570159
+    },
+    {
+      "id": "joint-4eff7b49bf94632fa060",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.22055991583468595
+    },
+    {
+      "id": "joint-826b747a63c95d89dae7",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.49296948313713074
+    },
+    {
+      "id": "joint-49b028799e627728b819",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.07438823873650208
+    },
+    {
+      "id": "joint-e9c1cc20581662cc28bc",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.012114606920682539
+    },
+    {
+      "id": "joint-aaad3ed6883df179a7f8",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.8895511619011804
+    },
+    {
+      "id": "joint-cd61f29e3a85f2b7926b",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7442535055602167
+    },
+    {
+      "id": "joint-b0b10f4cbbf948bfdb2f",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.3631704682966763
+    },
+    {
+      "id": "joint-06c8ecc438d9a11fbcb1",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 6.138061800014105
+    },
+    {
+      "id": "joint-80b51e0a12e547af5769",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 4.646024474819367
+    },
+    {
+      "id": "joint-3401460d98d6e0016a42",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.4183565240346625
+    },
+    {
+      "id": "joint-3ce091df2948b1cd4b45",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.376750334182208
+    },
+    {
+      "id": "joint-ba470041ef893225fd5f",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.5458095217200137
+    },
+    {
+      "id": "joint-6d8fbe8deb872f8007a0",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.5314519689699566
+    },
+    {
+      "id": "joint-6c81d58bcf92556a26c7",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7682181596755981
+    },
+    {
+      "id": "joint-695f80d7b676a7fccc36",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.1985197431160427
+    },
+    {
+      "id": "joint-bf8d44d0a8840fc9aad5",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.10572569840807058
+    },
+    {
+      "id": "joint-6dfd1e6ce41b6f7acb78",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 1.9055978687563426
+    },
+    {
+      "id": "joint-f38e23b035080768fa2b",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7673524747498018
+    },
+    {
+      "id": "joint-e0cf6c3b05fc00b2d49c",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.8751798691995774
+    },
+    {
+      "id": "joint-9f4de8c2cfc402945284",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 4.233696124151294
+    },
+    {
+      "id": "joint-016fe2f3b93f78ffb851",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.3150860302517566
+    },
+    {
+      "id": "joint-b59d0ca7969951c084fb",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.3605002398306403
+    },
+    {
+      "id": "joint-bb44e2a07af8805ffc5f",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.3488501221099254
+    },
+    {
+      "id": "joint-b3459b7e67940217b0b2",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.3576334298545118
+    },
+    {
+      "id": "joint-df84ed8ec691c5bbfef9",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.3172859728634472
+    },
+    {
+      "id": "joint-57b74730d1b0ed41f5f2",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.5903738737106323
+    },
+    {
+      "id": "joint-138f8621ba7a99701209",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.07051677303440537
+    },
+    {
+      "id": "joint-eccc1e6d8021c6803857",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.012114606920682539
+    },
+    {
+      "id": "joint-5d8bfd3914c7194d6e9a",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 3.541454920530048
+    },
+    {
+      "id": "joint-05baba845260b16ce3fe",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.8466532499586374
+    },
+    {
+      "id": "joint-6c6802bafa4ac4a0f048",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 3.1658370799365745
+    },
+    {
+      "id": "joint-ad47cc4170ac3c9db4fa",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 6.35438821672029
+    },
+    {
+      "id": "joint-959a25fb8fccad6077a8",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 5.271456464172497
+    },
+    {
+      "id": "joint-8ddaf64a16129c3acc25",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.6777562537580057
+    },
+    {
+      "id": "joint-4e23e311643f1c0ddae1",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.6256016691723887
+    },
+    {
+      "id": "joint-dd0dae612d845afa5d92",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.6850008122716531
+    },
+    {
+      "id": "joint-ed7a5da791180c2ce886",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.714189028338391
+    },
+    {
+      "id": "joint-3b24215c42c9cc3b93fc",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.9632806777954102
+    },
+    {
+      "id": "joint-ad45c43b88d2a432fe58",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.19639780677075586
+    },
+    {
+      "id": "joint-30047d957900f9a54e50",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.10572569840807058
+    },
+    {
+      "id": "joint-663653f43a8b231bf0f8",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 4.159709480822031
+    },
+    {
+      "id": "joint-b1a596ab210a303eef2b",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.293517655442597
+    },
+    {
+      "id": "joint-dc5a52b237be6ce999e6",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 4.064270935446363
+    },
+    {
+      "id": "joint-09d6a83fdbf0b97d21d5",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 7.491542843347288
+    },
+    {
+      "id": "joint-15609e35630f68c216f1",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 4.405845092362794
+    },
+    {
+      "id": "joint-cf8115401bcc3639f1e9",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.1979470969590849
+    },
+    {
+      "id": "joint-cb9c8ba0484eb4001cb6",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.1471764971064122
+    },
+    {
+      "id": "joint-6b1829a550408806ce03",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.26614399071468375
+    },
+    {
+      "id": "joint-d624da34f28d68495c81",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.19393171064079048
+    },
+    {
+      "id": "joint-591068d2575878842ab9",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.4681590795516968
+    },
+    {
+      "id": "joint-03e545f484f3b75740e4",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.10271187225731744
+    },
+    {
+      "id": "joint-c8bb0fb44331c8835d95",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.011929756901709299
+    },
+    {
+      "id": "joint-1298dd37f224157a8f76",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.2277628185437948
+    },
+    {
+      "id": "joint-d9879156842513c1ca1a",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.898092800868304
+    },
+    {
+      "id": "joint-48795bbfa39e0bbb7c18",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.718689410138247
+    },
+    {
+      "id": "joint-8c147ea53125f44f33db",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 4.08658557359187
+    },
+    {
+      "id": "joint-3f2efddfa7a2cc4aafa2",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.867018856470276
+    },
+    {
+      "id": "joint-6afa17822ea513a657e9",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.6597299924055557
+    },
+    {
+      "id": "joint-9d4ddc7b43a352da1160",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.5877994315848551
+    },
+    {
+      "id": "joint-6c511cc2542c7cfa24eb",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7164293728858475
+    },
+    {
+      "id": "joint-bc43cb714b897c911d51",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.6813542774706256
+    },
+    {
+      "id": "joint-a0f983766cc86e3ce2db",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.868678629398346
+    },
+    {
+      "id": "joint-5716af73c5e8dfa5ec57",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.14234142606758737
+    },
+    {
+      "id": "joint-8a34c9570cfe601fa274",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.03599989685245915
+    },
+    {
+      "id": "joint-bfb110d5a7d357d12712",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 4.472030345208266
+    },
+    {
+      "id": "joint-390fe8a95032c25999fb",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.2798347812884607
+    },
+    {
+      "id": "joint-7e9180785cb56f532152",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 3.9529783138902284
+    },
+    {
+      "id": "joint-d64938988a6af6274fec",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 9.790610640009511
+    },
+    {
+      "id": "joint-5e269dc48be254764d14",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 4.764153731344729
+    },
+    {
+      "id": "joint-b2d3bfbac19c598cc3ff",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.1515715390783192
+    },
+    {
+      "id": "joint-b47a6121872033ada5a4",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.2145539536992795
+    },
+    {
+      "id": "joint-30907f2a7db2f9486a20",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.25405031412723683
+    },
+    {
+      "id": "joint-07c8b37b3bb3727ba4f1",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.2014505832994146
+    },
+    {
+      "id": "joint-73d9b85138386d3eecd2",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.49056971073150635
+    },
+    {
+      "id": "joint-7cda17f85e128b10062c",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.08032290240333545
+    },
+    {
+      "id": "joint-e0462989593caaaed832",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.011929756901709299
+    },
+    {
+      "id": "joint-285dd32d6f509d59b087",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.4540182537476176
+    },
+    {
+      "id": "joint-0c8035ce7bda956751d7",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.3191259708114822
+    },
+    {
+      "id": "joint-5d9f011142cadea7ca56",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.2313659145162097
+    },
+    {
+      "id": "joint-30507ef2c9602687510b",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 7.1484471331319845
+    },
+    {
+      "id": "joint-b1f9a461d33e430fac3c",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.0827786671151105
+    },
+    {
+      "id": "joint-2da6c2cb1d52c65da1f9",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.638086680353304
+    },
+    {
+      "id": "joint-5223eefb18afab7653f6",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.5820461766812075
+    },
+    {
+      "id": "joint-83747b088a360394f542",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7283662413370142
+    },
+    {
+      "id": "joint-933eb4de4b53a94815bd",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7158547735579999
+    },
+    {
+      "id": "joint-f97cb40850ae99026fb8",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.9219497442245483
+    },
+    {
+      "id": "joint-c213440e7ec9562bc985",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.13409700760064358
+    },
+    {
+      "id": "joint-151d996139f9247e0b85",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.03599989685245915
+    },
+    {
+      "id": "joint-96a7ea0151a36cc4add1",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.3849422574251493
+    },
+    {
+      "id": "joint-2e716e6e222d3f0f9909",
+      "target_state": 2,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.513967475351258
+    },
+    {
+      "id": "joint-13542214a2dd068a6d32",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.1409276410799096
+    },
+    {
+      "id": "joint-7c42f2ccd0ec4c6509dc",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 5.362090341706061
+    },
+    {
+      "id": "joint-c813fc836b5c29201424",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.8553804787019983
+    },
+    {
+      "id": "joint-b952b6beabec0872f482",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.2078452890637037
+    },
+    {
+      "id": "joint-e2cdf17476d61e107f4d",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.4011882959179451
+    },
+    {
+      "id": "joint-cd853ec4fcb671d55a03",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.21970791389149275
+    },
+    {
+      "id": "joint-7170653bc1b43b40909f",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.18408148749535883
+    },
+    {
+      "id": "joint-51b5808236965692b283",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.4780311584472656
+    },
+    {
+      "id": "joint-498eebd0be12bb43fb88",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.0682391119298352
+    },
+    {
+      "id": "joint-ae2e98b6a3722a83b95d",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.013472510844226473
+    },
+    {
+      "id": "joint-b44d2b018bbe2924f327",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.1628704015178366
+    },
+    {
+      "id": "joint-27afbbe7967bd8f53aca",
+      "target_state": 2,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.6454265976546267
+    },
+    {
+      "id": "joint-8cd7b0ac043b413dba05",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.4420151865726334
+    },
+    {
+      "id": "joint-26803a8bd5d658ac7b14",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 5.274750947395299
+    },
+    {
+      "id": "joint-82b1d1b6fbcd31f3d2c8",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 4.212927318576041
+    },
+    {
+      "id": "joint-3d33112fd5f8eb910eae",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.5220291324269817
+    },
+    {
+      "id": "joint-ee671492d5b889480261",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.658272384588135
+    },
+    {
+      "id": "joint-030d9ce148bc032cf38d",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.5115669545679642
+    },
+    {
+      "id": "joint-d988f8e4141b5c530bb4",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.5139003841695408
+    },
+    {
+      "id": "joint-00134bec3a27a9d61bd4",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7669615745544434
+    },
+    {
+      "id": "joint-64b8a510ede8752d7a0f",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.15391523281401442
+    },
+    {
+      "id": "joint-18d6516a41453be9bf13",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.06509529597069677
+    },
+    {
+      "id": "joint-47c6a1f4b20f4acece74",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.380178887607028
+    },
+    {
+      "id": "joint-8c6b8b3cd19d34b630bb",
+      "target_state": 2,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.13207190763739
+    },
+    {
+      "id": "joint-95e0227a6a7c487455ac",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.4094267528177564
+    },
+    {
+      "id": "joint-bf4b6400e6865b51f3f8",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.7800598717298186
+    },
+    {
+      "id": "joint-b9b950a04b297d752b11",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.880944117794119
+    },
+    {
+      "id": "joint-24465322de6ac351a63a",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.3400443625993115
+    },
+    {
+      "id": "joint-f33e48507aca33c8ef43",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.5067298252585306
+    },
+    {
+      "id": "joint-e20c77519d639bc66af7",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.21837968725968745
+    },
+    {
+      "id": "joint-ebf7b9b9476f75b1a764",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.19110423586049274
+    },
+    {
+      "id": "joint-749261aa28844c0b3fb5",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.4673820436000824
+    },
+    {
+      "id": "joint-43c560b66cc52b377652",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.0729069746578951
+    },
+    {
+      "id": "joint-8b74804daebf74c6aac8",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.013472510844226473
+    },
+    {
+      "id": "joint-16ae986cf91005194586",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.5486897661668766
+    },
+    {
+      "id": "joint-277c796aa0231c77a156",
+      "target_state": 2,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.631625195701851
+    },
+    {
+      "id": "joint-04909731901604991445",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.9801783575806295
+    },
+    {
+      "id": "joint-2e1fa9bdddd59dd65000",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 4.315312490989373
+    },
+    {
+      "id": "joint-d74e2d26b7437fd09455",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.3022856392471107
+    },
+    {
+      "id": "joint-22fdb6381499e6155edd",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.5683758361784659
+    },
+    {
+      "id": "joint-035e867b40b506e9bc6e",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.7833274934317558
+    },
+    {
+      "id": "joint-a948f822dadc7877a873",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.5213510989884537
+    },
+    {
+      "id": "joint-1293ae623d36d6c38f71",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.5043150167516375
+    },
+    {
+      "id": "joint-c841a4455e632cee070f",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7751685380935669
+    },
+    {
+      "id": "joint-8a07812fd0d8fb470445",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.1534813818313068
+    },
+    {
+      "id": "joint-f0b05ded918b65b354cd",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.06509529597069677
+    },
+    {
+      "id": "joint-962554ca2b5402c951da",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 5.3009788864661
+    },
+    {
+      "id": "joint-5e580992dfea79f22eec",
+      "target_state": 2,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.9252146696133168
+    },
+    {
+      "id": "joint-1cd50c49073f6185f9fa",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 4.417333093049242
+    },
+    {
+      "id": "joint-0f9de7a70fc0b433de61",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 5.772526139104382
+    },
+    {
+      "id": "joint-6a5e8dfda7abf76fbc72",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.2839878824830824
+    },
+    {
+      "id": "joint-7da1a6fa578f3e9e18d3",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.130706502531569
+    },
+    {
+      "id": "joint-792ef530a81004d6c849",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.2566726308598921
+    },
+    {
+      "id": "joint-386383446d7f92363348",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.22896247430700223
+    },
+    {
+      "id": "joint-1705adf359470ee2a891",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.18714491551328777
+    },
+    {
+      "id": "joint-030a99caab65dcdc5887",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.476446270942688
+    },
+    {
+      "id": "joint-2148ea3f01341231c0cb",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.07175312325953893
+    },
+    {
+      "id": "joint-607d99809e32eaa7f8c5",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.011369974295438005
+    },
+    {
+      "id": "joint-62b214fdf411f34d3a58",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.12620748615272
+    },
+    {
+      "id": "joint-87b7aaea211468c60033",
+      "target_state": 2,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.862512548609729
+    },
+    {
+      "id": "joint-11018265d0bd9cf16f65",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.1448847521691485
+    },
+    {
+      "id": "joint-503e810f6caf6eb9e617",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.7374031630692697
+    },
+    {
+      "id": "joint-c4ef750b5823bc352d81",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.933223301100363
+    },
+    {
+      "id": "joint-4f6fc537ad6e7ab001c6",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.644423677757489
+    },
+    {
+      "id": "joint-d80cf991f7c2ea6af5bd",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.6528502801934795
+    },
+    {
+      "id": "joint-93c0b5c827b154b342f0",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7550291056925107
+    },
+    {
+      "id": "joint-8080c9a7cbf4a446bd52",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.7390459096150779
+    },
+    {
+      "id": "joint-9ad5372aa070be0ef6f1",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.9474539756774902
+    },
+    {
+      "id": "joint-8b06513e05733f212b79",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.14200475895565068
+    },
+    {
+      "id": "joint-cd5eb34f40ec34aaf6d3",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.034653516326924046
+    },
+    {
+      "id": "joint-a02f23e9800bf80fe9a0",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 4.189803706908664
+    },
+    {
+      "id": "joint-f254c4d5923b1470513b",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.6234701949755478
+    },
+    {
+      "id": "joint-6e22a373443a53aad4c3",
+      "target_state": 1,
+      "predicted_state": 2,
+      "teacher_forced_loss": 4.830273926680865
+    },
+    {
+      "id": "joint-7a5e0e85e292a21cfb5d",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 4.000011584595673
+    },
+    {
+      "id": "joint-47480e845b4ece2ebbe1",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 4.363070914020261
+    },
+    {
+      "id": "joint-9d37194eccc3ca76d974",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.251141131707086
+    },
+    {
+      "id": "joint-fa79ac34bbdd16276cef",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.340742723405006
+    },
+    {
+      "id": "joint-227d5685fa8539593d81",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.27856422000479186
+    },
+    {
+      "id": "joint-a1329bc35aafe8675b8e",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.23997000209365135
+    },
+    {
+      "id": "joint-659622ce5a5ff4249285",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.5182675719261169
+    },
+    {
+      "id": "joint-8b59d076b72832a8c800",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.07110306285323932
+    },
+    {
+      "id": "joint-e2290fdeec9b7e453f3c",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.011369974295438005
+    },
+    {
+      "id": "joint-600db7d7499e511e1a30",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 3.4992493252800623
+    },
+    {
+      "id": "joint-9f99390286852012a95a",
+      "target_state": 2,
+      "predicted_state": 1,
+      "teacher_forced_loss": 5.058874929106143
+    },
+    {
+      "id": "joint-03593d83d58fc909b8a5",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 2.5364991108537347
+    },
+    {
+      "id": "joint-77277972a7cc32868687",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 5.253320721439323
+    },
+    {
+      "id": "joint-10358ab2e451bb8fcdd8",
+      "target_state": 1,
+      "predicted_state": 1,
+      "teacher_forced_loss": 5.4106696489891934
+    },
+    {
+      "id": "joint-921b87b1704849b8091e",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.881675922544654
+    },
+    {
+      "id": "joint-954aae9863bfc059f635",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.891542992373695
+    },
+    {
+      "id": "joint-a5145c713d3339a3e59c",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.9376908289829025
+    },
+    {
+      "id": "joint-a263a3b39a655e20a65b",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 0.9296715087278937
+    },
+    {
+      "id": "joint-d25ecbf15c92d758ceed",
+      "target_state": 2,
+      "predicted_state": 2,
+      "teacher_forced_loss": 1.1625237464904785
+    },
+    {
+      "id": "joint-48a68d7b807186314f34",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.13588267593547734
+    },
+    {
+      "id": "joint-0538647c09383e1a60d9",
+      "target_state": 0,
+      "predicted_state": 0,
+      "teacher_forced_loss": 0.034653516326924046
+    }
+  ]
+}

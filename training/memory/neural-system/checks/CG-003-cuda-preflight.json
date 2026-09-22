@@ -1,0 +1,3561 @@
+{
+  "experiment": {
+    "id": "CG-003-platform-preflight",
+    "seed": 1013,
+    "optimizer_steps": 0,
+    "training_approved": false,
+    "deployment_approved": false,
+    "native": {
+      "natural": "First train world, correct home_city, EN/ZH, both policies; four actual greedy positions per run, four runs. Prefix-chain smoke only, NOT complete-reply accuracy or registered 24-case baseline.",
+      "fixtures": "Separate fresh models, both policies, EN correct source. Four one-position fixtures: forced neural normal/supported/insufficient and disabled. Reader/factor output biases set for route coverage, content/uncertainty output matrices filled with deterministic nonzero normal noise std 0.001, seed 4013. These weights are NOT trained candidates, never saved or used as memory accuracy evidence.",
+      "tolerance": {
+        "atol": 1e-05,
+        "rtol": 0.0001,
+        "identical_top1": true
+      },
+      "backend": "Fresh C reference and C continuous projection at every actual predicted prefix. Python reader and copy remain; no answer/prefix-bank fallback or KV history reuse."
+    },
+    "cuda": {
+      "selection": "First train world, home_city, EN/ZH; correct, role_swap, value_swap, empty, ordinary_source, ordinary_empty. Twelve records, four pair kinds, two arms: sixteen comparisons. CPU and CUDA on the same GPU host use identical CPU-initialized weights.",
+      "forward_tolerance": {
+        "atol": 1e-05,
+        "rtol": 0.0001
+      },
+      "gradient_tolerance": {
+        "atol": 0.0001,
+        "rtol": 0.001
+      },
+      "loss_tolerance": {
+        "atol": 0.0001,
+        "rtol": 0.001
+      },
+      "precision": "FP32; AMP and TF32 off; finite active gradients, same disconnected gradients, no optimizer or parameter mutation",
+      "provenance": "Selected tensors exported from the verified full C package. Transfer a complete source snapshot into a fresh isolated server directory. Reuse output-head.npy ONLY after SHA256 verification; verify same 0.5B GGUF identity on server."
+    },
+    "failure_policy": "Retain every failure and denominator. No seed, tolerance or threshold search; a failure blocks training until diagnosed and separately revalidated."
+  },
+  "host": "pcm-6cb311adc5a8",
+  "python": "3.10.21",
+  "torch": "2.13.0+cu130",
+  "gpu": "NVIDIA GeForce RTX 5070",
+  "tf32": false,
+  "amp": false,
+  "rows": [
+    {
+      "arm": "joint_aux",
+      "language": "en",
+      "kind": "role_swap",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 1.30385160446167e-08
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 3.8743019104003906e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 2.60770320892334e-08
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.4901161193847656e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.4329862390916048e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 6.28642737865448e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 5.820766091346741e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 1.0728836059570312e-06
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 9.238719940185547e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 5.005858838558197e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 5.966285243630409e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 1.043081283569336e-07
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 2.60770320892334e-08
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 9.015202522277832e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 1.4156103134155273e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 2.0489096641540527e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 1.280568540096283e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 1.6842386685311794e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "en",
+      "kind": "value_swap",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 1.30385160446167e-08
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 3.8743019104003906e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.2494076869984383e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 4.6566128730773926e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 5.960464477539062e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 5.736947059631348e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 4.089088179171085e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 4.470348358154297e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 1.30385160446167e-08
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 3.725290298461914e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 5.066394805908203e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 7.078051567077637e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 1.3709068298339844e-06
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 9.778887033462524e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "disconnected": true
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 0.0
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "en",
+      "kind": "empty",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 1.30385160446167e-08
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 3.8743019104003906e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.3827036839941798e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 2.6193447411060333e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 4.656612873077393e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 3.8743019104003906e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 2.384185791015625e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 1.2223608791828156e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 1.5133991837501526e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 6.51925802230835e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 2.444721758365631e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 4.470348358154297e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 1.4156103134155273e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 2.0489096641540527e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 6.682239472866058e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 1.280568540096283e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 1.6842386685311794e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 1.043081283569336e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 4.470348358154297e-08
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 6.51925802230835e-08
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 0.0
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "en",
+      "kind": "ordinary_empty",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 8.940696716308594e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 8.940696716308594e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 4.867630742921847e-10
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 1.3096723705530167e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 2.1827872842550278e-11
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 2.2351741790771484e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 1.9371509552001953e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 1.1641532182693481e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 1.0477378964424133e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 2.60770320892334e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 2.1979212760925293e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 6.83940015733242e-10
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 1.1641532182693481e-10
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 1.862645149230957e-09
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 9.663381206337363e-13
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 6.566642114179175e-17
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "disconnected": true
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "zh",
+      "kind": "role_swap",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 6.51925802230835e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 7.450580596923828e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.60770320892334e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 9.313225746154785e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 8.195638656616211e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.787194460156627e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 5.238689482212067e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 4.2928149923682213e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 8.940696716308594e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 8.344650268554688e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 4.423782229423523e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 5.122274160385132e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 4.470348358154297e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 1.6763806343078613e-08
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 8.270144462585449e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 1.043081283569336e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 1.862645149230957e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 2.9685907065868378e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 3.125774128420744e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 0.0
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "zh",
+      "kind": "value_swap",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 6.51925802230835e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 7.450580596923828e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 3.725290298461914e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 3.5762786865234375e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 8.940696716308594e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.414617413431074e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 6.461050361394882e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 6.854534149169922e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 3.7997961044311523e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 3.026798367500305e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 2.7939677238464355e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 3.2782554626464844e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 2.7567148208618164e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 4.76837158203125e-07
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "disconnected": true
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "zh",
+      "kind": "empty",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 6.51925802230835e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 7.450580596923828e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.043081283569336e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.763309028834925e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 2.2118911147117615e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 4.0745362639427185e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 3.5762786865234375e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 2.980232238769531e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 1.280568540096283e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 1.7171259969472885e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 1.862645149230957e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 2.3469328880310059e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 1.043081283569336e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 1.862645149230957e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 2.9685907065868378e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 3.125774128420744e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 8.195638656616211e-08
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 6.332993507385254e-08
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_aux",
+      "language": "zh",
+      "kind": "ordinary_empty",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 2.60770320892334e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.7881393432617188e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 3.051323638203485e-08
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 2.35741026699543e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 1.9099388737231493e-11
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 2.384185791015625e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 1.4435499906539917e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 1.1459633242338896e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 1.4551915228366852e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 1.862645149230957e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 2.086162567138672e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 7.130438461899757e-10
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 9.458744898438454e-11
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 1.3642420526593924e-12
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 1.584801291290756e-17
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "disconnected": true
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "en",
+      "kind": "role_swap",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 1.30385160446167e-08
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 3.8743019104003906e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 2.60770320892334e-08
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.4901161193847656e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.4381723106637878e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 5.9371814131736755e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 4.656612873077393e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 6.854534149169922e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 8.046627044677734e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 5.820766091346741e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 6.05359673500061e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 1.6763806343078613e-08
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 6.109476089477539e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 1.4156103134155273e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 2.0489096641540527e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 1.280568540096283e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 1.6842386685311794e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 4.209578037261963e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 3.129243850708008e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 0.0
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "en",
+      "kind": "value_swap",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 1.30385160446167e-08
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 3.8743019104003906e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.2494076869984383e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 4.6566128730773926e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 7.152557373046875e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 5.513429641723633e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 4.470348358154297e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 1.30385160446167e-08
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 3.725290298461914e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 5.066394805908203e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 7.078051567077637e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 1.3709068298339844e-06
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 9.778887033462524e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "disconnected": true
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 4.76837158203125e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 3.5762786865234375e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 0.0
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "en",
+      "kind": "empty",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 1.30385160446167e-08
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 3.8743019104003906e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.3827036839941798e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 3.4924596548080444e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 5.820766091346741e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 3.725290298461914e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 3.2782554626464844e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 2.444721758365631e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 2.7939677238464355e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 6.51925802230835e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 2.4586915969848633e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 1.4156103134155273e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 2.0489096641540527e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 6.682239472866058e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 1.280568540096283e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 1.6842386685311794e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 2.980232238769531e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 8.940696716308594e-08
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 1.7881393432617188e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 0.0
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "en",
+      "kind": "ordinary_empty",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.1920928955078125e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 2.9315559313403128e-08
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 1.4260876923799515e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 2.1827872842550278e-11
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 2.086162567138672e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 1.6391277313232422e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 1.1350493878126144e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 1.0477378964424133e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 2.1606683731079102e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 6.83940015733242e-10
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 1.1641532182693481e-10
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 1.862645149230957e-09
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 9.663381206337363e-13
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 6.566642114179175e-17
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 5.273166792107986e-09
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 1.862645149230957e-09
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 5.2601425437615035e-09
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 1.862645149230957e-09
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "zh",
+      "kind": "role_swap",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 6.51925802230835e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 7.450580596923828e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 8.940696716308594e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.60770320892334e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 9.313225746154785e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 8.195638656616211e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.7503225454795768e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 4.190951585769653e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 4.0745362639427185e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 6.258487701416016e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 5.960464477539062e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 6.51925802230835e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 8.032657206058502e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 3.3527612686157227e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 1.30385160446167e-08
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 5.736947059631348e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 1.043081283569336e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 1.862645149230957e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 2.9685907065868378e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 3.125774128420744e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 3.5762786865234375e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 2.980232238769531e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "zh",
+      "kind": "value_swap",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 6.51925802230835e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 7.450580596923828e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 8.940696716308594e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 3.725290298461914e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 3.5762786865234375e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 1.1175870895385742e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.4146174136087097e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 6.810296326875687e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 8.731149137020111e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 7.748603820800781e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 4.76837158203125e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 3.725290298461914e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 9.313225746154785e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 3.2782554626464844e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 2.7567148208618164e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 4.76837158203125e-07
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "disconnected": true
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "disconnected": true
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 3.5762786865234375e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 3.5762786865234375e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "zh",
+      "kind": "empty",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 1.9073486328125e-06
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 6.51925802230835e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 7.450580596923828e-08
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 8.940696716308594e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.043081283569336e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 1.763309028834925e-05
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 2.3283064365386963e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 4.0745362639427185e-10
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 3.5762786865234375e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 3.2782554626464844e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 3.026798367500305e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 3.725290298461914e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 2.2351741790771484e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 2.3469328880310059e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 1.043081283569336e-07
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 1.862645149230957e-08
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 2.9685907065868378e-09
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 3.125774128420744e-07
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 1.7881393432617188e-07
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 2.086162567138672e-07
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 5.960464477539063e-08
+        }
+      },
+      "passed": true
+    },
+    {
+      "arm": "joint_product",
+      "language": "zh",
+      "kind": "ordinary_empty",
+      "checks": [
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 9.5367431640625e-07
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 5.587935447692871e-09
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 2.60770320892334e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 1.4901161193847656e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "supported",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "uncertainty",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "positions",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "copy_mass",
+          "passed": true,
+          "max_error": 0.0
+        },
+        {
+          "field": "factor_logits",
+          "passed": true,
+          "max_error": 1.7881393432617188e-07
+        },
+        {
+          "field": "state_probabilities",
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        {
+          "field": "supported_top1",
+          "passed": true
+        },
+        {
+          "field": "uncertainty_top1",
+          "passed": true
+        },
+        {
+          "field": "state_logits_top1",
+          "passed": true
+        },
+        {
+          "field": "loss",
+          "passed": true,
+          "max_error": 2.9091408393355778e-08
+        }
+      ],
+      "gradients": {
+        "reader.slot_queries": {
+          "passed": true,
+          "max_error": 2.1827872842550278e-09
+        },
+        "reader.null_key": {
+          "passed": true,
+          "max_error": 2.1827872842550278e-11
+        },
+        "reader.query_encoder.weight": {
+          "passed": true,
+          "max_error": 2.5331974029541016e-07
+        },
+        "reader.source_encoder.weight": {
+          "passed": true,
+          "max_error": 1.4156103134155273e-07
+        },
+        "reader.match_query.weight": {
+          "passed": true,
+          "max_error": 1.1859810911118984e-09
+        },
+        "reader.match_key.weight": {
+          "passed": true,
+          "max_error": 1.5133991837501526e-09
+        },
+        "reader.state_encoder.weight": {
+          "passed": true,
+          "max_error": 1.862645149230957e-08
+        },
+        "reader.state_encoder.bias": {
+          "passed": true,
+          "max_error": 7.450580596923828e-09
+        },
+        "reader.state_head.weight": {
+          "passed": true,
+          "max_error": 2.086162567138672e-07
+        },
+        "reader.state_head.bias": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.position_query.weight": {
+          "passed": true,
+          "max_error": 7.130438461899757e-10
+        },
+        "reader.position_key.weight": {
+          "passed": true,
+          "max_error": 9.458744898438454e-11
+        },
+        "reader.copy_gate.weight": {
+          "passed": true,
+          "max_error": 2.9802322387695312e-08
+        },
+        "reader.copy_gate.bias": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "roles.content.null_key": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.layer_gain": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.query.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.key.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.value.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.output.weight": {
+          "passed": true,
+          "max_error": 1.3642420526593924e-12
+        },
+        "roles.content.use_gate.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.content.use_gate.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.weight": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_encoder.bias": {
+          "passed": true,
+          "max_error": 0.0
+        },
+        "roles.uncertainty_output.weight": {
+          "passed": true,
+          "max_error": 1.584801291290756e-17
+        },
+        "factor_heads.0.weight": {
+          "passed": true,
+          "max_error": 2.298627066465997e-09
+        },
+        "factor_heads.0.bias": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        },
+        "factor_heads.1.weight": {
+          "passed": true,
+          "max_error": 2.2928383636156013e-09
+        },
+        "factor_heads.1.bias": {
+          "passed": true,
+          "max_error": 9.313225746154785e-10
+        }
+      },
+      "passed": true
+    }
+  ],
+  "passed": 16,
+  "total": 16,
+  "optimizer_steps": 0,
+  "parameters_unchanged": true,
+  "memory_accuracy_measured": false,
+  "training_approved": false,
+  "fixture_digest": "4912e5c8041f1901858b2b22c6ac33ce58176f282a7fe3f7870c88935cf43ae8",
+  "snapshot_sha256": "f9df0d1cc1450a3c20d5adbbab05b414f8643f89ca4e23c050207a0be23af8bf",
+  "head_sha256": "8a44471dd9502adcfaf8a04eceb4716e1fbfd228fbbb6832f06520a699b93cbd",
+  "gguf_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "experiment_sha256": "dd4fb92c15a138b0a43a63bc03a8ec2eaa1903fc30465c4efbcb53147772d4c8",
+  "source_sha256": "189eec5bb8ee77921b591bf3d6bae81466005ac7f0a84df5ff79446c0982ab4e"
+}

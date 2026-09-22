@@ -1,0 +1,971 @@
+{
+  "experiment": {
+    "id": "DG-002",
+    "status": "registered_numeric_diagnostic_not_training",
+    "phase": "P1-cell-gradient-07",
+    "parent_experiment": "DG-001",
+    "hypothesis": "A backward anchored to native intermediates with fixed int8 codes and differentiable scales can match the local derivative inside unchanged quantization cells; this alone may not change output ranking.",
+    "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+    "seed": 3180922,
+    "initial_fusion_gain": 0.1,
+    "cases_from": "DG-001",
+    "gain_perturbations": [
+      0.0001,
+      0.0003,
+      0.001,
+      0.003,
+      0.01,
+      0.05,
+      0.1
+    ],
+    "cell_definition": "Both perturbations preserve native codes, max-absolute index and sign at FFN-input, FFN-down-input and output-input quantizers. Report all cross-cell and ambiguous comparisons separately without deleting them.",
+    "local_derivative_tolerance": {
+      "atol": 0.005,
+      "rtol": 0.25
+    },
+    "local_gate": "Each case needs at least two unchanged-cell comparisons; all qualifying finite differences must satisfy the preregistered derivative tolerance and sign agreement. Insufficient unchanged cells is inconclusive, not a pass.",
+    "acceptance_rule": "Use the first preregistered step whose proposed negative-gradient direction actually lowers native NLL by more than 1e-6; otherwise report no accepted diagnostic step. No optimizer update.",
+    "measurements": [
+      "native forward bit equality",
+      "nonzero fusion gradient",
+      "quantizer code changes",
+      "finite difference derivative",
+      "actual NLL decrease",
+      "target rank",
+      "top-1 token",
+      "fixed-code logit proportionality"
+    ],
+    "constraints": {
+      "optimizer_steps": 0,
+      "backbone_frozen": true,
+      "kv_reuse": false,
+      "lora": false,
+      "svd": false,
+      "nas_ng": false,
+      "locomo": false
+    },
+    "failure_action": "Do not change DG-001 or reclassify NLL improvement as memory capability. Passing local math does not approve a training method or architectural promotion."
+  },
+  "parent_experiment_sha256": "9309227aaeaf5ff93233301b832c631d5cbe4a4a259edb80490ab9756160ac08",
+  "cases": [
+    {
+      "id": "home_en",
+      "target_id": 10259,
+      "base_nll": 23.167004416190043,
+      "target_rank": 5793,
+      "top1_token": 59396,
+      "local_gradient": 0.020946960896253586,
+      "finite_nonzero_gradient": true,
+      "same_cell_pairs": 3,
+      "all_pairs": 7,
+      "sufficient_local_pairs": true,
+      "local_gate_passed": true,
+      "accepted_diagnostic_step": {
+        "step": 0.0001,
+        "direction": "minus",
+        "same_cell": true,
+        "target_rank": 5793,
+        "top1_token": 59396,
+        "candidate": {
+          "nll": 23.166999887262985,
+          "same_cell": true,
+          "quantizers": {
+            "ffn_input": {
+              "changed_codes": 0,
+              "max_index_changed": false,
+              "max_sign_changed": false,
+              "ambiguous_max": false
+            },
+            "ffn_down_input": {
+              "changed_codes": 0,
+              "max_index_changed": false,
+              "max_sign_changed": false,
+              "ambiguous_max": false
+            },
+            "output_input": {
+              "changed_codes": 0,
+              "max_index_changed": false,
+              "max_sign_changed": false,
+              "ambiguous_max": false
+            }
+          },
+          "target_rank": 5793,
+          "top1_token": 59396,
+          "output_scale_ratio": 0.9999998034150218,
+          "logit_proportionality_max_abs": 1.5120004306368173e-06
+        }
+      },
+      "comparisons": [
+        {
+          "step": 0.0001,
+          "same_cell_pair": true,
+          "finite_difference": 0.022644635286894754,
+          "local_derivative_matches": true,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 23.166999887262985,
+            "same_cell": true,
+            "target_rank": 5793,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9999998034150218,
+            "logit_proportionality_max_abs": 1.5120004306368173e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 23.167004416190043,
+            "same_cell": true,
+            "target_rank": 5793,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0,
+            "logit_proportionality_max_abs": 0.0,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.0003,
+          "same_cell_pair": true,
+          "finite_difference": 0.019865364393467647,
+          "local_derivative_matches": true,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 23.166992981929777,
+            "same_cell": true,
+            "target_rank": 5793,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9999994757733915,
+            "logit_proportionality_max_abs": 1.8784080211275977e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 23.167004901148413,
+            "same_cell": true,
+            "target_rank": 5793,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.000000065528326,
+            "logit_proportionality_max_abs": 1.2847532957493968e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.001,
+          "same_cell_pair": true,
+          "finite_difference": 0.017159021426849108,
+          "local_derivative_matches": true,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 23.166983923714014,
+            "same_cell": true,
+            "target_rank": 5793,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9999990826034352,
+            "logit_proportionality_max_abs": 1.7503690159514917e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 23.167018241756868,
+            "same_cell": true,
+            "target_rank": 5793,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0000005897549344,
+            "logit_proportionality_max_abs": 1.7985466271852601e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.003,
+          "same_cell_pair": false,
+          "finite_difference": 13.520025269015079,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 23.166943177655302,
+            "same_cell": true,
+            "target_rank": 5793,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9999973133386315,
+            "logit_proportionality_max_abs": 1.8748211907393397e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 23.248063329269392,
+            "same_cell": false,
+            "target_rank": 6107,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0004321593103693,
+            "logit_proportionality_max_abs": 0.2684963710287427,
+            "quantizer_changed_codes": {
+              "ffn_input": 1,
+              "ffn_down_input": 46,
+              "output_input": 15
+            }
+          }
+        },
+        {
+          "step": 0.01,
+          "same_cell_pair": false,
+          "finite_difference": -5.096139656571985,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": false,
+          "minus": {
+            "nll": 23.317209461085138,
+            "same_cell": false,
+            "target_rank": 6196,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.999265361936535,
+            "logit_proportionality_max_abs": 0.36377478368734684,
+            "quantizer_changed_codes": {
+              "ffn_input": 3,
+              "ffn_down_input": 67,
+              "output_input": 23
+            }
+          },
+          "plus": {
+            "nll": 23.2152866679537,
+            "same_cell": false,
+            "target_rank": 5873,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9999853871832884,
+            "logit_proportionality_max_abs": 0.34724682349054614,
+            "quantizer_changed_codes": {
+              "ffn_input": 5,
+              "ffn_down_input": 78,
+              "output_input": 22
+            }
+          }
+        },
+        {
+          "step": 0.05,
+          "same_cell_pair": false,
+          "finite_difference": 0.3747749362235808,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 23.133858574466018,
+            "same_cell": false,
+            "target_rank": 5843,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9996748484460874,
+            "logit_proportionality_max_abs": 0.42317867762396144,
+            "quantizer_changed_codes": {
+              "ffn_input": 17,
+              "ffn_down_input": 219,
+              "output_input": 32
+            }
+          },
+          "plus": {
+            "nll": 23.171336068088376,
+            "same_cell": false,
+            "target_rank": 5862,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0002007132627235,
+            "logit_proportionality_max_abs": 0.33097971929249503,
+            "quantizer_changed_codes": {
+              "ffn_input": 16,
+              "ffn_down_input": 177,
+              "output_input": 21
+            }
+          }
+        },
+        {
+          "step": 0.1,
+          "same_cell_pair": false,
+          "finite_difference": 1.635095356174272,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 22.95523203874586,
+            "same_cell": false,
+            "target_rank": 5392,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0001815134631877,
+            "logit_proportionality_max_abs": 0.4573974098036757,
+            "quantizer_changed_codes": {
+              "ffn_input": 29,
+              "ffn_down_input": 289,
+              "output_input": 33
+            }
+          },
+          "plus": {
+            "nll": 23.282251109980713,
+            "same_cell": false,
+            "target_rank": 6172,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0007398803295497,
+            "logit_proportionality_max_abs": 0.40198282952012754,
+            "quantizer_changed_codes": {
+              "ffn_input": 34,
+              "ffn_down_input": 240,
+              "output_input": 24
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "home_zh",
+      "target_id": 10924,
+      "base_nll": 26.83622829278976,
+      "target_rank": 29481,
+      "top1_token": 59396,
+      "local_gradient": 0.02472378872334957,
+      "finite_nonzero_gradient": true,
+      "same_cell_pairs": 3,
+      "all_pairs": 7,
+      "sufficient_local_pairs": true,
+      "local_gate_passed": false,
+      "accepted_diagnostic_step": {
+        "step": 0.0001,
+        "direction": "minus",
+        "same_cell": true,
+        "target_rank": 29481,
+        "top1_token": 59396,
+        "candidate": {
+          "nll": 26.836220664123136,
+          "same_cell": true,
+          "quantizers": {
+            "ffn_input": {
+              "changed_codes": 0,
+              "max_index_changed": false,
+              "max_sign_changed": false,
+              "ambiguous_max": false
+            },
+            "ffn_down_input": {
+              "changed_codes": 0,
+              "max_index_changed": false,
+              "max_sign_changed": false,
+              "ambiguous_max": false
+            },
+            "output_input": {
+              "changed_codes": 0,
+              "max_index_changed": false,
+              "max_sign_changed": false,
+              "ambiguous_max": false
+            }
+          },
+          "target_rank": 29481,
+          "top1_token": 59396,
+          "output_scale_ratio": 0.9999997000488321,
+          "logit_proportionality_max_abs": 1.6449182496103276e-06
+        }
+      },
+      "comparisons": [
+        {
+          "step": 0.0001,
+          "same_cell_pair": true,
+          "finite_difference": 0.03814333311424889,
+          "local_derivative_matches": false,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 26.836220664123136,
+            "same_cell": true,
+            "target_rank": 29481,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9999997000488321,
+            "logit_proportionality_max_abs": 1.6449182496103276e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 26.83622829278976,
+            "same_cell": true,
+            "target_rank": 29481,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0,
+            "logit_proportionality_max_abs": 0.0,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.0003,
+          "same_cell_pair": true,
+          "finite_difference": 0.025339158445566078,
+          "local_derivative_matches": true,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 26.83621881099329,
+            "same_cell": true,
+            "target_rank": 29481,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.99999962506104,
+            "logit_proportionality_max_abs": 1.6011494352596856e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 26.836234014488358,
+            "same_cell": true,
+            "target_rank": 29481,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.000000224963376,
+            "logit_proportionality_max_abs": 1.7940169279029305e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.001,
+          "same_cell_pair": true,
+          "finite_difference": 0.027388719308518716,
+          "local_derivative_matches": true,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 26.836194971201035,
+            "same_cell": true,
+            "target_rank": 29481,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9999987252075362,
+            "logit_proportionality_max_abs": 1.8065165647840331e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 26.836249748639652,
+            "same_cell": true,
+            "target_rank": 29481,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.000000824865712,
+            "logit_proportionality_max_abs": 1.7481989544876342e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.003,
+          "same_cell_pair": false,
+          "finite_difference": -12.84552062425585,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": false,
+          "minus": {
+            "nll": 26.91976546050857,
+            "same_cell": false,
+            "target_rank": 29989,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0003007010458698,
+            "logit_proportionality_max_abs": 0.21689312408928263,
+            "quantizer_changed_codes": {
+              "ffn_input": 3,
+              "ffn_down_input": 59,
+              "output_input": 12
+            }
+          },
+          "plus": {
+            "nll": 26.842692336763037,
+            "same_cell": false,
+            "target_rank": 29427,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0000025495849276,
+            "logit_proportionality_max_abs": 0.06132220664587251,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 1
+            }
+          }
+        },
+        {
+          "step": 0.01,
+          "same_cell_pair": false,
+          "finite_difference": 0.5718016105086932,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": false,
+          "minus": {
+            "nll": 26.83901715728542,
+            "same_cell": false,
+            "target_rank": 29550,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9994309176466072,
+            "logit_proportionality_max_abs": 0.25499883600195794,
+            "quantizer_changed_codes": {
+              "ffn_input": 8,
+              "ffn_down_input": 94,
+              "output_input": 16
+            }
+          },
+          "plus": {
+            "nll": 26.850453189495592,
+            "same_cell": false,
+            "target_rank": 29210,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0002301375336096,
+            "logit_proportionality_max_abs": 0.21166874396996782,
+            "quantizer_changed_codes": {
+              "ffn_input": 4,
+              "ffn_down_input": 94,
+              "output_input": 12
+            }
+          }
+        },
+        {
+          "step": 0.05,
+          "same_cell_pair": false,
+          "finite_difference": 0.2556856648042327,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": false,
+          "minus": {
+            "nll": 26.870886219659702,
+            "same_cell": false,
+            "target_rank": 29177,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.001866746093736,
+            "logit_proportionality_max_abs": 0.29581833680233416,
+            "quantizer_changed_codes": {
+              "ffn_input": 21,
+              "ffn_down_input": 181,
+              "output_input": 23
+            }
+          },
+          "plus": {
+            "nll": 26.896454786140126,
+            "same_cell": false,
+            "target_rank": 29669,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0003148737385554,
+            "logit_proportionality_max_abs": 0.33619770776992475,
+            "quantizer_changed_codes": {
+              "ffn_input": 10,
+              "ffn_down_input": 154,
+              "output_input": 24
+            }
+          }
+        },
+        {
+          "step": 0.1,
+          "same_cell_pair": false,
+          "finite_difference": -0.5636555312536728,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": false,
+          "minus": {
+            "nll": 26.91012833805559,
+            "same_cell": false,
+            "target_rank": 29329,
+            "top1_token": 59396,
+            "output_scale_ratio": 1.0023140482729411,
+            "logit_proportionality_max_abs": 0.3458535962378786,
+            "quantizer_changed_codes": {
+              "ffn_input": 29,
+              "ffn_down_input": 217,
+              "output_input": 28
+            }
+          },
+          "plus": {
+            "nll": 26.797397231804855,
+            "same_cell": false,
+            "target_rank": 29033,
+            "top1_token": 59396,
+            "output_scale_ratio": 0.9991523379993738,
+            "logit_proportionality_max_abs": 0.3192448210423695,
+            "quantizer_changed_codes": {
+              "ffn_input": 28,
+              "ffn_down_input": 238,
+              "output_input": 23
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "drink_en",
+      "target_id": 14336,
+      "base_nll": 29.00058034466204,
+      "target_rank": 53544,
+      "top1_token": 5,
+      "local_gradient": 0.03796294704079628,
+      "finite_nonzero_gradient": true,
+      "same_cell_pairs": 3,
+      "all_pairs": 7,
+      "sufficient_local_pairs": true,
+      "local_gate_passed": true,
+      "accepted_diagnostic_step": {
+        "step": 0.0001,
+        "direction": "minus",
+        "same_cell": true,
+        "target_rank": 53544,
+        "top1_token": 5,
+        "candidate": {
+          "nll": 29.000573670223606,
+          "same_cell": true,
+          "quantizers": {
+            "ffn_input": {
+              "changed_codes": 0,
+              "max_index_changed": false,
+              "max_sign_changed": false,
+              "ambiguous_max": false
+            },
+            "ffn_down_input": {
+              "changed_codes": 0,
+              "max_index_changed": false,
+              "max_sign_changed": false,
+              "ambiguous_max": false
+            },
+            "output_input": {
+              "changed_codes": 0,
+              "max_index_changed": false,
+              "max_sign_changed": false,
+              "ambiguous_max": false
+            }
+          },
+          "target_rank": 53544,
+          "top1_token": 5,
+          "output_scale_ratio": 0.9999998030251399,
+          "logit_proportionality_max_abs": 1.6161013185467255e-06
+        }
+      },
+      "comparisons": [
+        {
+          "step": 0.0001,
+          "same_cell_pair": true,
+          "finite_difference": 0.047676488090786506,
+          "local_derivative_matches": true,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 29.000573670223606,
+            "same_cell": true,
+            "target_rank": 53544,
+            "top1_token": 5,
+            "output_scale_ratio": 0.9999998030251399,
+            "logit_proportionality_max_abs": 1.6161013185467255e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 29.000583205521224,
+            "same_cell": true,
+            "target_rank": 53544,
+            "top1_token": 5,
+            "output_scale_ratio": 1.0000001313165734,
+            "logit_proportionality_max_abs": 1.7129979106300652e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.0003,
+          "same_cell_pair": true,
+          "finite_difference": 0.04691052758095301,
+          "local_derivative_matches": true,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 29.000566500762247,
+            "same_cell": true,
+            "target_rank": 53544,
+            "top1_token": 5,
+            "output_scale_ratio": 0.9999995403919931,
+            "logit_proportionality_max_abs": 1.8588528121199488e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 29.000594647078795,
+            "same_cell": true,
+            "target_rank": 53544,
+            "top1_token": 5,
+            "output_scale_ratio": 1.0000005252662936,
+            "logit_proportionality_max_abs": 1.4122572871144712e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.001,
+          "same_cell_pair": true,
+          "finite_difference": 0.03529811252356296,
+          "local_derivative_matches": true,
+          "proposed_direction": "minus",
+          "actual_loss_improves": true,
+          "minus": {
+            "nll": 29.000544569721583,
+            "same_cell": true,
+            "target_rank": 53544,
+            "top1_token": 5,
+            "output_scale_ratio": 0.9999987524925527,
+            "logit_proportionality_max_abs": 1.7405894254807208e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          },
+          "plus": {
+            "nll": 29.00061516594663,
+            "same_cell": true,
+            "target_rank": 53544,
+            "top1_token": 5,
+            "output_scale_ratio": 1.0000012475074473,
+            "logit_proportionality_max_abs": 1.7592608259064946e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.003,
+          "same_cell_pair": false,
+          "finite_difference": -5.406827145110427,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": false,
+          "minus": {
+            "nll": 29.033137672021507,
+            "same_cell": false,
+            "target_rank": 53602,
+            "top1_token": 5,
+            "output_scale_ratio": 0.9999959948445113,
+            "logit_proportionality_max_abs": 0.07978606397213817,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 1
+            }
+          },
+          "plus": {
+            "nll": 29.000696709150844,
+            "same_cell": true,
+            "target_rank": 53544,
+            "top1_token": 5,
+            "output_scale_ratio": 1.0000040708137754,
+            "logit_proportionality_max_abs": 1.7195145467496786e-06,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 0
+            }
+          }
+        },
+        {
+          "step": 0.01,
+          "same_cell_pair": false,
+          "finite_difference": -6.4033635785644805,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": false,
+          "minus": {
+            "nll": 29.177814468186654,
+            "same_cell": false,
+            "target_rank": 54016,
+            "top1_token": 5,
+            "output_scale_ratio": 1.0003864646755134,
+            "logit_proportionality_max_abs": 0.27608810507263293,
+            "quantizer_changed_codes": {
+              "ffn_input": 1,
+              "ffn_down_input": 42,
+              "output_input": 9
+            }
+          },
+          "plus": {
+            "nll": 29.049747196615364,
+            "same_cell": false,
+            "target_rank": 53748,
+            "top1_token": 5,
+            "output_scale_ratio": 1.0000132629739134,
+            "logit_proportionality_max_abs": 0.10974561207280242,
+            "quantizer_changed_codes": {
+              "ffn_input": 0,
+              "ffn_down_input": 0,
+              "output_input": 2
+            }
+          }
+        },
+        {
+          "step": 0.05,
+          "same_cell_pair": false,
+          "finite_difference": 0.24134194572294376,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": false,
+          "minus": {
+            "nll": 29.19334291935008,
+            "same_cell": false,
+            "target_rank": 54283,
+            "top1_token": 5,
+            "output_scale_ratio": 1.0012917611325267,
+            "logit_proportionality_max_abs": 0.3278665847017006,
+            "quantizer_changed_codes": {
+              "ffn_input": 16,
+              "ffn_down_input": 162,
+              "output_input": 22
+            }
+          },
+          "plus": {
+            "nll": 29.217477113922374,
+            "same_cell": false,
+            "target_rank": 54321,
+            "top1_token": 5,
+            "output_scale_ratio": 1.000242147761348,
+            "logit_proportionality_max_abs": 0.294306997362062,
+            "quantizer_changed_codes": {
+              "ffn_input": 7,
+              "ffn_down_input": 129,
+              "output_input": 16
+            }
+          }
+        },
+        {
+          "step": 0.1,
+          "same_cell_pair": false,
+          "finite_difference": -0.38814181669803105,
+          "local_derivative_matches": null,
+          "proposed_direction": "minus",
+          "actual_loss_improves": false,
+          "minus": {
+            "nll": 29.163370276659688,
+            "same_cell": false,
+            "target_rank": 54223,
+            "top1_token": 5,
+            "output_scale_ratio": 1.0007571057039324,
+            "logit_proportionality_max_abs": 0.2990363463573811,
+            "quantizer_changed_codes": {
+              "ffn_input": 23,
+              "ffn_down_input": 179,
+              "output_input": 17
+            }
+          },
+          "plus": {
+            "nll": 29.08574191332008,
+            "same_cell": false,
+            "target_rank": 54021,
+            "top1_token": 5,
+            "output_scale_ratio": 1.000327963142064,
+            "logit_proportionality_max_abs": 0.27777933399504384,
+            "quantizer_changed_codes": {
+              "ffn_input": 21,
+              "ffn_down_input": 171,
+              "output_input": 19
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "local_gate_passed": false,
+  "native_forward_exact": true,
+  "memory_accuracy_measured": false,
+  "optimizer_steps": 0,
+  "training_approved": false,
+  "encoder_identity": {
+    "encoder_id": "f7653ec60c43b2cefa710bd4273513050cedc9dc0b34243c6e622bb7be1fbc01",
+    "binding": {
+      "policy": {
+        "format": "native-reader-f32-v1",
+        "wire_format": "BNEN0001",
+        "hidden": 1024,
+        "layers": 24,
+        "dtype": "float32",
+        "bos": "encoded_then_drop_feature_row",
+        "normalization": "c_ordered_f32_l2_eps1e-12",
+        "message_frame": "json-role-speaker-text-v1",
+        "threads": 4,
+        "metal": false,
+        "context_capacity": 512,
+        "maximum_tokens_with_bos": 511,
+        "cross_input_kv_reuse": false,
+        "internal_prefill_kv_buffers": true
+      },
+      "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+      "binary_sha256": "dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0",
+      "message_frame_source_sha256": "3aa68b33252ad35f22ff150f905fe02fa1905ca55a0645d1229bc845a4feb0b5",
+      "system": "Darwin",
+      "machine": "arm64",
+      "os_release": "25.2.0",
+      "dispatch": "arm_neon"
+    }
+  },
+  "source_sha256": {
+    "python/native_cell_gradient.py": "445d131f7b289cc1085b8a60a4bec1e974d1d99d5160bace4de155718e005fbf",
+    "python/diagnose_native_cell_gradient.py": "aa7ec75e781e754a70a8eb6161561fe4efab1b827eb5a28c2a5cdd74a2f1cb8d",
+    "python/diagnose_native_generation_gradient.py": "e35374a932753af50339878891a7824d720496ac09dd0f5b8d3f1e895466373a",
+    "python/native_generation_bridge.py": "a2201a7325c39df76a85176a01973fee577417dcca1b0042cb9c27fdbfb785e9",
+    "python/memory_fusion.py": "d3a62c46afe9dbd3f8fb9c74eda2c0351a9c389db8ef59ba18839e2fcdb3371d",
+    "src/bitnet.c": "d434728fd1db00db0e3ba4429f59bf2acdedba328256e1f74af02b928582be63",
+    "src/ops.c": "98137f23d07fcf926f6a52d08771e85d5cb7c73358e1319cb3d154975d05f65e",
+    "tools/memory_gradient_probe.c": "7a74cd318b8235dc99c53c93bd295822c36f6eb2c2bc948c6f0b561462eaaa68"
+  },
+  "artifact_sha256": {
+    "build/memory_gradient_probe": "adbada4f7e8f1ca0ce15ffb93dada12648d87b941dec5330dc9d90734b281b0e",
+    "build/memory_gradient_reference": "4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152",
+    "build/libggwshim.so": "79c37c2f3b3dffd175d80507ed1acc965f5767456e1a84efddd3a51df1b86a67",
+    "build/tok_probe": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+    "training/memory/neural-system/experiments/DG-002.json": "ebffa9cc1375d57dcee4a44cf410a813f6c0b08a8c75d0ddafe952d82ad5593c"
+  },
+  "full_report_path": "build/neural-memory-dg002/summary.json",
+  "full_report_sha256": "9f4cd8655df4808c252029bd79d23cb566d8f0ac366db03a79efcb8874c6f45a",
+  "status": "local_gate_failed_no_training",
+  "raw_artifact_count": 211,
+  "raw_hash_manifest_sha256": "cb7825b84b837fa354dae24b3b1f9a65a39163e965b1abfa2086f4e0854964bb"
+}

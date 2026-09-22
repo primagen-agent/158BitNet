@@ -1,0 +1,73 @@
+{
+  "format": "joint-training-features-v1",
+  "scope": "full",
+  "splits": [
+    "train",
+    "dev"
+  ],
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "corpus_manifest_digest": "fcff455f690e360298701b123102e3a90527d83bf12ef390ca59d035fbd2bf2c",
+  "template_version": "gguf-chatml-v2",
+  "encoder_identity": {
+    "encoder_id": "f7653ec60c43b2cefa710bd4273513050cedc9dc0b34243c6e622bb7be1fbc01",
+    "binding": {
+      "policy": {
+        "format": "native-reader-f32-v1",
+        "wire_format": "BNEN0001",
+        "hidden": 1024,
+        "layers": 24,
+        "dtype": "float32",
+        "bos": "encoded_then_drop_feature_row",
+        "normalization": "c_ordered_f32_l2_eps1e-12",
+        "message_frame": "json-role-speaker-text-v1",
+        "threads": 4,
+        "metal": false,
+        "context_capacity": 512,
+        "maximum_tokens_with_bos": 511,
+        "cross_input_kv_reuse": false,
+        "internal_prefill_kv_buffers": true
+      },
+      "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+      "binary_sha256": "dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0",
+      "message_frame_source_sha256": "3aa68b33252ad35f22ff150f905fe02fa1905ca55a0645d1229bc845a4feb0b5",
+      "system": "Darwin",
+      "machine": "arm64",
+      "os_release": "25.2.0",
+      "dispatch": "arm_neon"
+    }
+  },
+  "tokenizer_sha256": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+  "records_sha256": "38f2cd9a3a651d10b8aaac66d8b568fe2e478e6cb55b46573324961fec545fbe",
+  "output_head_sha256": "8a44471dd9502adcfaf8a04eceb4716e1fbfd228fbbb6832f06520a699b93cbd",
+  "prefix_manifest_digest": "14a1058b4aca4db7bd806175d159fc0cdc68f55c51a750d2b3a60e8114b01ff7",
+  "token_manifest_digest": "09cb6b850e8faf280dbbdb81f08b78e903beba95f2c5ac7c0e7557d4451e8d49",
+  "logit_scale": 4.0,
+  "blocked_ids": [
+    1,
+    73440
+  ],
+  "reference_parity": [
+    true,
+    true,
+    true,
+    true
+  ],
+  "records": 768,
+  "prefixes": 1764,
+  "texts": 608,
+  "binaries_sha256": {
+    "prefix_probe": "2735729604b1a52d99d1a60f48234b96ce3683d63aeec6434879bbfe7753e302",
+    "reference_probe": "4c05a9c4faa7b61d03a017a3a80f43c36329c5d8af945ea5c9f1359640de9152",
+    "encoder_probe": "dcee4c7034c2dbc08edda5c05e93318cdc66b4c98eedbb88e3b7822707eff6e0",
+    "tok_probe": "f3d5fd147895e5875776a579d864f7a36ef16b55a4f59da00838f8b59f416adc",
+    "lib": "79c37c2f3b3dffd175d80507ed1acc965f5767456e1a84efddd3a51df1b86a67"
+  },
+  "optimizer_steps": 0,
+  "source_sha256": {
+    "prepare_joint_training_features.py": "e1e1ed9b630fdc671d9f6c647a5944e15b98dec9775507fbb06e5e869fcf564f",
+    "joint_training_data.py": "7de2a15fc76e7f64595c7ab1cb3aa3ff9ad8b9a0b610d18c2398b34f2c89d155",
+    "availability_supervision.py": "3e5cf4fbf64962bb909ee7e6ab06617799000b8998b5728c3358b3b9e0af5f6a",
+    "native_memory_encoder.py": "5e8d8cee8ff5002d7b8ded73c3053b7fb48475d2c4ed1dfeabbdbae9dbdf90c5",
+    "native_prefix_bank.py": "ede73dacd36bb88320fce230adfb2b2c26a39088630bd6c681a9fc574ff886cf"
+  }
+}

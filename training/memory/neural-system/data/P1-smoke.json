@@ -1,0 +1,24 @@
+{
+  "format": "neural-memory-p1-smoke-v1",
+  "seed": 3180919,
+  "train_worlds": 8,
+  "dev_worlds": 8,
+  "worlds": [
+    {"id": "w01", "a": "Mara", "b": "Basil", "alias": "May", "city": "Lima", "other_city": "Oslo", "drink": "tea"},
+    {"id": "w02", "a": "Cleo", "b": "Dorian", "alias": "Cee", "city": "Rome", "other_city": "Kyoto", "drink": "coffee"},
+    {"id": "w03", "a": "Elin", "b": "Farid", "alias": "Ellie", "city": "Paris", "other_city": "Seoul", "drink": "cocoa"},
+    {"id": "w04", "a": "Gita", "b": "Hugo", "alias": "Gigi", "city": "Oslo", "other_city": "Lima", "drink": "juice"},
+    {"id": "w05", "a": "Inez", "b": "Jules", "alias": "Izzy", "city": "Kyoto", "other_city": "Rome", "drink": "milk"},
+    {"id": "w06", "a": "Kira", "b": "Leif", "alias": "Kay", "city": "Seoul", "other_city": "Paris", "drink": "water"},
+    {"id": "w07", "a": "Mina", "b": "Nabil", "alias": "Mimi", "city": "Lima", "other_city": "Kyoto", "drink": "coffee"},
+    {"id": "w08", "a": "Orla", "b": "Pavel", "alias": "Ora", "city": "Rome", "other_city": "Seoul", "drink": "tea"},
+    {"id": "w09", "a": "Quinn", "b": "Ravi", "alias": "Que", "city": "Paris", "other_city": "Oslo", "drink": "juice"},
+    {"id": "w10", "a": "Sora", "b": "Tomas", "alias": "Sol", "city": "Oslo", "other_city": "Rome", "drink": "cocoa"},
+    {"id": "w11", "a": "Uma", "b": "Viktor", "alias": "Umi", "city": "Kyoto", "other_city": "Paris", "drink": "water"},
+    {"id": "w12", "a": "Willa", "b": "Xavi", "alias": "Willow", "city": "Seoul", "other_city": "Lima", "drink": "milk"},
+    {"id": "w13", "a": "Yara", "b": "Zubin", "alias": "Yari", "city": "Lima", "other_city": "Paris", "drink": "cocoa"},
+    {"id": "w14", "a": "Anika", "b": "Benoit", "alias": "Ani", "city": "Rome", "other_city": "Oslo", "drink": "juice"},
+    {"id": "w15", "a": "Corin", "b": "Dev", "alias": "Cory", "city": "Paris", "other_city": "Kyoto", "drink": "tea"},
+    {"id": "w16", "a": "Esme", "b": "Felix", "alias": "Ezzie", "city": "Oslo", "other_city": "Seoul", "drink": "coffee"}
+  ]
+}

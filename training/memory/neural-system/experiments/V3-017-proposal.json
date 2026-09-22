@@ -1,0 +1,20 @@
+{
+ "id": "V3-017",
+ "status": "unfreezing_span_heads_insufficient",
+ "optimizer_steps": 0,
+ "deployment_approved": false,
+ "hypothesis": "BUG FOUND: V3-008..016 froze ALL parameters except route/mode heads - the fact/value/span/boundary heads (which control span selection) were never trainable, so all value-weighting rounds (2x/4x/8x) had ZERO effect on span selection. The correct fix: unfreeze fact/value/span/boundary heads alongside route/mode, keep only the query/source embedding layers frozen (trunk).",
+ "changes": {
+  "trainable": "route + mode + fact + fact_value + value + value_query + span + boundaries + offset + refine heads (all small MLPs)",
+  "frozen": "query, source, query_pool (the large embedding projections from the C backbone)",
+  "base": "V3-013 ckpt-440",
+  "value_weight": "2x on canonical prefixes"
+ },
+ "evaluation": "EV-012 same panel/gates",
+ "user_approval": {
+  "approved": true,
+  "date": "2026-09-21",
+  "via": "stop-hook directive after bug discovery"
+ },
+ "result": "Even with fact/value/span/boundary heads unfrozen (V3-017, LBFGS on V3-013 base), span selection identical failure: copies distractor city. The frozen query/source Linear projections (2048->width, from C backbone) are the information bottleneck - they compress the question \"Where does Brenna live?\" into a 64-dim representation that does not distinguish Brenna-ness from the other person. Seven rounds (V3-008..017) exhaustively confirm: the C backbone features through frozen projections lack the subject-identity signal needed for query-conditioned span selection."
+}

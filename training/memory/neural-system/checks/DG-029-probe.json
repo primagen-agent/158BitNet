@@ -1,0 +1,47 @@
+{
+  "format": "dg029-balanced-structural-probe-v1",
+  "registration_sha256": "d691003ae6b549510f50b5e850def89a60c3b1f6482c03334c5431d8e237074a",
+  "items": 892,
+  "route_probe_cv_recall": {
+    "0": [
+      96,
+      96,
+      1.0
+    ],
+    "1": [
+      188,
+      268,
+      0.701
+    ],
+    "2": [
+      462,
+      528,
+      0.875
+    ]
+  },
+  "route_actual_recall": {
+    "0": null,
+    "note": "actual trained-head recalls from DG-027-style probe: r0=48/96=0.5,r1=268/268=1.0,r2=96/528=0.182"
+  },
+  "mode_class_counts": {
+    "0": 2180,
+    "1": 268
+  },
+  "mode_probe_cv_recall": {
+    "0": [
+      2178,
+      2180,
+      0.999
+    ],
+    "1": [
+      267,
+      268,
+      0.996
+    ]
+  },
+  "mode_actual_note": "start never predicted: 0/268",
+  "route_structural_augmented": true,
+  "features_standardized": true,
+  "frozen_reader_digest": "2ba652e67f8eded9f3dea3ca66705f94838e431597c9265fb660cdfdd06051b0",
+  "optimizer_steps": 0
+}

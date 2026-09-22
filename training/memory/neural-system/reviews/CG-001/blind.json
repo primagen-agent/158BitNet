@@ -1,0 +1,514 @@
+{
+  "format": "neural-memory-blind-review-v1",
+  "packets": [
+    {
+      "id": "021c5c8419811a20a23c33da1122aec42f05a8ad6c700abc99083569278468b0",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Celia目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia现在住在Graz。"
+        }
+      ],
+      "response": "对不起，我目前无法提供Celia目前住在哪座城市的信息。",
+      "packet_sha256": "a64fbf641fcc621f57563106df67ce024ba3dfc36569de9c6f26b8d41707a87d"
+    },
+    {
+      "id": "0a338de394838c95f968cc66bbc38570163346abfc8e6d2dfe99016e2c2d1032",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Celia currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia currently lives in Graz."
+        }
+      ],
+      "response": "Celia currently lives in New York.",
+      "packet_sha256": "3e39be8afcc1633927ed0ed6df0ef6320c0308b3a86890c1f70877c3b7e814f6"
+    },
+    {
+      "id": "135ed1129311b5bda398b4913e8b90c188f02163c735bc2eb9e90e1c95336b04",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Adela目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela现在住在Turin。"
+        }
+      ],
+      "response": "抱歉，我无法提供实时更新的信息。建议您访问相关网站或应用程序以获取最新的居住信息。",
+      "packet_sha256": "afa68b96639eeb3866fc3c1db9b2d761d8b34dfbf0ff7fa425c2d965dab85e29"
+    },
+    {
+      "id": "161482f84344ae842a2a807047f333f593701aba0d71982f37638c53a6b65cf1",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "请算一下3与31的和。"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia现在住在Turin。"
+        }
+      ],
+      "response": "好的，计算结果是64。",
+      "packet_sha256": "c5cf00d1e1363752ae3096873d5d2ea228e671f26bec77856c021deea99ef426"
+    },
+    {
+      "id": "16a680ba752dc54fd9216c4e4f3ee8309098c1768b9aff474b368b28ae50666c",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Adela currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela currently lives in Turin."
+        }
+      ],
+      "response": "Adela is currently living in Berlin.",
+      "packet_sha256": "7122fa88b635b9cdccb3c186510a7695cf094ba9b2d1b6d571af9b63de604184"
+    },
+    {
+      "id": "24b26952e1e4a9698efc9f80f9418f36e20bed2f481899200b46ac9c481db8b9",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Adela目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela现在住在Turin。"
+        }
+      ],
+      "response": "抱歉，我目前无法提供实时更新的信息。",
+      "packet_sha256": "d9dc6ab6fac021c3392378ad0a7e52536b699d14b915af25fb96d5e895756f93"
+    },
+    {
+      "id": "26b39a2122dc8cb4cc08258f7f851fba5d9ac04ea95ad9994f7886be3ff9d351",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Please add 2 and 30."
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela currently lives in Rennes."
+        }
+      ],
+      "response": "Ok.",
+      "packet_sha256": "a3c1062111fb99e9bb557359c20095a1e0c78ebcffd1a1e446d5f3e1e919c44f"
+    },
+    {
+      "id": "28e4f7f533e7525758436cced41463b9c522065889aefefd611e6955e23a45a7",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Adela currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela currently lives in Rennes."
+        }
+      ],
+      "response": "Adela is currently living in Berlin.",
+      "packet_sha256": "087193eac9a1aeda41a514500bc08c5edfae316a734dc5ec3753d1503a45befe"
+    },
+    {
+      "id": "38e0632b6120cb433480e15eafc821de4610c01503d9a3967822025ed7ddcaf7",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Adela currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela currently lives in Rennes."
+        }
+      ],
+      "response": "Adela is currently living in the United States.",
+      "packet_sha256": "d257b4dc74d14d36740f380983d5002098c6c64f36fbe979d0e2e590587b12f9"
+    },
+    {
+      "id": "3b614ee5bdcd6635414fc95ed414ccae7960113830911265eb7d3f3d98552b3c",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Adela currently living?"
+        }
+      ],
+      "episodes": [],
+      "response": "Adela is currently living in Berlin.",
+      "packet_sha256": "ef720eff255e3e26c1c3fe4a924932b5b49591af5081b126a6bb6afe1c33e3ee"
+    },
+    {
+      "id": "4470b98c0fa815c191e0e0932999c3cfa1ff9db0e18d135c626fb5e94b43f103",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Celia目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia现在住在Turin。"
+        }
+      ],
+      "response": "对不起，我目前无法提供Celia目前住在哪座城市的信息。",
+      "packet_sha256": "7aff6d3ff6f1c4d007b807249c0f7ca09653d5a1c6b737bb63fc83eae3a5b352"
+    },
+    {
+      "id": "67af0e3de21339a96594f9aa0f3b73df2950f115189c7629762c64c6beb26d75",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Adela currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela currently lives in Turin."
+        }
+      ],
+      "response": "Adela is currently living in the United States.",
+      "packet_sha256": "01236a5002b374d43a39381ecafdd8d7f99bf2fff5485621fb494c1da70ee207"
+    },
+    {
+      "id": "68aebcdf4858bf3e7e0e028a682c1e98177af34c7e44bd6ac8916a1fd838de8f",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Celia目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [],
+      "response": "当然可以。Celia目前住在上海。",
+      "packet_sha256": "4fcb533b6f9ebf562114b58f8cf9a78df304eecb9a64bf4e62791186f5f5602d"
+    },
+    {
+      "id": "72a99f4e6ef5862a16fdf47a54110ba3d45752d94f7dbf47e9494bc588859160",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Adela目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela现在住在Rennes。"
+        }
+      ],
+      "response": "抱歉，我无法提供实时更新的信息。建议您访问相关网站或应用程序以获取最新的居住信息。",
+      "packet_sha256": "6d86479613de14be6aedfb68562a273fcf53f245113000ed361c62b0ac4015e1"
+    },
+    {
+      "id": "777f23b39da3703eb90d44f41d804f86ba252fe4135a81c7eb7d55d849c55aa3",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Celia currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia currently lives in Turin."
+        }
+      ],
+      "response": "Celia is currently living in New York City.",
+      "packet_sha256": "69635fbfbd26d33fda41dabb514c93a8c05c4c9211b8f4c3bb4e8682e4f6718a"
+    },
+    {
+      "id": "78df4e0ae6ef79c768c4a633df0e9c6054dbebb1a8d40d8658076f0e323ef129",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Please add 3 and 31."
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia currently lives in Turin."
+        }
+      ],
+      "response": "Ok.",
+      "packet_sha256": "e495def1e37b8e5c0280cc898308f6ce8c802ec59638f4530bfca6c122ad52a5"
+    },
+    {
+      "id": "8963ab9e169a21b35f061d93e118cbcc74c4921ec972cee1848e88c3c332b609",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Celia目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [],
+      "response": "Celia目前住在上海。",
+      "packet_sha256": "806a364102dd4d110f6b66193bb19e5506785112fb3402928d3a75ab617f0ab2"
+    },
+    {
+      "id": "997b0a8169184da90139c1ece5a60d622a86ec99c51114979849c550f5dce425",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Celia currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia currently lives in Turin."
+        }
+      ],
+      "response": "Celia currently lives in New York.",
+      "packet_sha256": "5127e27c32830d5d7fa3a04c816901302745b6a3836b1aeba24500d1409d0744"
+    },
+    {
+      "id": "9a1e3d321eb8b437a0ae081cc1c17d1a4ea596feba8411827ef926223dfce49d",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "请算一下3与31的和。"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia现在住在Turin。"
+        }
+      ],
+      "response": "好的，3与31的和是34。",
+      "packet_sha256": "f3042fde4ef440f9e235a84877d2c965a3180f7ebe847705cf2c4dc692c25a30"
+    },
+    {
+      "id": "9b96fcb924bad7168f6c6b1be5f1bf061be63cdd39a23a9963fb1a8c20f3228f",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Adela目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela现在住在Rennes。"
+        }
+      ],
+      "response": "抱歉，我目前无法提供实时更新的信息。",
+      "packet_sha256": "d7daaf7a8d0867300b0f4264d8113a8d5b7d7bef82e734233a97c8f366aad61a"
+    },
+    {
+      "id": "a4a8893bb5b222306a7f00100f121db4c54c6ed5644b767abedbdf0e4121ec26",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Adela currently living?"
+        }
+      ],
+      "episodes": [],
+      "response": "Adela is currently living in the United States.",
+      "packet_sha256": "2bcdc744c3027ca64c6d57111bfeb51642239a20198281a16e568685fb5977a9"
+    },
+    {
+      "id": "a737f101e129c993a4cc90700a2f5e43e9002311eb200c5981fe8dffb69e5c60",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Celia目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia现在住在Turin。"
+        }
+      ],
+      "response": "当然可以。Celia目前住在上海。",
+      "packet_sha256": "c85167561273fea31c77ac536f2f7e5d3e86de94b8263142b165a8bb927b6435"
+    },
+    {
+      "id": "b22be42c22ee8115daee7c2e419808fb0f20ab5a032878a9a818afde1d53a115",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Celia currently living?"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia currently lives in Graz."
+        }
+      ],
+      "response": "Celia is currently living in New York City.",
+      "packet_sha256": "b9b2b9b021d1537ebcc047ffe5601997a98e9e9483a65c8540082af797992767"
+    },
+    {
+      "id": "be88394cb011144e10f15af1ee6a2d9697cda35d00e0ec9a61abfb8bd15c1fb9",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Adela目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [],
+      "response": "抱歉，我无法提供实时更新的信息。建议你查看最新的新闻或使用专门的在线地图服务来获取Adela目前住在哪座城市。",
+      "packet_sha256": "0d7cce98c08f8c997608779537bf1df0a42e5adc0a2f59b8bf384a6f9b093478"
+    },
+    {
+      "id": "cf9b3acdb625155053f3f7311377b80731fb8129178e101f410f07f6faf1aca3",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Celia目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Celia现在住在Graz。"
+        }
+      ],
+      "response": "当然可以。Celia目前住在上海。",
+      "packet_sha256": "434736260e107a51ece88b8b85a6ec460ca8f3a8c47d9b7f54c8cd1759ce9989"
+    },
+    {
+      "id": "d1744bbd8f67156e5832f031b5fae25e2cc15f54860d500970569768489b6b37",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "In which city is Celia currently living?"
+        }
+      ],
+      "episodes": [],
+      "response": "Celia is currently living in New York City.",
+      "packet_sha256": "9251c0eb4fae18027b8ed57c4d55d2170da564c483494aea8d175d6a92f52a61"
+    },
+    {
+      "id": "f0b358398995addf98ef9fe04a95f2a8628b224d79ecc478e95df013b7dce7da",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "能告诉我Adela目前住在哪座城市吗？"
+        }
+      ],
+      "episodes": [],
+      "response": "抱歉，我无法提供实时更新的信息。建议您访问相关网站或应用程序以获取最新的居住信息。",
+      "packet_sha256": "77a9bf6b0ae2bac765e3ee261da96b34acfbe604d05ed87b5370fd5c977136d5"
+    },
+    {
+      "id": "f17f849b4bc287aeec80de8d5004b3bb7f3eaf5d03dd5b3aae3c56d8210477b5",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "请算一下2与30的和。"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela现在住在Rennes。"
+        }
+      ],
+      "response": "好的，计算结果是6。",
+      "packet_sha256": "d6aab8fab8d0ea9772cd9838fec58dbe66ae4f6f583cff90fdcb549a9741c71d"
+    },
+    {
+      "id": "fa4600fd5f91330870def3cec207450676e88846bfd687c18f9fb368514013cb",
+      "context": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "请算一下2与30的和。"
+        }
+      ],
+      "episodes": [
+        {
+          "role": "user",
+          "speaker": "user",
+          "text": "Adela现在住在Rennes。"
+        }
+      ],
+      "response": "2 + 30 = 32",
+      "packet_sha256": "ad1ab0e7cc630317dc4c7447d437f6967596ce305622f16e17963e855ebd211c"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "DG-007",
+  "status": "registered_zero_optimizer_diagnostic",
+  "checkpoint_sha256": "a8976841239f18520842e75551dfbc8681c27f6d25e0784fed03c1efcb5585d9",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "panel": "Unchanged CG-001 ordered 16 development records and their recorded 168 free-generation prefixes",
+  "interventions": [
+    "Detach mixture probabilities and uncertainty state features from generation gradients; retain independent state CE gradients. Forward values must remain identical.",
+    "Hold only initial user-prefill probabilities constant for the reply; retain current-prefix content and uncertainty features. No answer prefix in the decision constructor.",
+    "Compare original zero-gain initialization with a nonzero last-layer gain parameter of 1.0 plus zero content output matrix. Same seed, other parameters unchanged; both total residuals must start at zero. This is one reparameterization comparison, not trained weights."
+  ],
+  "recorded_prefix_ablations": ["unchanged", "remove_content", "remove_uncertainty", "fixed_prefill_probabilities"],
+  "scope": "Offline replay of identity-bound real C tensors, post-forward losses and one-step distributions. Changed logits on old prefixes are off-policy diagnostics, NOT new free-generated answers or accuracy.",
+  "numeric_tolerance": {"atol": 0.00001, "rtol": 0.0001},
+  "initialization_seed": 3180923,
+  "gradient_gates": [
+    "Compatibility forward exactly matches the original module",
+    "Isolation preserves logits and blocks all generation gradients to state_encoder and state_head, while state CE retains a nonzero controller gradient",
+    "Generation output matrices retain finite nonzero gradients where a branch is structurally available",
+    "Both initializations preserve base logits exactly; the alternative exposes nonzero content-output gradients without a double-zero dead path",
+    "Prefill decision rejects multiple hidden rows, model updates, memory changes and mutation; later prefixes cannot change its probabilities"
+  ],
+  "reporting": "Keep all 16 cases, every recorded prefix and every intervention. Report classification, NLL, gradient norms, projected branch norms and changed next-token counts separately. Do not score replayed tokens as complete responses.",
+  "optimizer_steps": 0,
+  "parameter_updates": 0,
+  "automatic_training_approval": false,
+  "deployment_approved": false,
+  "constraints": {"kv_reuse": false, "lora": false, "svd": false, "nas_ng": false, "locomo": false, "gold_forward_routing": false}
+}

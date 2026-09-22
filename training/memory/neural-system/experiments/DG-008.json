@@ -1,0 +1,24 @@
+{
+  "id": "DG-008",
+  "status": "registered_zero_update_content_path_diagnostic",
+  "checkpoint_sha256": "eb6b9a551c616d08a2aa0e8d183a63233c87a3c10e296f290a7b48b99dea716d",
+  "feature_package_digest": "8f5b2d2ae685a7995d45422e661a8f59811357186d0cff370211eb596d5f36a6",
+  "scope": "All 8 development worlds, both languages: original, swapped_values, wrong_subject. 48 source records, 16 value pairs and 16 subject-only pairs. Separate diagnostic; original 16-case generation denominator unchanged.",
+  "value_control": "original versus swapped_values: same query and subject, only city changes",
+  "subject_control": "swapped_values versus wrong_subject: same query and city, only source subject changes. Original versus wrong_subject changes TWO factors and must not be called subject-only.",
+  "source_checks": "Exact C token IDs and bytes, annotated subject/value token spans after forward, presence in uncompressed input tokens; annotations never select neural attention or serving output",
+  "observations": [
+    "Initial user-prefill state probabilities; subject-only versus value-only contrasts",
+    "Projected source-token mean, SDPA read, pre-gate output and content residual differences; mean-vector similarity does not prove information loss",
+    "Post-forward attention mass on subject/value and relative to uniform mass; attention is descriptive, not a causal explanation",
+    "At first divergent target token after a common teacher-forced answer prefix: base/conditioned token ranks, two-choice margins, value-swap effect direction and full-vocabulary next-token correctness. No gold token is fed into this position.",
+    "Record whether that exact token prefix occurred in existing free generation. Oracle-prefix diagnostics are not complete replies or accuracy."
+  ],
+  "numeric_gate": "Reconstructed residual must match module output exactly; manual attention read versus SDPA within atol 1e-5 and rtol 1e-4",
+  "reporting": "Retain every pair and denominator, ties, ranks and failure cases. No rescaling, learned probes, optimizer, parameter search or third candidate.",
+  "optimizer_steps": 0,
+  "new_free_generated_answers": 0,
+  "training_approved": false,
+  "deployment_approved": false,
+  "constraints": {"kv_reuse": false, "lora": false, "svd": false, "nas_ng": false, "locomo": false, "labels_in_neural_forward": false}
+}

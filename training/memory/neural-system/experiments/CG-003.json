@@ -1,0 +1,61 @@
+{
+  "id": "CG-003",
+  "status": "complete_both_candidates_failed_budget_exhausted",
+  "selected_arm": null,
+  "final_review": "../reviews/CG-003/score.json",
+  "final_process": "../reviews/CG-003/PROCESS.md",
+  "training_approved": true,
+  "budget_approval": "CG-003-budget-approval.json",
+  "prerequisites_complete": true,
+  "deployment_approved": false,
+  "launch_command": "/home/ubuntu/miniforge3/envs/metis/bin/python -u /home/ubuntu/158bitnet-locomo/build/cg003-training-1f4dd606/source/python/run_joint_training.py --experiment /home/ubuntu/158bitnet-locomo/build/cg003-training-1f4dd606/source/training/memory/neural-system/experiments/CG-003.json --snapshot /home/ubuntu/158bitnet-locomo/build/cg003-training-1f4dd606/source-snapshot.json --features /home/ubuntu/158bitnet-locomo/build/cg003-training-1f4dd606/features --gguf /home/ubuntu/models/gguf/bitcpm4-0.5b-tq2_0.gguf --preflight /home/ubuntu/158bitnet-locomo/build/cg003-training-1f4dd606/optimizer-preflight.json --output /home/ubuntu/158bitnet-locomo/build/cg003-training-1f4dd606/training",
+  "executed_optimizer_steps": {"joint_aux": 50, "joint_product": 50, "total": 100},
+  "budget_remaining_steps": 0,
+  "scope": "New budget proposal, not an extension of exhausted CG-001/CG-002 screening. Single supplied compound event; not automatic memory or LoCoMo.",
+  "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+  "dataset": "../data/JB-001.json",
+  "dataset_manifest": "../data/JB-001/manifest.json",
+  "dataset_manifest_digest": "fcff455f690e360298701b123102e3a90527d83bf12ef390ca59d035fbd2bf2c",
+  "data_schedule_and_panel_evidence": "../checks/CG-003-data.json",
+  "initial_seed": 1013,
+  "initialization": "Fresh reader, factors and role specialists; zero continuous output matrices with nonzero content gain. Do not inherit the CG-002 uncertainty weights that repeated in DG-012. Same exact initial state tensors in both arms. Exclude unused legacy private state classifier parameters from optimizer.",
+  "arms": [
+    {"id": "joint_aux", "route": "Three-way neural reader logits; factor heads provide auxiliary supervised losses only"},
+    {"id": "joint_product", "route": "Same three-way reader plus the DG-011 multiplicative factor support gate; no changes to data, initialization, optimizer or other losses"}
+  ],
+  "implementation_status": "Both approved arms completed exactly 50 steps and stopped. All 48 candidate replies and 882 actual C positions independently audited. Two isolated reviewers agreed on all 49 unique blind packets across baseline and both candidates. Each candidate achieved 1/8 grounded replies and 0/4 both-correct value pairs; aux/product had 1/6 truncated replies. Neither passed registered gates; selected_arm=null. Budget exhausted, no additional training or deployment approval. Immutable executed snapshot and all failures retained.",
+  "baseline_sha256": "4389fc1c29a28f81353dac9ecc52bec8bb024fd54c658ceecc8485db5874433d",
+  "baseline_report": "../reviews/CG-003/baseline.json",
+  "baseline_audit": "../checks/CG-003-baseline-audit.json",
+  "baseline_blind_packet": "../reviews/CG-003/baseline-blind.json",
+  "preparation_evidence": ["../checks/CG-003-smoke-features.json", "../checks/CG-003-cpu-preflight.json", "../checks/CG-003-feature-inventory.json", "../checks/CG-003-full-features.json", "../checks/CG-003-full-preflight.json", "../checks/CG-003-native-preflight.json", "../checks/CG-003-cuda-preflight.json", "../checks/CG-003-cuda-fixtures.json", "../checks/CG-003-platform-archive.json", "../checks/CG-003-platform-source.json"],
+  "full_feature_package_digest": "d299ad9f59c5a8500d751ee71b4f9139232cec9f80a2607e14953442e883b6fb",
+  "proposed_budget": {"candidates": 2, "optimizer_steps_per_arm": 50, "total_optimizer_steps": 100, "additional_seeds": 0, "automatic_continuation": false},
+  "optimizer": {"name": "AdamW", "learning_rate": 0.0001, "weight_decay": 0.01, "batch_size_pairs": 4, "gradient_clip_norm": 1.0, "precision": "float32", "amp": false, "tf32": false},
+  "sampling": "Train pairs only. Four pairs/eight record uses per step. Cycle the ten registered pair kinds equally; deterministic shuffle of world/language/relation groups using seed 1013. Same 200-pair/400-record-use schedule in both arms. Audit actual unique coverage, duplicates and all per-kind counts before launch; 50 steps is a probe, not a full corpus epoch.",
+  "loss": {
+    "per_example": "DG-011 state CE, optional presence BCE, full reply CE including EOS (or normal KL), eligible value-position marginal CE with NULL for uncopyable values, negative/normal copy-off. All coefficients 1 and example weights 1.",
+    "pair": "One additional coefficient-1 softplus(1-d) for role_swap and value_swap only. Role d contrasts supported-minus-insufficient initial logits; value d contrasts first divergent value tokens at identical teacher-forced prefixes. Other pair kinds have no extra pair loss. Do not treat positive d alone as correctness.",
+    "reduction": "Mean of the two per-example losses plus pair term per pair, then mean over four pairs. Frozen weights and full forward graph; no gold routing in actual generation.",
+    "implementation_gate": "Verify paired math, unavailable token retention, EOS, gradient isolation, ordinary KL and same-prefix alignment before any training"
+  },
+  "first_stage_evaluation": {
+    "classification": "All 192 dev records, diagnostic only",
+    "native_panel": "First lexicographically sorted dev world, both languages, both relations; correct, role_swap, value_swap, empty, ordinary_source, ordinary_empty. Freeze 24 IDs before model evaluation.",
+    "reference_runs": "24 disabled/base replies plus 24 replies per trained arm, total at most 72 replies; initial native numeric qualification is separate. max_new_tokens=64, context_capacity=128, exact same tokenizer/template, greedy, no KV history reuse.",
+    "denominators": {"grounded": 8, "role_swap_negative": 4, "empty": 4, "normal": 8, "value_pairs": 4},
+    "review": "Two independent blind model reviewers with deduplication and preserved disagreements; retain same-family limitation unless a second family is actually available. No rule-only or exact-string score substitution for free replies.",
+    "gates": "At least 6/8 grounded complete correct replies; at least 3/4 both-correct value pairs; 4/4 role-swap negatives avoid the unsupported fact; 4/4 empty avoid fabrication; normal route and replies 8/8 exactly preserve baseline. No candidate truncation, invalid UTF-8, or three consecutive repetitions of the same >=4-token block. Any unresolved review blocks promotion. Every failed denominator stays visible.",
+    "selection": "If neither arm passes, stop both. If only one passes, freeze it. If both pass, prefer more both-correct value pairs, then more grounded passes; exact tie prefers aux-only. No extra steps, seed or coefficient sweep.",
+    "test": "Keep all 192 test cases sealed during training and arm selection; only the frozen selected candidate may enter separately registered final testing. Never train on test feedback. Passing this pilot is not production approval."
+  },
+  "required_before_launch": [
+    "Implement and test new paired sampler/compiler and both route policies without changing DG-011 historical certificates",
+    "Exact C source/query and full reply-prefix feature package for train/dev with hashes; test records rejected by trainer/package selection",
+    "Mechanical token/byte/copy coverage and context-capacity audit, keep every unavailable value token",
+    "Fresh initialization, zero-step native numeric controls, CPU/CUDA preflight and frozen-backbone/unused-parameter checks",
+    "Freeze actual schedule, baseline replies, native-panel IDs, review packets and source/archive/checkpoint manifest",
+    "Confirm new two-arm budget, synchronize complete revision to tmux GPU host, verify identities; no execution merely by flipping JSON flags"
+  ],
+  "constraints": {"backbone_trainable": false, "kv_reuse": false, "lora": false, "svd": false, "nas_ng": false, "source_text_in_prompt": false, "gold_serving_route": false, "locomo": false}
+}

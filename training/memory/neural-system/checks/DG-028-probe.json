@@ -1,0 +1,42 @@
+{
+  "format": "dg028-linear-probe-v1",
+  "registration_sha256": "6f946130b2bfa8848e3fc6f836fad7d117002197cd01ca41fb1e62c0b83c5742",
+  "items": 892,
+  "route_probe_cv_recall": {
+    "0": [
+      93,
+      96,
+      0.969
+    ],
+    "1": [
+      121,
+      268,
+      0.451
+    ],
+    "2": [
+      238,
+      528,
+      0.451
+    ]
+  },
+  "route_actual_recall": {
+    "0": null,
+    "note": "actual trained-head recalls from DG-027-style probe: r0=48/96=0.5,r1=268/268=1.0,r2=96/528=0.182"
+  },
+  "mode_probe_items": 270,
+  "mode_probe_cv_recall": {
+    "0": [
+      0,
+      2,
+      0.0
+    ],
+    "1": [
+      268,
+      268,
+      1.0
+    ]
+  },
+  "mode_actual_note": "start never predicted: 0/268",
+  "frozen_reader_digest": "2ba652e67f8eded9f3dea3ca66705f94838e431597c9265fb660cdfdd06051b0",
+  "optimizer_steps": 0
+}

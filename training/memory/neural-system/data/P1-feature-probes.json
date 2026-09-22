@@ -1,0 +1,13 @@
+{
+  "purpose": "feature_domain_diagnostic_not_memory_accuracy",
+  "atol": 0.00001,
+  "rtol": 0.0001,
+  "texts": [
+    {"id": "plain_en", "text": "Mara lives in Lima."},
+    {"id": "plain_zh", "text": "小林现在住在杭州。"},
+    {"id": "roles", "text": "Alice lent a book to Bob, not the other way around."},
+    {"id": "chatml", "text": "<|im_start|>user\nWhere does Mara live?<|im_end|>\n<|im_start|>assistant\n"},
+    {"id": "message_frame", "text": "[{\"role\":\"user\",\"speaker\":\"user\",\"text\":\"Where does Mara live?\"}]"},
+    {"id": "repeat_en", "text": "Mara lives in Lima."}
+  ]
+}

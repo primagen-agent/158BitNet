@@ -1,0 +1,754 @@
+{
+  "corpus_manifest_sha256": "3436917c4e86487738ff5a312fd29a37dc1bb1ba41863d3dee095907fb0fb778",
+  "fixtures": [
+    {
+      "packet": {
+        "id": "388c6272756b2af6952c23a66559f30f66d2dd40bbc0a85a6140b71c0044039f",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle currently lives in Graz."
+          }
+        ],
+        "response": "Estelle currently lives in Graz.",
+        "packet_sha256": "452f398dfd0d40d6cb4924a9dc0f0996cb88535661987d702df7eaff6f425c32"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-308f3b523b2579718608",
+        "input_sha256": "2b60352f1337ecfabac8a808eef0a8cf664e094ceea68fd8f6c97f330c876927",
+        "memory_needed": true,
+        "relevant_episode_indices": [
+          0
+        ],
+        "required_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "response": "Estelle currently lives in Graz.",
+        "sample_weight": 2.0,
+        "state": "supported"
+      },
+      "expected": "pass"
+    },
+    {
+      "packet": {
+        "id": "0d9ff300ed29551d68c2fed3f499d56a5c44c561972427095f12386f8ac33b76",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle currently lives in Graz."
+          }
+        ],
+        "response": "Estelle currently lives in Utrecht.",
+        "packet_sha256": "afc8943269ebaef8fb9c619f165a8734d574a9d8607e6d8d62b7e3659cf91e91"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-308f3b523b2579718608",
+        "input_sha256": "2b60352f1337ecfabac8a808eef0a8cf664e094ceea68fd8f6c97f330c876927",
+        "memory_needed": true,
+        "relevant_episode_indices": [
+          0
+        ],
+        "required_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "response": "Estelle currently lives in Graz.",
+        "sample_weight": 2.0,
+        "state": "supported"
+      },
+      "expected": "fail"
+    },
+    {
+      "packet": {
+        "id": "d579620e14b174f131ff7bcc8b96bb960e08f6665a0be00032f390b59f799c42",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle currently lives in Graz."
+          }
+        ],
+        "response": "Fabian currently lives in Graz.",
+        "packet_sha256": "16136cc519eb0a2d1211ce2ee37fa464300c7f1efcf677b2f4affabdf74f91e0"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-308f3b523b2579718608",
+        "input_sha256": "2b60352f1337ecfabac8a808eef0a8cf664e094ceea68fd8f6c97f330c876927",
+        "memory_needed": true,
+        "relevant_episode_indices": [
+          0
+        ],
+        "required_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "response": "Estelle currently lives in Graz.",
+        "sample_weight": 2.0,
+        "state": "supported"
+      },
+      "expected": "fail"
+    },
+    {
+      "packet": {
+        "id": "7e4ce019264f25027f4c62d523fb1260dce636638ff4f5d8e4b195e6404a0b4a",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle lived in Graz in 2020, moved to Utrecht in 2024, and still lives there."
+          }
+        ],
+        "response": "Estelle currently lives in Graz.",
+        "packet_sha256": "484917bbb2b207326583bf879bf14b2ac0da493e722836e74b0e6e974b1a3a64"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "2020",
+            "value": "Graz"
+          },
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Utrecht"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-58ebb5568df5e9aadff3",
+        "input_sha256": "78b559b236c14da00abe06ba9019344bcb0bda7b462634c9ab832c25a84e884d",
+        "memory_needed": true,
+        "relevant_episode_indices": [
+          0
+        ],
+        "required_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Utrecht"
+          }
+        ],
+        "response": "Estelle currently lives in Utrecht.",
+        "sample_weight": 2.0,
+        "state": "supported"
+      },
+      "expected": "fail"
+    },
+    {
+      "packet": {
+        "id": "f603fd1a0b7006a248fd7bd2cde72256f0ee3c19e5ad0c7fb76447f30b5d534c",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [],
+        "response": "I do not have enough information to say where Estelle lives now.",
+        "packet_sha256": "ca08a6860853c3c6877b013d712475e09391698887e525cfed4b48cb936f32cb"
+      },
+      "label": {
+        "allowed_claims": [],
+        "evidence_missing": true,
+        "id": "case-cbfa921e9faf1d444293",
+        "input_sha256": "21c0fce8adb368ba6619612a4445c160e4671b39032f515f1270c21d2bf0b5da",
+        "memory_needed": true,
+        "relevant_episode_indices": [],
+        "required_claims": [],
+        "response": "I do not have enough information to say where Estelle lives now.",
+        "sample_weight": 1.0,
+        "state": "insufficient"
+      },
+      "expected": "pass"
+    },
+    {
+      "packet": {
+        "id": "79859b1937aa8136ad5928b90a43463bf91b51a35accd9f5f9af2ae732b9f548",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [],
+        "response": "Estelle currently lives in Graz.",
+        "packet_sha256": "fd84d30beb6261719d820a4fa07118721cf55a10501db0e06a0ccb1aa545152e"
+      },
+      "label": {
+        "allowed_claims": [],
+        "evidence_missing": true,
+        "id": "case-cbfa921e9faf1d444293",
+        "input_sha256": "21c0fce8adb368ba6619612a4445c160e4671b39032f515f1270c21d2bf0b5da",
+        "memory_needed": true,
+        "relevant_episode_indices": [],
+        "required_claims": [],
+        "response": "I do not have enough information to say where Estelle lives now.",
+        "sample_weight": 1.0,
+        "state": "insufficient"
+      },
+      "expected": "fail"
+    },
+    {
+      "packet": {
+        "id": "1d7375cebbbdd10547f58f8655e52d03a089ad86e47a78bf83a560d881bcab17",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "What is 4 plus 32?"
+          }
+        ],
+        "episodes": [],
+        "response": "The sum is 36.",
+        "packet_sha256": "3de812042b96bbf303f4b64bef2442c76af83b8943cee0bfd21cc3f8d1109e08"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "equals",
+            "status": "actual",
+            "subject": "4+32",
+            "time": "timeless",
+            "value": "36"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-ae1c108ad2ad41e44f8d",
+        "input_sha256": "a6ab858a2faf1e1a596532f54e1e815af5b60ec702cc6883f7e2d194100d43b4",
+        "memory_needed": false,
+        "relevant_episode_indices": [],
+        "required_claims": [
+          {
+            "relation": "equals",
+            "status": "actual",
+            "subject": "4+32",
+            "time": "timeless",
+            "value": "36"
+          }
+        ],
+        "response": "The sum is 36.",
+        "sample_weight": 2.0,
+        "state": "no_memory_needed"
+      },
+      "expected": "pass"
+    },
+    {
+      "packet": {
+        "id": "1bc709064630190502336129fed8864514d862bf624a4ee34f531c573b9c375c",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "What is 4 plus 32?"
+          }
+        ],
+        "episodes": [],
+        "response": "I cannot answer without searching my memory.",
+        "packet_sha256": "562308c7d97dcf9715b0c760ebd166dc65a091ed6857f3f9093b4fc3e8ccb815"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "equals",
+            "status": "actual",
+            "subject": "4+32",
+            "time": "timeless",
+            "value": "36"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-ae1c108ad2ad41e44f8d",
+        "input_sha256": "a6ab858a2faf1e1a596532f54e1e815af5b60ec702cc6883f7e2d194100d43b4",
+        "memory_needed": false,
+        "relevant_episode_indices": [],
+        "required_claims": [
+          {
+            "relation": "equals",
+            "status": "actual",
+            "subject": "4+32",
+            "time": "timeless",
+            "value": "36"
+          }
+        ],
+        "response": "The sum is 36.",
+        "sample_weight": 2.0,
+        "state": "no_memory_needed"
+      },
+      "expected": "fail"
+    },
+    {
+      "packet": {
+        "id": "2388e7397cc2a4e95a88aa022f401b42b00b826ea805125f46ef29d90e37b1c9",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在哪里？"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在Graz。"
+          }
+        ],
+        "response": "Estelle现在住在Graz。",
+        "packet_sha256": "b57b747f161c1f6bdcef7ad500110b937a6bbc5678eabe4a7b4ab795355ac730"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-166b9b23b0671988e29c",
+        "input_sha256": "6fd8b3d1803be97c25d66e83880d84f3ab488ea3bb65a170c2e2a8c1e473da3e",
+        "memory_needed": true,
+        "relevant_episode_indices": [
+          0
+        ],
+        "required_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "response": "Estelle现在住在Graz。",
+        "sample_weight": 2.0,
+        "state": "supported"
+      },
+      "expected": "pass"
+    },
+    {
+      "packet": {
+        "id": "c8474299030f7b86deaa1fba8833a727206e9ee65e9f89848d1920252f4a1942",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在哪里？"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在Graz。"
+          }
+        ],
+        "response": "Estelle现在住在Utrecht。",
+        "packet_sha256": "f1da254f42c870bb5756542e0e9da34d1f8149763dd49f5334c41b682ec6971e"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-166b9b23b0671988e29c",
+        "input_sha256": "6fd8b3d1803be97c25d66e83880d84f3ab488ea3bb65a170c2e2a8c1e473da3e",
+        "memory_needed": true,
+        "relevant_episode_indices": [
+          0
+        ],
+        "required_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "response": "Estelle现在住在Graz。",
+        "sample_weight": 2.0,
+        "state": "supported"
+      },
+      "expected": "fail"
+    },
+    {
+      "packet": {
+        "id": "bddb1088473aa4ddca983c38a7476faabe2f4a92915ce49c4c5911155a413a69",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在哪里？"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在不住在Graz。"
+          }
+        ],
+        "response": "现有信息不足以确定Estelle现在住在哪里。",
+        "packet_sha256": "fe57c5ab484bb7cd58454e23b5ea26059089478b613afbedbf6948b026c74656"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "negated",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "evidence_missing": true,
+        "id": "case-303390e540a46dac9e7b",
+        "input_sha256": "9255a30d0311c628182d59c917d74a1bed636f62c74467c04be9fae2b6725e3e",
+        "memory_needed": true,
+        "relevant_episode_indices": [],
+        "required_claims": [],
+        "response": "现有信息不足以确定Estelle现在住在哪里。",
+        "sample_weight": 1.0,
+        "state": "insufficient"
+      },
+      "expected": "pass"
+    },
+    {
+      "packet": {
+        "id": "9e2275a784fe4e25231d2fe8a4f31150b72b9577373bd31e1f00906a684f366d",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在哪里？"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在不住在Graz。"
+          }
+        ],
+        "response": "Estelle现在住在Graz。",
+        "packet_sha256": "4e1f9a6c53b0709f46e1fa3dca269249a5b0f950cef5533c4d1e6eda5349eb4a"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "negated",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "evidence_missing": true,
+        "id": "case-303390e540a46dac9e7b",
+        "input_sha256": "9255a30d0311c628182d59c917d74a1bed636f62c74467c04be9fae2b6725e3e",
+        "memory_needed": true,
+        "relevant_episode_indices": [],
+        "required_claims": [],
+        "response": "现有信息不足以确定Estelle现在住在哪里。",
+        "sample_weight": 1.0,
+        "state": "insufficient"
+      },
+      "expected": "fail"
+    },
+    {
+      "packet": {
+        "id": "2c3b2c7384ff0800a0b324c338680ecc5c36f945f828eedfa85547459227ceec",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Two unverified reports say Estelle currently lives in Graz and Estelle currently lives in Utrecht. Neither is confirmed."
+          }
+        ],
+        "response": "I do not have enough information to say where Estelle lives now.",
+        "packet_sha256": "c6b8234b3707b33b1b8bf4d6e2cc68b2f6fc23520c5a47348aea1a00977a5c08"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "quoted",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          },
+          {
+            "relation": "home_city",
+            "status": "quoted",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Utrecht"
+          }
+        ],
+        "evidence_missing": true,
+        "id": "case-64f61c231dadc7fb932b",
+        "input_sha256": "e48db87e09702a64c5e6ef5194bb4a2a69e8d944377f73f431c00c99c3cf6fc1",
+        "memory_needed": true,
+        "relevant_episode_indices": [],
+        "required_claims": [],
+        "response": "I do not have enough information to say where Estelle lives now.",
+        "sample_weight": 1.0,
+        "state": "insufficient"
+      },
+      "expected": "pass"
+    },
+    {
+      "packet": {
+        "id": "a14dcbcc87564b80a3ab1e1c34415b16f8f707fa0d663826fde63327986f1b9f",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Two unverified reports say Estelle currently lives in Graz and Estelle currently lives in Utrecht. Neither is confirmed."
+          }
+        ],
+        "response": "Estelle currently lives in Graz.",
+        "packet_sha256": "eca1f0586b6439c06d2442dd3aea52b020117f57838d233d6a673581def56545"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "quoted",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          },
+          {
+            "relation": "home_city",
+            "status": "quoted",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Utrecht"
+          }
+        ],
+        "evidence_missing": true,
+        "id": "case-64f61c231dadc7fb932b",
+        "input_sha256": "e48db87e09702a64c5e6ef5194bb4a2a69e8d944377f73f431c00c99c3cf6fc1",
+        "memory_needed": true,
+        "relevant_episode_indices": [],
+        "required_claims": [],
+        "response": "I do not have enough information to say where Estelle lives now.",
+        "sample_weight": 1.0,
+        "state": "insufficient"
+      },
+      "expected": "fail"
+    },
+    {
+      "packet": {
+        "id": "fc315b1de01d509f3bfb7a7ef25388fd644e3b1516b27e2b41f56cdda218d45f",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Where does Estelle live now?"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle currently lives in Graz."
+          }
+        ],
+        "response": "I retrieved this from memory: Estelle currently lives in Graz.",
+        "packet_sha256": "1a2ff0d598e8e0eb404488425fe0ca0b9af0d54a27d85080e6981cb731f9f94b"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-308f3b523b2579718608",
+        "input_sha256": "2b60352f1337ecfabac8a808eef0a8cf664e094ceea68fd8f6c97f330c876927",
+        "memory_needed": true,
+        "relevant_episode_indices": [
+          0
+        ],
+        "required_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "response": "Estelle currently lives in Graz.",
+        "sample_weight": 2.0,
+        "state": "supported"
+      },
+      "expected": "fail"
+    },
+    {
+      "packet": {
+        "id": "b0e71cadc94a27a7ca7167542b4f2cf255b00747e66dbdf321f33d4937eb0971",
+        "context": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在哪里？"
+          }
+        ],
+        "episodes": [
+          {
+            "role": "user",
+            "speaker": "user",
+            "text": "Estelle现在住在Graz。"
+          }
+        ],
+        "response": "我查询了记忆：Estelle现在住在Graz。",
+        "packet_sha256": "e8ca517b5c06be79731147c3e6f1a47464f450ca9e586d3a5c11df82df4c6bb2"
+      },
+      "label": {
+        "allowed_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "evidence_missing": false,
+        "id": "case-166b9b23b0671988e29c",
+        "input_sha256": "6fd8b3d1803be97c25d66e83880d84f3ab488ea3bb65a170c2e2a8c1e473da3e",
+        "memory_needed": true,
+        "relevant_episode_indices": [
+          0
+        ],
+        "required_claims": [
+          {
+            "relation": "home_city",
+            "status": "actual",
+            "subject": "Estelle",
+            "time": "current",
+            "value": "Graz"
+          }
+        ],
+        "response": "Estelle现在住在Graz。",
+        "sample_weight": 2.0,
+        "state": "supported"
+      },
+      "expected": "fail"
+    }
+  ]
+}
