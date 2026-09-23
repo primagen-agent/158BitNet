@@ -35,8 +35,24 @@ nm_route_t nm_predict_route(nm_ctx_t *ctx,
  * from the modified hidden — no separate output head file needed.
  * hidden: [1024] C backbone hidden state
  * modified_hidden: [1024] hidden + residual / logit_scale */
+/* Wide 2048-dim span selection: score candidate spans using full backbone features.
+ * Returns index of best value span, or -1. Writes span token range to best_span_idx. */
+int nm_wide_select_value(nm_ctx_t *ctx,
+                          const float *query_features,  /* [1×2048] */
+                          const float *source_features, /* [n_source×2048] */
+                          int n_source,
+                          int *span_starts, int *span_ends,
+                          int n_spans,
+                          int *best_span_idx);
+
 void nm_apply_residual(nm_ctx_t *ctx,
                         const float *hidden,
                         float *modified_hidden);
+
+/* Per-token relevance score using the trained wide fact head.
+ * wide_in: [4096] (query[2048] + token[2048])
+ * h1: [256] intermediate buffer
+ * score: [1] output */
+void nm_wide_score(nm_ctx_t *ctx, const float *wide_in, float *h1, float *score);
 
 #endif /* NEURAL_MEMORY_H */

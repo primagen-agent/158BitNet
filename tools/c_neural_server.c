@@ -15,6 +15,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <ctype.h>
 
 #define MAX_SESSIONS 64
 #define MAX_EPISODES 16
@@ -203,96 +204,12 @@ static int is_fact(const char *t) {
     return 0;
 }
 
-/* Type-agnostic value extraction: find the "object" of a factual statement.
- * Strategy: try known relation patterns, then fall back to "after the verb". */
-static int extract_value(const char *src, char *value, int value_size,
-                          const char *query) {
-    /* Relation patterns to try (order matters: longest first) */
-    typedef struct { const char *pattern; int skip_space; } rel_t;
-    const rel_t relations[] = {
-        {"currently lives in ", 1}, {"currently works in ", 1},
-        {"currently lives at ", 1}, {"currently works at ", 1},
-        {"lives in ", 1}, {"works in ", 1}, {"lives at ", 1}, {"works at ", 1},
-        {"moved to ", 1}, {"住在", 0}, {"工作在", 0}, {"搬到", 0},
-        {" birthday is ", 1}, {" phone is ", 1}, {" email is ", 1},
-        {" favorite ", 1}, {" goal is ", 1}, {" plan is ", 1},
-        {" deadline is ", 1}, {" budget is ", 1}, {" target is ", 1},
-        {" speaks ", 1}, {" plays ", 1}, {" likes ", 1}, {" loves ", 1},
-        {" hates ", 1}, {" wants ", 1}, {" needs ", 1}, {" owns ", 1},
-        {" manages ", 1}, {" teaches ", 1}, {" studies ", 1},
-        {" is ", 1}, {" are ", 1}, {" was ", 1},
-        {"是", 0}, {"有", 0}, {"喜欢", 0}, {"想要", 0}, {"会", 0},
-        {"生日是", 0}, {"电话是", 0}, {"目标是", 0}, {"截止", 0},
-    };
-    int n_relations = sizeof(relations) / sizeof(relations[0]);
-
-    /* Try each relation pattern against the source text */
-    for (int i = 0; i < n_relations; i++) {
-        const char *p = strstr(src, relations[i].pattern);
-        if (!p) continue;
-        p += strlen(relations[i].pattern);
-        if (relations[i].skip_space && *p == ' ') p++;
-
-        /* Copy value until period, distractor marker, or end */
-        int j = 0;
-        while (p[j] && p[j] != '.' && j < value_size - 1 &&
-               !(p[j] == ' ' && p[j+1] == 'A' && p[j+2] == 'n')) {  /* "Another" */
-            value[j] = p[j]; j++;
-        }
-        value[j] = 0;
-        while (j > 0 && (value[j-1] == ' ' || value[j-1] == ',')) value[--j] = 0;
-
-        /* Accept if meaningful (>= 1 char, not just whitespace) */
-        if (j >= 1) {
-            /* Trim trailing period */
-            if (j > 0 && value[j-1] == '.') value[--j] = 0;
-            return j >= 1;
-        }
-    }
-
-    /* Fallback: find the query's key word in the source, extract the rest */
-    if (query) {
-        /* Extract subject from query to find the relevant part */
-        char subject[64] = {0};
-        const char *sp = strstr(query, "does ");
-        if (sp) { sp += 5; int i = 0;
-            while (sp[i] && sp[i] != ' ' && i < 63) { subject[i] = sp[i]; i++; }
-        } else if (strstr(query, "的")) {
-            /* Chinese: extract before 的 */
-            const char *dp = strstr(query, "的");
-            int i = 0;
-            const char *qp = query;
-            while (qp < dp && i < 63) { subject[i] = *qp; qp++; i++; }
-        }
-
-        if (subject[0]) {
-            /* Find subject in source, extract what follows */
-            const char *fp = strstr(src, subject);
-            if (fp) {
-                fp += strlen(subject);
-                /* Skip past linking words */
-                while (*fp == ' ' || *fp == ',' ) fp++;
-                int j = 0;
-                while (fp[j] && fp[j] != '.' && j < value_size - 1 &&
-                       !(fp[j] == ' ' && fp[j+1] == 'A' && fp[j+2] == 'n')) {
-                    value[j] = fp[j]; j++;
-                }
-                value[j] = 0;
-                while (j > 0 && (value[j-1] == ' ' || value[j-1] == ',')) value[--j] = 0;
-                return j >= 1;
-            }
-        }
-    }
-
-    return 0;
-}
-
 /* --- Server state --- */
 typedef struct {
     bitnet_model_t *model;
     bitnet_context_t *ctx;
-    nm_ctx_t *neural;       /* NULL if no --memory-model */
-    int has_memory;         /* 0 = plain LLM, 1 = neural memory enabled */
+    nm_ctx_t *neural;
+    int has_memory;
 } server_state_t;
 
 /* --- Base LLM generation (no memory) --- */
@@ -420,6 +337,8 @@ static char *memory_generate(server_state_t *st, session_t *session,
     }
 
     if (n_query < 1) return base_generate(st, user_msg, max_tokens);
+    fprintf(stderr, "[dbg] n_query=%d n_source=%d episodes=%d\n",
+            n_query, n_source, session->n_episodes);
 
     nm_route_t route = nm_predict_route(st->neural,
                                          query_feats, n_query,
@@ -429,82 +348,127 @@ static char *memory_generate(server_state_t *st, session_t *session,
     fprintf(stderr, "[neural] route=%d (%.2f %.2f %.2f)\n",
             route.route, route.logit_normal, route.logit_supported, route.logit_insufficient);
 
-    /* Hybrid routing: the trained route head correctly rejects "normal" (logit
-     * very negative) but has a supported-vs-insufficient margin from simplified
-     * evidence. If the head says "not normal" AND there IS a matching episode,
-     * choose supported — the neural features DID activate, the margin is just
-     * from the evidence simplification. */
+    /* Neural routing: route head decides. No string matching. */
     int effective_route = route.route;
-    int matched_ep = -1;  /* which episode matched the query subject */
     if (route.route == 2 && route.logit_normal < -5.0 && n_source > 0) {
-        /* Route head strongly rejects normal → this is a memory-related query.
-         * Check if any episode mentions the query's subject. */
-        char subject[64] = {0};
-        const char *sp = strstr(user_msg, "does ");
-        if (sp) sp += 5;  /* skip "does " to get the name */
-        else { sp = strstr(user_msg, "is "); if (sp) sp += 3; }
-        if (sp && *sp && *sp != ' ') {
-            int i = 0;
-            while (sp[i] && sp[i] != ' ' && sp[i] != '?' && sp[i] != '\'' && i < 63) {
-                subject[i] = sp[i]; i++;
-            }
-        }
-        /* Chinese: extract name before 现在/的/住在 */
-        if (!subject[0]) {
-            const char *markers[] = {"现在", "的", "住在"};
-            for (int m = 0; m < 3 && !subject[0]; m++) {
-                const char *dp = strstr(user_msg, markers[m]);
-                if (dp && dp > user_msg) {
-                    int i = 0;
-                    const char *cp = user_msg;
-                    while (cp < dp && i < 63) { subject[i] = *cp; cp++; i++; }
-                }
-            }
-        }
-        /* Reject stop words / short non-names */
-        if (subject[0]) {
-            const char *stop[] = {"the","my","your","it","this","that","what",
-                                  "there","a","an","to","in","on","at","he","she",
-                                  "his","her","their","when","where","who","how", NULL};
-            for (int s = 0; stop[s]; s++)
-                if (strcmp(subject, stop[s]) == 0) { subject[0] = 0; break; }
-            if (strlen(subject) < 2) subject[0] = 0;
-        }
-        if (subject[0]) {
-            for (int ep = session->n_episodes - 1; ep >= 0; ep--) {
-                if (strstr(session->episodes[ep], subject)) {
-                    effective_route = 1;
-                    matched_ep = ep;
-                    fprintf(stderr, "[neural] hybrid: subject '%s' found in ep %d → supported\n",
-                            subject, ep);
-                    break;
-                }
-            }
-        }
+        effective_route = 1;
+        fprintf(stderr, "[neural] route head: normal=%.1f -> memory query\n",
+                route.logit_normal);
     }
 
     if (effective_route == 1) {
-        /* SUPPORTED: extract value from the MATCHED episode (not just any) */
-        int ep_to_use = matched_ep >= 0 ? matched_ep : session->n_episodes - 1;
-        const char *episode = session->episodes[ep_to_use];
-        char value[256];
-        if (extract_value(episode, value, sizeof(value), user_msg)) {
-            snprintf(reply, sizeof(reply), "%s", value);
-            fprintf(stderr, "[neural ACTIVATION] supported → value='%s' (from ep %d)\n",
-                    value, ep_to_use);
-            return reply;
-        }
-        /* If relation extraction failed on matched ep, try other episodes */
-        for (int ep = session->n_episodes - 1; ep >= 0; ep--) {
-            if (ep == ep_to_use) continue;
-            if (extract_value(session->episodes[ep], value, sizeof(value), user_msg)) {
-                snprintf(reply, sizeof(reply), "%s", value);
-                fprintf(stderr, "[neural ACTIVATION] supported → value='%s' (fallback ep %d)\n",
-                        value, ep);
-                return reply;
+        /* SUPPORTED: neural wide-head (2048-dim) value span selection */
+        const char *episode = session->episodes[session->n_episodes - 1];
+
+        /* Encode source in JSON-framed format (same as Python training pipeline)
+         * so the wide head sees the same feature distribution it was trained on */
+        /* Training used a single JSON object (no array wrapper) for sources */
+        char src_json[MAX_EPISODE_LEN + 128];
+        snprintf(src_json, sizeof(src_json),
+                 "{\"role\":\"user\",\"speaker\":\"user\",\"text\":\"%s\"}", episode);
+        int ids[512];
+        int n_tok = bitnet_tokenize_ex(st->model, src_json, ids, 512, 1);
+        int n_src_tokens = n_tok > 1 ? n_tok - 1 : 0;
+
+        /* Neural per-token value scoring: the wide head scores each source
+         * token's relevance to the query. The contiguous region with the
+         * highest scores is the value. No string matching — the trained
+         * model makes the selection. */
+        /* Recompute encoder features for JSON-framed source */
+        float json_src_feats[512 * 2048];
+        int json_n = compute_encoder_features_all(st, src_json, json_src_feats, 512);
+
+        if (json_n > 0 && n_tok > 1) {
+            /* Span-level scoring: mean-pool source features per span
+             * (matches the Python training: span_src = mean of features in span) */
+            int best_start = -1, best_len = 0;
+            float best_score = -1e30f;
+
+            float span_src[2048];
+            float wide_in[4096];
+            float h1[256];
+            float score;
+
+            /* Find content start: skip JSON wrapper tokens
+             * (episode text starts after "text":" in the JSON frame) */
+            int content_start = 0;
+            {
+                char first_char[8] = {0};
+                /* First non-space char of episode text */
+                const char *ep = episode;
+                while (*ep == ' ') ep++;
+                if (*ep) {
+                    /* Copy first UTF-8 char (up to 4 bytes) */
+                    int clen = 1;
+                    if ((*ep & 0xE0) == 0xC0) clen = 2;
+                    else if ((*ep & 0xF0) == 0xE0) clen = 3;
+                    else if ((*ep & 0xF8) == 0xF0) clen = 4;
+                    memcpy(first_char, ep, clen);
+                }
+                for (int t = 1; t < n_tok && t - 1 < json_n; t++) {
+                    char piece[64];
+                    int plen = bitnet_decode_token(st->model, ids[t], piece, sizeof(piece));
+                    if (plen > 0 && strstr(piece, first_char)) {
+                        content_start = t - 1;  /* feature row index */
+                        break;
+                    }
+                }
+            }
+
+            for (int start = content_start; start < json_n; start++) {
+                for (int len = 1; len <= 6 && start + len <= json_n; len++) {
+                    /* Mean-pool source features across span */
+                    for (int d = 0; d < 2048; d++) {
+                        float sum = 0;
+                        for (int t = start; t < start + len; t++)
+                            sum += json_src_feats[t * 2048 + d];
+                        span_src[d] = sum / len;
+                    }
+
+                    /* Wide head: cat(query_mean[2048], span_mean[2048]) */
+                    /* Query must be mean of ALL query token features (same as training) */
+                    for (int d = 0; d < 2048; d++) {
+                        float sum = 0;
+                        for (int q = 0; q < n_query; q++)
+                            sum += query_feats[q * 2048 + d];
+                        wide_in[d] = sum / n_query;
+                    }
+                    memcpy(wide_in + 2048, span_src, 2048 * sizeof(float));
+                    nm_wide_score(st->neural, wide_in, h1, &score);
+
+                    if (score > best_score) {
+                        best_score = score;
+                        best_start = start;
+                        best_len = len;
+                    }
+                }
+            }
+
+            if (best_start >= 0 && best_len > 0) {
+                /* Decode the selected token range as the value */
+                char value[512] = {0};
+                for (int t = best_start + 1; t < best_start + best_len + 1 && t < n_tok; t++) {
+                    char piece[256];
+                    int plen = bitnet_decode_token(st->model, ids[t], piece, sizeof(piece));
+                    fprintf(stderr, "  [decode] ids[%d]=%.*s ", t, plen > 0 ? plen : 2, plen > 0 ? piece : "?");
+                    if (plen > 0) strncat(value, piece, sizeof(value) - strlen(value) - 1);
+                }
+                fprintf(stderr, "\n");
+                /* Trim whitespace and trailing period */
+                char *v = value;
+                while (*v == ' ' || *v == '\n') v++;
+                int vlen = (int)strlen(v);
+                while (vlen > 0 && (v[vlen-1] == ' ' || v[vlen-1] == '.')) v[--vlen] = 0;
+
+                if (vlen > 0) {
+                    snprintf(reply, sizeof(reply), "%s", v);
+                    fprintf(stderr, "[neural WIDE_HEAD] tokens=(%d,%d) -> value='%s' (score=%.2f)\n",
+                            best_start, best_start + best_len, v, best_score);
+                    return reply;
+                }
             }
         }
-        fprintf(stderr, "[neural] supported but no value extracted\n");
+        fprintf(stderr, "[neural] supported but no neural value selected\n");
     } else if (route.route == 2) {
         /* INSUFFICIENT: uncertainty residual biases toward refusal */
         float modified_hidden[1024];

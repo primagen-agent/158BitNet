@@ -1,0 +1,224 @@
+{
+  "format": "MEMORY_FUSION_GATE_ONE_AUDIT_V1",
+  "date": "2026-09-18",
+  "oracle_episode_boundaries": true,
+  "automatic_memory": false,
+  "locomo_used": false,
+  "deployable": false,
+  "grader": "value_and_subject_v2",
+  "runs": {
+    "fusion_control": {
+      "configuration": {
+        "gguf": "/home/ubuntu/158bitnet-locomo/models/bitcpm4-0.5b-tq2_0.gguf",
+        "data": "/home/ubuntu/158bitnet-locomo/build/fusion-gate1-yzqckrye/run/data",
+        "output": "/home/ubuntu/158bitnet-locomo/build/fusion-gate1-yzqckrye/run/model",
+        "lib": "build/libggwshim.so",
+        "tok_probe": "build/tok_probe",
+        "device": "cuda",
+        "steps": 300,
+        "accumulation": 4,
+        "eval_every": 50,
+        "learning_rate": 0.0002,
+        "seed": 3180918,
+        "generation_tokens": 32
+      },
+      "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+      "train_sha256": "e96a77083524da2988cf3e16368012a5c957210f374294887347c139aa92e324",
+      "valid_sha256": "0e24e237bcb9494943fb72c89cda3b0eb52aac7a218a20070c1d7ce176f3e8a5",
+      "selected_sha256": "3977211405dc8bc2fade07384ddec76ea024836576e6cd255e4ddfcfb87f55e1",
+      "selected_step": 300,
+      "groups": {
+        "original": {
+          "total": 8,
+          "passed": 2,
+          "value_grounded": 2,
+          "natural_surface": 8,
+          "subject_exact": 8,
+          "exact_sentence": 2
+        },
+        "swapped": {
+          "total": 8,
+          "passed": 3,
+          "value_grounded": 3,
+          "natural_surface": 8,
+          "subject_exact": 8,
+          "exact_sentence": 3
+        },
+        "removed": {
+          "total": 8,
+          "passed": 7,
+          "value_grounded": 7,
+          "natural_surface": 8,
+          "subject_exact": 8,
+          "exact_sentence": 5
+        },
+        "distractor": {
+          "total": 8,
+          "passed": 2,
+          "value_grounded": 2,
+          "natural_surface": 8,
+          "subject_exact": 8,
+          "exact_sentence": 1
+        }
+      },
+      "paired_swaps": {
+        "passed": 1,
+        "total": 8
+      },
+      "gate_one_passed": false,
+      "empty_memory_logits_exact": true,
+      "state_roundtrip_exact": true,
+      "report_sha256": "94e3ce83350d251cce128781d25f4d321640c0a337d9f684e255992af76bc502",
+      "total_correct": 14,
+      "total": 32,
+      "implementation_sha256": null
+    },
+    "entity_diversity_control": {
+      "configuration": {
+        "gguf": "/home/ubuntu/158bitnet-locomo/models/bitcpm4-0.5b-tq2_0.gguf",
+        "data": "../run-diverse/data",
+        "output": "../run-diverse/model",
+        "lib": "build/libggwshim.so",
+        "tok_probe": "build/tok_probe",
+        "device": "cuda",
+        "steps": 600,
+        "accumulation": 8,
+        "eval_every": 100,
+        "learning_rate": 0.0002,
+        "seed": 3180918,
+        "generation_tokens": 32
+      },
+      "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+      "train_sha256": "d8b4fdae0cca59df528278a52e179a8344aa4b04413af6429a932b6293d90fa9",
+      "valid_sha256": "0e24e237bcb9494943fb72c89cda3b0eb52aac7a218a20070c1d7ce176f3e8a5",
+      "selected_sha256": "d1a4a33d4f04e25ae6a797b32b3b45de417583b269b6318d782aa73c0166a767",
+      "selected_step": 500,
+      "groups": {
+        "original": {
+          "total": 8,
+          "passed": 2,
+          "value_grounded": 7,
+          "natural_surface": 8,
+          "subject_exact": 2,
+          "exact_sentence": 2
+        },
+        "swapped": {
+          "total": 8,
+          "passed": 1,
+          "value_grounded": 6,
+          "natural_surface": 8,
+          "subject_exact": 2,
+          "exact_sentence": 1
+        },
+        "removed": {
+          "total": 8,
+          "passed": 0,
+          "value_grounded": 0,
+          "natural_surface": 8,
+          "subject_exact": 2,
+          "exact_sentence": 0
+        },
+        "distractor": {
+          "total": 8,
+          "passed": 1,
+          "value_grounded": 4,
+          "natural_surface": 8,
+          "subject_exact": 1,
+          "exact_sentence": 1
+        }
+      },
+      "paired_swaps": {
+        "passed": 1,
+        "total": 8
+      },
+      "gate_one_passed": false,
+      "empty_memory_logits_exact": true,
+      "state_roundtrip_exact": true,
+      "report_sha256": "2cb8f3dabaac05f9adf338fce670385104b909cbdc6236b70cf32117d7d856be",
+      "total_correct": 4,
+      "total": 32,
+      "implementation_sha256": null
+    },
+    "evidence_conditioned_candidate": {
+      "configuration": {
+        "gguf": "/home/ubuntu/158bitnet-locomo/models/bitcpm4-0.5b-tq2_0.gguf",
+        "data": "../run-diverse/data",
+        "output": "../run-evidence/model",
+        "lib": "build/libggwshim.so",
+        "tok_probe": "build/tok_probe",
+        "device": "cuda",
+        "steps": 600,
+        "accumulation": 8,
+        "eval_every": 100,
+        "learning_rate": 0.0002,
+        "seed": 3180918,
+        "generation_tokens": 32,
+        "evidence_gate": true,
+        "gate_loss_weight": 1,
+        "decision_loss_weight": 4,
+        "select_by_generation": true
+      },
+      "backbone_sha256": "44cb4e0db8374d4247bba391b3d3b7c0b3ee815c36cf2e20d0d1a3570677bd95",
+      "train_sha256": "d8b4fdae0cca59df528278a52e179a8344aa4b04413af6429a932b6293d90fa9",
+      "valid_sha256": "0e24e237bcb9494943fb72c89cda3b0eb52aac7a218a20070c1d7ce176f3e8a5",
+      "selected_sha256": "dd6a90147ace4242e6996cc3384b054b3644200ff3f8dc2404808ef6cdd8cd87",
+      "selected_step": 400,
+      "groups": {
+        "original": {
+          "total": 8,
+          "passed": 2,
+          "value_grounded": 4,
+          "natural_surface": 8,
+          "subject_exact": 3,
+          "exact_sentence": 1
+        },
+        "swapped": {
+          "total": 8,
+          "passed": 1,
+          "value_grounded": 4,
+          "natural_surface": 8,
+          "subject_exact": 5,
+          "exact_sentence": 0
+        },
+        "removed": {
+          "total": 8,
+          "passed": 2,
+          "value_grounded": 2,
+          "natural_surface": 8,
+          "subject_exact": 2,
+          "exact_sentence": 0
+        },
+        "distractor": {
+          "total": 8,
+          "passed": 1,
+          "value_grounded": 3,
+          "natural_surface": 8,
+          "subject_exact": 2,
+          "exact_sentence": 0
+        }
+      },
+      "paired_swaps": {
+        "passed": 0,
+        "total": 8
+      },
+      "gate_one_passed": false,
+      "empty_memory_logits_exact": true,
+      "state_roundtrip_exact": true,
+      "report_sha256": "55f148fa15e2b780e586a9d8e9e980a989ccf2362227e24d0730d64e9642de83",
+      "total_correct": 6,
+      "total": 32,
+      "implementation_sha256": {
+        "train_memory_fusion.py": "da7505a88cf5b5c93613d8fab24ebc6e073c79774fc570d3fd81f3d8c7e07973",
+        "memory_fusion.py": "d3a62c46afe9dbd3f8fb9c74eda2c0351a9c389db8ef59ba18839e2fcdb3371d",
+        "torch_backbone.py": "7f90d02047171adcb1a843db269b172257b65400e933d934ea9ba78cfa9e8330",
+        "c_tokenizer.py": "26239f607e33deaf24d4009b7a24e623b3f7ed3e38eabad45905df2aff6e1ef8"
+      }
+    }
+  },
+  "conclusions": [
+    "All candidates fail the predeclared architecture gate.",
+    "Value-only scores overstate correctness when subject names are corrupted.",
+    "Training replay does not establish entity generalization.",
+    "No autonomous writer, C memory deployment, or large-scale training promotion."
+  ]
+}

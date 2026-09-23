@@ -627,12 +627,23 @@ text. Both are loaded from a single `model.bnmodel` file.
 | Route discrimination | 82% | V3-009 (frozen trunk, two-phase) |
 | START timing | correct | V3-013 (tokenization fix) |
 | Value copy path | connected | V3-013 |
-| Value selection accuracy | 0/10 (grounded) | Known limitation |
+| In-distribution value selection | 93-100% | V3-023j (wide heads + live tokenizer) |
+| Cross-subject value binding (OOD) | not solved | Architecture limitation (see below) |
 
-The grounded limitation (selecting the correct value from stored facts) requires
-architectural changes to the query/source projection layer. Nine training
-rounds (V3-008 through V3-019) exhaustively demonstrated that parameter
-unfreezing alone cannot resolve this within the current architecture.
+### Known limitation: subject-to-value binding on unseen combinations
+
+The frozen 0.5B backbone's features do not encode entity-attribute binding.
+Ten-plus experiments (wide 2048-dim heads, cross-attention, projection
+unfreezing, context windows, contrastive losses) all confirm: when a stored
+source contains facts about two people ("Brenna lives in Riga. Caius works
+in Aachen"), the model cannot reliably select the value belonging to the
+queried person on combinations not seen during training. In-distribution
+recall (city/relation pairs present in the training corpus) works correctly
+end-to-end in the C server.
+
+Resolving this requires either fine-tuning the backbone or a larger model
+whose features naturally encode binding. The limitation is architectural,
+not a training deficiency.
 
 ## NEON optimization
 

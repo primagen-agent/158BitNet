@@ -27,3 +27,5 @@ training/memory/neural-system/data/*
 docs/
 __pycache__/
 *.pyc
+models/
+!models/memory/

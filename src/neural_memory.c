@@ -169,6 +169,11 @@ struct neural_memory_ctx {
     /* Branch weights */
     float *br_enc_w, *br_enc_b;       /* 1024×1024, 1024 */
     float *br_out_w;                  /* 1024×1024 */
+    /* Wide fact/value heads (2048-dim, bypass 64-dim bottleneck) */
+    float *wf0_w, *wf0_b;            /* 256×4096, 256 */
+    float *wf2_w, *wf2_b;            /* 1×256, 1 */
+    float *wv0_w, *wv0_b;            /* 256×4096, 256 */
+    float *wv2_w, *wv2_b;            /* 1×256, 1 */
     /* Structural constants */
     float struct_mu[3], struct_sd[3];
     float logit_scale;
@@ -211,6 +216,16 @@ nm_ctx_t *nm_init(const char *model_path) {
     ctx->br_enc_w = bnmodel_get(m, "branch.encoder.weight");
     ctx->br_enc_b = bnmodel_get(m, "branch.encoder.bias");
     ctx->br_out_w = bnmodel_get(m, "branch.output.weight");
+
+    /* Wide fact/value heads (version 2 .bnmodel) */
+    ctx->wf0_w = bnmodel_get(m, "wide_fact.0.weight");
+    ctx->wf0_b = bnmodel_get(m, "wide_fact.0.bias");
+    ctx->wf2_w = bnmodel_get(m, "wide_fact.2.weight");
+    ctx->wf2_b = bnmodel_get(m, "wide_fact.2.bias");
+    ctx->wv0_w = bnmodel_get(m, "wide_value.0.weight");
+    ctx->wv0_b = bnmodel_get(m, "wide_value.0.bias");
+    ctx->wv2_w = bnmodel_get(m, "wide_value.2.weight");
+    ctx->wv2_b = bnmodel_get(m, "wide_value.2.bias");
 
     /* Structural constants: hardcoded from training data (DG-029) */
     ctx->struct_mu[0] = 0.838565f; ctx->struct_mu[1] = 136.708527f; ctx->struct_mu[2] = 0.455858f;
@@ -342,6 +357,60 @@ nm_route_t nm_predict_route(nm_ctx_t *ctx,
 }
 
 /* --- Uncertainty branch: residual → logits --- */
+/* --- Wide 2048-dim span selection (bypasses 64-dim bottleneck) --- */
+/* Scores each candidate span using the FULL 2048-dim query/source features.
+ * Returns the best value span's token range, or -1 if no spans. */
+int nm_wide_select_value(nm_ctx_t *ctx,
+                          const float *query_features,  /* [1×2048] */
+                          const float *source_features, /* [n_source×2048] */
+                          int n_source,
+                          int *span_starts, int *span_ends, /* candidate spans */
+                          int n_spans,
+                          int *best_span_idx) {
+    if (!ctx->wf0_w || n_spans <= 0 || !query_features || !source_features) return -1;
+
+    float q_wide[2048];
+    /* Mean-pool query features */
+    for (int i = 0; i < 2048; i++) q_wide[i] = query_features[i]; /* single row = no pool needed */
+
+    float best_score = -1e30f;
+    int best_idx = -1;
+
+    for (int s = 0; s < n_spans; s++) {
+        /* Mean-pool source features in span range */
+        float span_src[2048];
+        int start = span_starts[s], end = span_ends[s];
+        if (end > n_source) end = n_source;
+        int n = end - start;
+        if (n <= 0) continue;
+        for (int i = 0; i < 2048; i++) {
+            float sum = 0;
+            for (int t = start; t < end; t++) sum += source_features[t * 2048 + i];
+            span_src[i] = sum / n;
+        }
+
+        /* Concatenate query + span → [4096] */
+        float wide_in[4096];
+        memcpy(wide_in, q_wide, 2048 * sizeof(float));
+        memcpy(wide_in + 2048, span_src, 2048 * sizeof(float));
+
+        /* wide_fact: 4096 → 256 → tanh → 1 */
+        float h1[256];
+        linear(h1, wide_in, ctx->wf0_w, ctx->wf0_b, 4096, 256);
+        tanh_vec(h1, 256);
+        float score;
+        linear(&score, h1, ctx->wf2_w, ctx->wf2_b, 256, 1);
+
+        if (score > best_score) {
+            best_score = score;
+            best_idx = s;
+        }
+    }
+
+    if (best_idx >= 0) *best_span_idx = best_idx;
+    return best_idx;
+}
+
 void nm_apply_residual(nm_ctx_t *ctx,
                         const float *hidden,  /* [1024] C backbone hidden */
                         float *modified_hidden /* [1024] hidden + uncertainty residual / scale */) {
@@ -371,4 +440,11 @@ void nm_apply_residual(nm_ctx_t *ctx,
      * the final logits from this modified hidden state — no .npy needed. */
     for (int i = 0; i < H; i++)
         modified_hidden[i] = hidden[i] + residual[i] / ctx->logit_scale;
+}
+
+void nm_wide_score(nm_ctx_t *ctx, const float *wide_in, float *h1, float *score) {
+    if (!ctx || !ctx->wf0_w || !wide_in || !h1 || !score) return;
+    linear(h1, wide_in, ctx->wf0_w, ctx->wf0_b, 4096, 256);
+    tanh_vec(h1, 256);
+    linear(score, h1, ctx->wf2_w, ctx->wf2_b, 256, 1);
 }
