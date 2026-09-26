@@ -80,6 +80,7 @@ add_library(bitnet STATIC
     src/quant_q6k.c
     src/quant_q8k.c
     src/neural_memory.c
+    src/memory_state.c
     src/ops.c
     src/sampler.c
     src/thread_config.c
@@ -164,6 +165,22 @@ target_include_directories(test_gguf PRIVATE src)
 target_compile_definitions(test_gguf PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_link_libraries(test_gguf PRIVATE bitnet)
 add_test(NAME test_gguf COMMAND test_gguf)
+
+add_executable(test_memory_state tests/test_memory_state.c)
+target_include_directories(test_memory_state PRIVATE src)
+target_link_libraries(test_memory_state PRIVATE bitnet m)
+add_test(NAME test_memory_state COMMAND test_memory_state)
+
+add_executable(test_neural_memory tests/test_neural_memory.c)
+target_include_directories(test_neural_memory PRIVATE src)
+target_link_libraries(test_neural_memory PRIVATE bitnet m)
+add_test(NAME test_neural_memory COMMAND test_neural_memory)
+
+add_executable(test_route_parity tests/test_route_parity.c)
+target_include_directories(test_route_parity PRIVATE src)
+target_link_libraries(test_route_parity PRIVATE bitnet m)
+add_test(NAME test_route_parity COMMAND test_route_parity
+         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_executable(test_quant_tq2_0 tests/test_quant_tq2_0.c)
 target_include_directories(test_quant_tq2_0 PRIVATE src)

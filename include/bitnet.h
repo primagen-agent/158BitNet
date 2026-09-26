@@ -74,6 +74,15 @@ int bitnet_sample_greedy_repetition_penalty(bitnet_context_t *ctx,
                                             int n_tokens,
                                             float penalty);
 const float *bitnet_get_logits(const bitnet_context_t *ctx);
+
+/* Project a FINAL-NORMED hidden vector (as returned by bitnet_get_last_hidden)
+ * through the model's output projection (Q6_K path) without a transformer
+ * forward. Neural-memory uncertainty uses this to inject a residual into the
+ * hidden state: logits = OutputProj(hidden + residual).
+ * Returns the context's logits buffer (vocab-sized), or NULL when the model's
+ * output path is unsupported. The buffer is overwritten by the next eval. */
+const float *bitnet_project_hidden_to_logits(bitnet_context_t *ctx,
+                                             const float *hidden_normed);
 void bitnet_apply_repetition_penalty(float *logits,
                                      int vocab_size,
                                      const int *tokens,

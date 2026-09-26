@@ -554,12 +554,21 @@ cmake -S . -B build && cmake --build build -j 8
 ## Memory server usage
 
 ```
-Morgan lives in Lima.               → [write] stored
-Where does Morgan live now?         → [neural] route=2, hybrid: Morgan → ep 0
-                                     → supported → value='Lima'
-Where does Kai live now?            → no matching fact → refusal
-What is 3 plus 7?                   → route=0 (normal) → "3 + 7 = 10"
+Caius currently lives in Aachen. Darya currently works in Bilbao.
+                                   → [write] stored
+Where does Caius live now?         → route=1 (supported) → value='Aachen'
+Where does Kai live now?           → route=2 → natural refusal
+Morgan lives in Lima.              → [write] stored
+Where does Morgan live now?        → route=2 (single-fact phrasing is outside
+                                     the route head's training form) → refusal
+What is 3 plus 7?                  → usually route=0 (normal base chat);
+                                     may misroute after a JB-form episode
+                                     (measured transfer weakness, LC-002)
 ```
+
+Recall activates on the JB training form (two-fact episodes with
+"currently lives/works"); plain single-fact sentences and unseen
+subject–attribute combinations refuse rather than guess.
 
 ### Persistence
 
@@ -577,73 +586,115 @@ What is 3 plus 7?                   → route=0 (normal) → "3 + 7 = 10"
   --save-state memory.bnstate
 ```
 
-### Supported memory types
+### Memory recall: what actually activates (measured, 2026-09-24)
 
-| Type | Example write | Example query | Extracted value |
-| --- | --- | --- | --- |
-| Location | Morgan lives in Lima. | Where does Morgan live? | Lima |
-| Birthday | Sarah birthday is on March 5th. | When is Sarah birthday? | on March 5th |
-| Goal | Tom wants to learn Spanish. | What does Tom want to learn? | to learn Spanish |
-| Identity | Anna is a doctor. | What is Anna's job? | a doctor |
-| Event | Meeting starts at 3pm. | When does the meeting start? | at 3pm |
-| Chinese | 李明住在上海。 | 李明现在住在哪里？ | 上海 |
+The trained route head certifies only the JB training form — two-fact
+episodes ("X currently lives in Y. Z currently works in W."). Measured
+behavior of the current system:
+
+| Input shape | Behavior |
+| --- | --- |
+| Several stored episodes + query about ANY of them | ranked recall (EC-005 joint head, holdout top-1 0.81 over unseen worlds): e.g. 3 episodes stored, query the FIRST subject → its value |
+| JB-form episode + in-distribution query | neural recall (e.g. → `Aachen`) |
+| Plain single-fact sentences (Morgan lives in Lima.) | stored, but query refuses (route=insufficient) — the route head never saw this form |
+| Query about an absent subject | natural refusal (uncertainty branch) |
+| Arithmetic after a JB-form episode | may misroute to recall (known transfer weakness, LC-002) |
+
+The earlier "six memory types" table described the pre-LC-002 system whose
+route decision was an empirical override (route=2 + logit patch → always
+extract). With the trained route restored, those plain-form examples no
+longer activate; the table was removed rather than left misleading.
 
 ### Architecture
 
 ```
 User message
   ↓ tokenize + C backbone forward
-  ↓ encoder feature extraction (2048-dim, L2-normalized hidden+lexical pair)
-  ↓ neural route prediction (trained 3-class head: normal/supported/insufficient)
-  ↓ if supported: subject matching → episode lookup → value extraction
-  ↓ if insufficient: uncertainty branch residual → trained refusal
-  ↓ if normal: plain base generation
-  ↓ reply
+  ↓ encoder features (2048-dim, L2-normalized hidden+lexical pair)
+  ↓ route head (trained 3-class: normal/supported/insufficient)
+  │  — exact port of the trained reader's span-based evidence
+  │    (candidate spans + fact-probability-weighted evidence),
+  │    verified by test_route_parity against Python logits
+  ├─ normal      → plain base generation
+  ├─ supported   → wide-head (2048-dim) value span selection on the episode
+  └─ insufficient→ uncertainty residual added to the final hidden state,
+                   projected through the backbone's own Q6_K output head
+                   (bitnet_project_hidden_to_logits) → natural refusal
 ```
 
-The route head is the trained `FineSpanReader` from 18 rounds of local training
-(V3-001 through V3-019). The uncertainty branch is the trained
-`QueryOnlyUncertainty` residual that biases generation toward natural refusal
-text. Both are loaded from a single `model.bnmodel` file.
+Both route and value heads read features computed with the training-matched
+JSON framing (query = one-element array, episode = single object, escaped
+text). Memory content is UNBOUNDED: the session table grows dynamically,
+episodes are arbitrary-length strings, and input lines have no fixed cap.
+Recall operates on a 512-token feature window per episode (long episodes
+truncate at a UTF-8 boundary; storage keeps the full text). Episode feature
+means are cached at write time only when a ranking head consumes them and
+persist in `.bnstate` v2. There is no route-override patch: the trained
+heads decide, and refusal is the trained uncertainty branch.
 
 ### Files
 
 | File | Role |
 | --- | --- |
-| `src/neural_memory.c/h` | Pure C neural inference (route head + uncertainty branch) |
+| `src/neural_memory.c/h` | Pure C neural inference (route + wide heads + uncertainty branch, framing/span layout) |
+| `src/memory_state.c/h` | Session episode store, capacity 512, `.bnstate` v1/v2 persistence |
 | `tools/c_neural_server.c` | Pure C server (sessions, memory, persistence, routing) |
-| `build/neural-c-weights/model.bnmodel` | Trained neural weights (29 tensors, 9.5 MB) |
-| `python/train_v3_*.py` | Training pipeline (18 rounds) |
-| `python/check_v3_eval_*.py` | Free-reply evaluators (C-verified + dual blind review) |
-| `python/free_reply_protocol.py` | Blind review protocol and gate aggregation |
+| `build/neural-c-weights/model.bnmodel` | Trained neural weights (v3, 43 tensors, joint ranking head) |
+| `python/train_wide_live_ce.py` | Value-span training (live features + tokenizer) |
+| `python/export_bnmodel.py` | `.bnmodel` writer/inspector (v2/v3) |
+| `python/eval_locomo_neural.py` | LoCoMo driver (raw-turn writes, real restart, read-only queries) |
+| `tests/test_memory_state.c`, `tests/test_neural_memory.c`, `tests/test_route_parity.c` | ctest-registered C units |
+| `tests/test_c_neural_server_memory.py` | End-to-end REPL integration tests |
 | `training/memory/neural-system/` | Experiment registrations, reviews, training data |
 
-### Training results
+### Verification and training results
 
-| Capability | Status | Training round |
+| Capability | Status | Established in |
 | --- | --- | --- |
-| Uncertainty refusal | 8-10/10 | V3-004 (supervision fix) |
-| Normal chat | 4/4 | V3-005 onward |
-| Route discrimination | 82% | V3-009 (frozen trunk, two-phase) |
-| START timing | correct | V3-013 (tokenization fix) |
-| Value copy path | connected | V3-013 |
-| In-distribution value selection | 93-100% | V3-023j (wide heads + live tokenizer) |
-| Cross-subject value binding (OOD) | not solved | Architecture limitation (see below) |
+| Route logits parity (C == trained Python reader) | 10/10 records | `test_route_parity` (ctest) |
+| Episode ranking, unseen worlds (EC-005) | holdout top-1 **0.812** | `reviews/EC-005/` |
+| Multi-episode recall, non-last episode | verified | integration test |
+| Uncertainty refusal (natural, EN/ZH) | 8–10/10 panels | V3-004 lineage |
+| Normal chat | 4/4 panels | V3-005 onward |
+| Route discrimination (dev, n=892) | 82% | V3-009 (two-stage) |
+| In-distribution recall end-to-end in C (JB form) | verified | integration test (ctest-excluded, needs GGUF) |
+| Persistence across restart (v2 state) | verified | `test_memory_state` + integration |
+| Episode relevance head (EC-001) | **failed gate** (holdout top-1 0.292 < 0.80) — not deployed | `reviews/EC-001/` |
+| LoCoMo10 baseline (LC-001, pre-fix) | F1 0.0022, cat-5 rejection 0.0 | `reviews/LC-001/` |
+| LoCoMo10 post-fix (LC-002) | storage fixed (168-402/conv), cat-5 rejection 0.213 (was 0.0), F1 0.0036 | `reviews/LC-002/` |
+| LoCoMo10 ranking head (LC-003) | mechanics confirmed, F1 flat: form transfer fails | `reviews/LC-003/` |
+| LoCoMo10 mixed-form + tau (LC-004) | cat-5 rejection **0.946**, first exact match; recall ~0 (threshold rejects answerable cross-form queries) | `reviews/LC-004/` |
+| LoCoMo10 paraphrase corpus (LC-005) | F1 0.000, rejection 0.938 — self-distillation does not bridge to real dialogue (generative-process gap) | `reviews/LC-005/` |
 
-### Known limitation: subject-to-value binding on unseen combinations
+### Known limitations
 
-The frozen 0.5B backbone's features do not encode entity-attribute binding.
-Ten-plus experiments (wide 2048-dim heads, cross-attention, projection
-unfreezing, context windows, contrastive losses) all confirm: when a stored
-source contains facts about two people ("Brenna lives in Riga. Caius works
-in Aachen"), the model cannot reliably select the value belonging to the
-queried person on combinations not seen during training. In-distribution
-recall (city/relation pairs present in the training corpus) works correctly
-end-to-end in the C server.
+1. **Episode selection is learned and deployed** (EC-005): a joint
+   per-pair-interaction ranking head (the only architecture of five tested
+   that learned subject identity) selects which stored episode answers the
+   query — 0.81 top-1 on held-out semantic worlds. Its absolute scores are
+   NOT calibrated (deployment tau=0.02): the head ranks, the route head
+   still decides whether to answer. Span-level binding of two facts inside
+   ONE episode remains in-distribution-only.
+2. **Route head distribution.** Supported/insufficient decisions are only
+   trained on the JB form (two-fact "currently lives/works" episodes);
+   plain single-fact sentences refuse.
+3. **Subject–value binding on unseen combinations** remains unsolved — an
+   architectural limit of frozen 0.5B features (see PAPER.md §6).
 
-Resolving this requires either fine-tuning the backbone or a larger model
-whose features naturally encode binding. The limitation is architectural,
-not a training deficiency.
+### LoCoMo10
+
+`python/eval_locomo_neural.py` drives the pinned official LoCoMo10
+(SHA-verified) through the C server: raw-turn single-line writes with the
+automatic gate, `/save`, real process restart, `/load`, then read-only
+questions scored with the official category F1. Baseline (LC-001):
+F1 0.0022 over 1,540 answerable questions, 100% activation including all 446
+adversarial ones (rejection 0.0), storage capped at 16 episodes. The LC-002
+re-run confirms the engineering fixes (full storage, real refusal path,
+exact route computation) while the remaining gap is fully attributed to the
+documented representation wall: value extraction still reads only the last
+episode and the JB-trained route head over-accepts natural dialogue
+questions (conversation 0 answers all 199 queries from the last episode's
+span). Details in `reviews/LC-002/`.
 
 ## NEON optimization
 

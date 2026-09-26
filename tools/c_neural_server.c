@@ -3,150 +3,58 @@
  * Without --memory-model: plain LLM inference (tokenize → forward → decode).
  * With --memory-model: neural memory capabilities enabled (store/recall/refuse).
  *
+ * Memory query path (LC-002 fixes over LC-001):
+ *   1. episodes ranked by the trained episode-relevance head (EC-001) over
+ *      cached per-episode feature means — not "last episode only";
+ *   2. the trained route head decides normal/supported/insufficient on the
+ *      top episode (no empirical logit override);
+ *   3. supported → wide-head value span selection on the top episode;
+ *      insufficient / below tau → uncertainty residual drives refusal through
+ *      the backbone's own output projection;
+ *   4. query and episode features use the training-matched JSON object frame
+ *      (sorted keys, compact separators, escaped text).
+ *
  * Usage:
  *   Plain LLM:   c_neural_server model.gguf
  *   With memory: c_neural_server model.gguf --memory-model weights.bnmodel
  */
 #include "bitnet.h"
 #include "neural_memory.h"
+#include "memory_state.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <pthread.h>
 #include <stdint.h>
 #include <ctype.h>
 
-#define MAX_SESSIONS 64
-#define MAX_EPISODES 16
-#define MAX_EPISODE_LEN 512
 #define MAX_MSG_LEN 2048
 #define MAX_TOKENS 512
+/* Absolute-score floor for the joint ranking head. EC-007 five-corpus
+   world-level holdout Youden point (see reviews/EC-007 tau_analysis). */
+#define EP_REL_TAU 0.17f
+/* Ranking window (LC-003): plain-C joint scoring costs ~0.5s/episode, so
+ * CPU deployment ranks only the most recent episodes. Registered interim
+ * limit in reviews/LC-003; remove when the vectorized/Metal kernel lands. */
+#define EP_RANK_WINDOW 32
 
-/* --- Memory state file format (.bnstate) ---
- * [4B magic "BNST"] [4B version] [4B n_sessions] [4B reserved]
- * per session:
- *   [4B id_len] [id bytes] [4B n_episodes]
- *   per episode: [4B ep_len] [episode bytes]
- * All integers little-endian. CRC32 at end for integrity. */
-
-#define BNST_MAGIC 0x54534E42  /* "BNST" */
-#define BNST_VERSION 1
-
-static uint32_t crc32_simple(const uint8_t *data, size_t len) {
-    uint32_t crc = 0xFFFFFFFF;
-    for (size_t i = 0; i < len; i++) {
-        crc ^= data[i];
-        for (int j = 0; j < 8; j++)
-            crc = (crc >> 1) ^ (0xEDB88320 & (-(crc & 1)));
-    }
-    return ~crc;
-}
-
-/* --- Session state --- */
-typedef struct {
-    char id[64];
-    int n_episodes;
-    char episodes[MAX_EPISODES][MAX_EPISODE_LEN];
-} session_t;
-
-static session_t sessions[MAX_SESSIONS];
-static int n_sessions = 0;
-static pthread_mutex_t session_lock = PTHREAD_MUTEX_INITIALIZER;
-
-static session_t *get_session(const char *id) {
-    pthread_mutex_lock(&session_lock);
-    for (int i = 0; i < n_sessions; i++)
-        if (strcmp(sessions[i].id, id) == 0) { pthread_mutex_unlock(&session_lock); return &sessions[i]; }
-    if (n_sessions < MAX_SESSIONS) {
-        strncpy(sessions[n_sessions].id, id, 63);
-        sessions[n_sessions].n_episodes = 0;
-        pthread_mutex_unlock(&session_lock);
-        return &sessions[n_sessions++];
-    }
-    pthread_mutex_unlock(&session_lock);
-    return NULL;
-}
-
-static void add_episode(session_t *s, const char *text) {
-    if (s && s->n_episodes < MAX_EPISODES) {
-        strncpy(s->episodes[s->n_episodes], text, MAX_EPISODE_LEN-1);
-        s->episodes[s->n_episodes][MAX_EPISODE_LEN-1] = 0;
-        s->n_episodes++;
-    }
-}
-
-/* --- Memory state export/import --- */
-static int save_memory_state(const char *path) {
-    FILE *f = fopen(path, "wb");
-    if (!f) { fprintf(stderr, "[memory] cannot open %s for writing\n", path); return -1; }
-
-    uint32_t header[4] = {BNST_MAGIC, BNST_VERSION, (uint32_t)n_sessions, 0};
-    fwrite(header, 4, 4, f);
-
-    for (int i = 0; i < n_sessions; i++) {
-        uint32_t id_len = (uint32_t)strlen(sessions[i].id);
-        fwrite(&id_len, 4, 1, f);
-        fwrite(sessions[i].id, 1, id_len, f);
-        uint32_t n_ep = (uint32_t)sessions[i].n_episodes;
-        fwrite(&n_ep, 4, 1, f);
-        for (int j = 0; j < sessions[i].n_episodes; j++) {
-            uint32_t ep_len = (uint32_t)strlen(sessions[i].episodes[j]);
-            fwrite(&ep_len, 4, 1, f);
-            fwrite(sessions[i].episodes[j], 1, ep_len, f);
-        }
-    }
-    fclose(f);
-    fprintf(stderr, "[memory] saved %d sessions to %s\n", n_sessions, path);
-    return 0;
-}
-
-static int load_memory_state(const char *path) {
-    FILE *f = fopen(path, "rb");
-    if (!f) { fprintf(stderr, "[memory] no state file: %s\n", path); return -1; }
-
-    uint32_t header[4];
-    if (fread(header, 4, 4, f) != 4 || header[0] != BNST_MAGIC) {
-        fprintf(stderr, "[memory] bad state file magic\n"); fclose(f); return -1;
-    }
-    if (header[1] != BNST_VERSION) {
-        fprintf(stderr, "[memory] unsupported state version %u\n", header[1]); fclose(f); return -1;
-    }
-
-    uint32_t count = header[2];
-    if (count > MAX_SESSIONS) count = MAX_SESSIONS;
-    n_sessions = 0;
-
-    for (uint32_t i = 0; i < count; i++) {
-        uint32_t id_len;
-        if (fread(&id_len, 4, 1, f) != 1 || id_len >= 64) break;
-        char id[64];
-        if (fread(id, 1, id_len, f) != id_len) break;
-        id[id_len] = 0;
-
-        uint32_t n_ep;
-        if (fread(&n_ep, 4, 1, f) != 1 || n_ep > MAX_EPISODES) break;
-
-        session_t *s = get_session(id);
-        if (!s) break;
-        s->n_episodes = 0;
-        for (uint32_t j = 0; j < n_ep; j++) {
-            uint32_t ep_len;
-            if (fread(&ep_len, 4, 1, f) != 1 || ep_len >= MAX_EPISODE_LEN) break;
-            if (fread(s->episodes[j], 1, ep_len, f) != ep_len) break;
-            s->episodes[j][ep_len] = 0;
-            s->n_episodes++;
-        }
-    }
-    fclose(f);
-    fprintf(stderr, "[memory] loaded %d sessions from %s\n", n_sessions, path);
-    return 0;
-}
+/* --- Memory state: sessions/episodes/means live in memory_state.{c,h} --- */
 
 /* --- Memory heuristics (only used when neural memory is enabled) --- */
 static int is_question(const char *t) {
     size_t n = strlen(t);
-    if (n > 0 && (t[n-1] == '?')) return 1;
+    if (n > 0 && (t[n-1] == '?')) {
+        /* multi-sentence utterances ending in '?' (dialogue turns) still
+         * carry facts — only a single-question utterance is a question */
+        int has_statement = 0;
+        for (size_t i = 0; i + 1 < n; i++) {
+            unsigned char c = (unsigned char)t[i];
+            if (c == '.' || c == '!' || (c == 0xEF && (unsigned char)t[i+1] == 0xBC)) {
+                has_statement = 1; break;
+            }
+        }
+        if (!has_statement) return 1;
+    }
     const char *qw[] = {"where","Where","who","Who","what","What","when","When",
                         "why","Why","how","How","which","Which","can","Can","do","Do",
                         "is ","Is ","are ","Are ","was ","Was ",
@@ -159,13 +67,14 @@ static int is_question(const char *t) {
 }
 
 /* Type-agnostic fact detection: any declarative statement with a linking verb,
- * possession, preference, goal, time, event, or attribute qualifies. */
+ * possession, preference, goal, time, event, or attribute qualifies.
+ * Storage gating ONLY — never participates in recall. No length cap:
+ * memory content is unbounded by design. */
 static int is_fact(const char *t) {
     if (is_question(t)) return 0;
     size_t n = strlen(t);
-    if (n < 5 || n > 500) return 0;
+    if (n < 5) return 0;
 
-    /* English patterns: linking verbs, possession, preference, time, goal, event */
     const char *en[] = {
         " is ", " are ", " was ", " were ", " has ", " have ", " had ",
         " lives ", " works ", " moved ", " likes ", " loves ", " hates ",
@@ -185,7 +94,6 @@ static int is_fact(const char *t) {
     for (int i = 0; en[i]; i++)
         if (strstr(t, en[i])) return 1;
 
-    /* Chinese patterns */
     const char *zh[] = {
         "是", "有", "在", "喜欢", "讨厌", "想要", "需要", "会", "能",
         "住在", "工作", "搬到", "出生", "毕业", "结婚", "退休", "加入",
@@ -197,9 +105,16 @@ static int is_fact(const char *t) {
     for (int i = 0; zh[i]; i++)
         if (strstr(t, zh[i])) return 1;
 
-    /* Heuristic: any statement with a period and no question mark */
-    if (n > 8 && t[n-1] == '.' && !strstr(t, "?"))
-        return 1;
+    if (n > 8) {
+        /* multi-sentence utterances carry facts regardless of the final
+         * punctuation (dialogue turns often end in '?'); single questions
+         * were already caught by is_question above */
+        int terminators = 0;
+        for (size_t i = 0; i < n; i++)
+            if (t[i] == '.' || t[i] == '!' || t[i] == '?') terminators++;
+        if (terminators >= 2 || t[n-1] == '.')
+            return 1;
+    }
 
     return 0;
 }
@@ -211,6 +126,34 @@ typedef struct {
     nm_ctx_t *neural;
     int has_memory;
 } server_state_t;
+
+/* --- JSON framing lives in neural_memory (nm_frame_text): identical to
+ * training (json.dumps sort_keys, compact separators, escaped text). --- */
+
+/* Portable arbitrary-length line reader (no getline: MSVC CI). */
+static char *read_line(FILE *f, char **buf, size_t *cap) {
+    size_t len = 0;
+    for (;;) {
+        if (*cap - len < 1024) {
+            size_t new_cap = *cap ? *cap * 2 : 4096;
+            char *grown = realloc(*buf, new_cap);
+            if (!grown) return NULL;
+            *buf = grown;
+            *cap = new_cap;
+        }
+        if (!fgets(*buf + len, (int)(*cap - len), f))
+            return len ? *buf : NULL;
+        len += strlen(*buf + len);
+        if (len && (*buf)[len - 1] == '\n') {
+            (*buf)[len - 1] = 0;
+            return *buf;
+        }
+        if (feof(f)) {
+            (*buf)[len] = 0;
+            return len ? *buf : NULL;
+        }
+    }
+}
 
 /* --- Base LLM generation (no memory) --- */
 static char *base_generate(server_state_t *st, const char *user_msg, int max_tokens) {
@@ -237,14 +180,44 @@ static char *base_generate(server_state_t *st, const char *user_msg, int max_tok
     return reply;
 }
 
+static char *frame_buf = NULL;
+static size_t frame_cap = 0;
+
 /* --- Compute 2048-dim encoder features for ALL token positions (same as training).
- * Returns number of feature rows (n_tokens - 1), features written to feat_buf.
- * Each row t (for token t+1) = [L2_norm(hidden_t); L2_norm(lex_t)]. */
+ * Each row t (for token t+1) = [L2_norm(hidden_t); L2_norm(lex_t)].
+ * Long texts are truncated at a UTF-8 boundary to the 512-token feature
+ * window (memory storage itself stays unbounded); ids_out receives the
+ * window's token ids so callers decode pieces from the same tokenization. */
 static int compute_encoder_features_all(server_state_t *st, const char *text,
-                                         float *feat_buf, int max_rows) {
+                                         float *feat_buf, int max_rows,
+                                         int *ids_out) {
+    static char *scratch = NULL;
+    static size_t scratch_cap = 0;
+    size_t len = strlen(text);
+    if (scratch_cap < len + 1) {
+        size_t new_cap = scratch_cap ? scratch_cap : 8192;
+        while (new_cap < len + 1) new_cap *= 2;
+        char *grown = realloc(scratch, new_cap);
+        if (!grown) return 0;
+        scratch = grown;
+        scratch_cap = new_cap;
+    }
+    memcpy(scratch, text, len + 1);
+
     int ids[512];
-    int n = bitnet_tokenize_ex(st->model, (char*)text, ids, 512, 1);
-    if (n < 2 || n >= 512) return 0;
+    int n = -1;
+    size_t tlen = len;
+    while (tlen > 0) {
+        n = bitnet_tokenize_ex(st->model, scratch, ids, 512, 1);
+        if (n >= 2 && n < 512) break;
+        size_t half = tlen / 2;
+        while (half > 0 && ((unsigned char)scratch[half] & 0xC0) == 0x80) half--;
+        if (half == 0) { n = -1; break; }
+        tlen = half;
+        scratch[tlen] = 0;
+    }
+    if (n < 2) return 0;
+    if (ids_out) memcpy(ids_out, ids, (size_t)n * sizeof(int));
 
     bitnet_context_t *ctx = bitnet_create_context(st->model, 512);
     if (!ctx) return 0;
@@ -263,7 +236,6 @@ static int compute_encoder_features_all(server_state_t *st, const char *text,
         free(lex); bitnet_free_context(ctx); return 0;
     }
 
-    /* Compute normalized pairs for positions 1..n-1 */
     int n_rows = n - 1;
     if (n_rows > max_rows) n_rows = max_rows;
 
@@ -289,219 +261,304 @@ static int compute_encoder_features_all(server_state_t *st, const char *text,
     return n_rows;
 }
 
+static int argmax_over(const float *v, int n) {
+    int best = 0;
+    for (int i = 1; i < n; i++) if (v[i] > v[best]) best = i;
+    return best;
+}
+
+/* Uncertainty refusal: the trained query-only residual biases generation
+ * toward natural refusal. The residual is added to the current position's
+ * final-normed hidden and the modified hidden drives the output projection
+ * via bitnet_project_hidden_to_logits — the trained branch actually fires. */
+static char *uncertainty_reply(server_state_t *st, int max_tokens) {
+    static char reply[4096];
+    reply[0] = 0;
+    int vocab = bitnet_vocab_size(st->model);
+    for (int pos = 0; pos < max_tokens && pos < 48; pos++) {
+        int token = -1;
+        const float *hidden = bitnet_get_last_hidden(st->ctx);
+        if (hidden) {
+            float modified[1024];
+            nm_apply_residual(st->neural, hidden, modified);
+            const float *logits = bitnet_project_hidden_to_logits(st->ctx, modified);
+            if (logits && vocab > 0)
+                token = argmax_over(logits, vocab);
+        }
+        if (token < 0)
+            token = bitnet_sample_greedy(st->ctx);
+        if (token < 0) break;
+        char piece[256];
+        int plen = bitnet_decode_token(st->model, token, piece, sizeof(piece));
+        if (plen > 0) strncat(reply, piece, sizeof(reply) - strlen(reply) - 1);
+        if (token == bitnet_eos_token(st->model)) break;
+        if (bitnet_eval(st->ctx, &token, 1) != 0) break;
+    }
+    char *im = strstr(reply, "<|im_end|>");
+    if (im) *im = 0;
+    fprintf(stderr, "[neural] insufficient → uncertainty reply\n");
+    return reply;
+}
+
 /* --- Neural memory generation (when --memory-model is given) --- */
-static char *memory_generate(server_state_t *st, session_t *session,
+static char *memory_generate(server_state_t *st, ms_session_t *session,
                               const char *user_msg, int max_tokens) {
     static char reply[4096];
     reply[0] = 0;
 
-    /* Store fact (type-agnostic: any declarative statement) */
+    /* Store fact (type-agnostic gate; storage ONLY, never recall).
+     * Feature-window rows + derived mean are cached at write time when a
+     * ranking head consumes them (joint-pair relevance). */
     if (is_fact(user_msg) && session) {
-        /* Store as-is; the neural reader's route head decides relevance */
-        add_episode(session, user_msg);
+        ms_add_episode(session, user_msg);
+        if (nm_has_episode_joint(st->neural)) {
+            static float rows[MS_MAX_ROWS * 2048];
+            char frame[8192];
+            nm_frame_text_dyn(user_msg, &frame_buf, &frame_cap);
+            snprintf(frame, sizeof frame, "%s", frame_buf);
+            int n_rows = compute_encoder_features_all(st, frame, rows,
+                                                       MS_MAX_ROWS, NULL);
+            if (n_rows > 0) {
+                int idx = session->n_episodes - 1;
+                ms_set_rows(session, idx, rows, n_rows);
+                float mean[2048];
+                for (int d = 0; d < 2048; d++) {
+                    float sum = 0;
+                    for (int r = 0; r < n_rows; r++) sum += rows[r * 2048 + d];
+                    mean[d] = sum / n_rows;
+                }
+                ms_set_mean(session, idx, mean);
+            }
+        }
         fprintf(stderr, "[write] %s\n", user_msg);
     }
 
-    /* No episodes or not a question → base */
     if (!session || session->n_episodes == 0 || !is_question(user_msg))
         return base_generate(st, user_msg, max_tokens);
 
-    /* Neural route prediction */
-    int tokens[MAX_TOKENS];
+    /* Prompt forward: prefix hidden for the route head + fallback decoding */
     char prompt[MAX_MSG_LEN];
     snprintf(prompt, MAX_MSG_LEN, "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n", user_msg);
-    int n = bitnet_tokenize(st->model, prompt, tokens, MAX_TOKENS);
-    if (n <= 0) return base_generate(st, user_msg, max_tokens);
+    int ptok[MAX_TOKENS];
+    int pn = bitnet_tokenize(st->model, prompt, ptok, MAX_TOKENS);
+    if (pn <= 0) return base_generate(st, user_msg, max_tokens);
     bitnet_reset_context(st->ctx);
-    if (bitnet_eval(st->ctx, tokens, n) != 0) return base_generate(st, user_msg, max_tokens);
+    if (bitnet_eval(st->ctx, ptok, pn) != 0)
+        return base_generate(st, user_msg, max_tokens);
 
-    const float *hidden = bitnet_get_last_hidden(st->ctx);
-    if (!hidden) return base_generate(st, user_msg, max_tokens);
+    /* Query features: training frames the query context as a one-element
+     * ARRAY; episodes use the single-object frame. Dynamic buffers —
+     * memory content is unbounded. */
+    static float query_feats[512 * 2048];
+    static char *qframe = NULL;
+    static size_t qframe_cap = 0;
+    nm_frame_query_dyn(user_msg, &qframe, &qframe_cap);
+    int n_query = compute_encoder_features_all(st, qframe, query_feats, 512, NULL);
+    if (n_query < 1) return base_generate(st, user_msg, max_tokens);
 
-    /* Compute PROPER encoder features for ALL token positions (same as training).
-     * Query: JSON-framed user message; Source: last episode text. */
-    char query_json[MAX_MSG_LEN];
-    snprintf(query_json, MAX_MSG_LEN,
-             "[{\"role\":\"user\",\"speaker\":\"user\",\"text\":\"%s\"}]", user_msg);
-    static float query_feats[512 * 2048];  /* large but reused across calls */
-    int n_query = compute_encoder_features_all(st, query_json, query_feats, 512);
-
-    static float source_feats[512 * 2048];
-    int n_source = 0;
-    if (session->n_episodes > 0) {
-        char source_json[MAX_EPISODE_LEN + 128];
-        const char *ep_text = session->episodes[session->n_episodes - 1];
-        snprintf(source_json, sizeof(source_json),
-                 "[{\"role\":\"user\",\"speaker\":\"user\",\"text\":\"%s\"}]", ep_text);
-        n_source = compute_encoder_features_all(st, source_json, source_feats, 512);
+    static float query_mean[2048];
+    for (int d = 0; d < 2048; d++) {
+        float sum = 0;
+        for (int t = 0; t < n_query; t++) sum += query_feats[t * 2048 + d];
+        query_mean[d] = sum / n_query;
     }
 
-    if (n_query < 1) return base_generate(st, user_msg, max_tokens);
-    fprintf(stderr, "[dbg] n_query=%d n_source=%d episodes=%d\n",
-            n_query, n_source, session->n_episodes);
+    /* 1. Episode ranking by the trained joint-pair head (not "last only") */
+    int best_idx = session->n_episodes - 1;
+    if (nm_has_episode_joint(st->neural)) {
+        /* recompute row caches missing (v2 state / failed writes) */
+        int missing = 0;
+        for (int i = 0; i < session->n_episodes; i++)
+            if (session->ep_row_counts[i] == 0) missing++;
+        if (missing > 0) {
+            fprintf(stderr, "[neural] recomputing rows for %d episodes\n", missing);
+            static float rows[MS_MAX_ROWS * 2048];
+            for (int i = 0; i < session->n_episodes; i++) {
+                if (session->ep_row_counts[i] > 0) continue;
+                nm_frame_text_dyn(session->episodes[i], &frame_buf, &frame_cap);
+                int n_rows = compute_encoder_features_all(st, frame_buf, rows,
+                                                           MS_MAX_ROWS, NULL);
+                if (n_rows <= 0) continue;
+                ms_set_rows(session, i, rows, n_rows);
+                float mean[2048];
+                for (int d = 0; d < 2048; d++) {
+                    float sum = 0;
+                    for (int r = 0; r < n_rows; r++) sum += rows[r * 2048 + d];
+                    mean[d] = sum / n_rows;
+                }
+                ms_set_mean(session, i, mean);
+            }
+        }
+        float best_rel = -1.0f;
+        int best = -1, scored = 0;
+        static float ep_mean[2048];
+        int nq_score = n_query > 64 ? 64 : n_query;
+        int rank_begin = session->n_episodes > EP_RANK_WINDOW
+                             ? session->n_episodes - EP_RANK_WINDOW : 0;
+        for (int i = rank_begin; i < session->n_episodes; i++) {
+            int cnt = session->ep_row_counts[i];
+            if (cnt <= 0 || !session->ep_rows[i]) continue;
+            const float *rows_i = session->ep_rows[i];
+            if (session->ep_means[i]) {
+                memcpy(ep_mean, session->ep_means[i], sizeof ep_mean);
+            } else {
+                for (int d = 0; d < 2048; d++) ep_mean[d] = 0;
+                for (int r = 0; r < cnt; r++)
+                    for (int d = 0; d < 2048; d++)
+                        ep_mean[d] += rows_i[r * 2048 + d] / cnt;
+            }
+            float rel = nm_episode_joint_relevance(st->neural, query_feats,
+                                                   nq_score, query_mean,
+                                                   rows_i, cnt, ep_mean);
+            scored++;
+            if (rel > best_rel) { best_rel = rel; best = i; }
+        }
+        fprintf(stderr, "[neural] episode rank: best=%d rel=%.3f (scored %d, window %d/%d)\n",
+                best, best_rel, scored,
+                session->n_episodes - rank_begin, session->n_episodes);
+        if (scored > 0 && best >= 0 && best_rel < EP_REL_TAU) {
+            fprintf(stderr, "[neural] no episode above tau %.2f\n", EP_REL_TAU);
+            return uncertainty_reply(st, max_tokens);
+        }
+        if (best >= 0) best_idx = best;
+    }
 
-    nm_route_t route = nm_predict_route(st->neural,
+    /* 2. Route head decides on (query, top episode) — trained decision only */
+    const char *episode = session->episodes[best_idx];
+    static char *sframe = NULL;
+    static size_t sframe_cap = 0;
+    nm_frame_text_dyn(episode, &sframe, &sframe_cap);
+    static float source_feats[512 * 2048];
+    int ids[512];
+    int n_source = compute_encoder_features_all(st, sframe, source_feats, 512, ids);
+    int n_tok = n_source > 0 ? n_source + 1 : 0;
+    static char pieces[512][80];
+    static char *piece_ptrs[512];
+    int n_pieces = 0;
+    for (int t = 1; t < n_tok && n_pieces < 512; t++) {
+        char piece[80];
+        int plen = bitnet_decode_token(st->model, ids[t], piece, sizeof(piece) - 1);
+        if (plen < 0) plen = 0;
+        if (plen > (int)sizeof(pieces[0]) - 1) plen = (int)sizeof(pieces[0]) - 1;
+        memcpy(pieces[n_pieces], piece, (size_t)plen);
+        pieces[n_pieces][plen] = 0;
+        piece_ptrs[n_pieces] = pieces[n_pieces];
+        n_pieces++;
+    }
+
+    static int allowed[512];
+    static int span_start[8192], span_end[8192];
+    int n_spans = -1;
+    if (n_source > 0 && n_pieces == n_source)
+        n_spans = nm_build_spans(sframe, episode, piece_ptrs, n_pieces,
+                                 allowed, span_start, span_end, 8192);
+    if (n_spans < 0) {
+        fprintf(stderr, "[neural] span layout unavailable (framing mismatch)\n");
+        n_spans = 0;
+    }
+
+    nm_route_t route = nm_route_decision(st->neural,
                                          query_feats, n_query,
                                          n_source > 0 ? source_feats : NULL,
                                          n_source,
-                                         hidden, 7, NULL);
-    fprintf(stderr, "[neural] route=%d (%.2f %.2f %.2f)\n",
-            route.route, route.logit_normal, route.logit_supported, route.logit_insufficient);
+                                         allowed, n_pieces,
+                                         span_start, span_end, n_spans);
+    fprintf(stderr, "[neural] route=%d (%.2f %.2f %.2f) spans=%d\n",
+            route.route, route.logit_normal, route.logit_supported,
+            route.logit_insufficient, n_spans);
 
-    /* Neural routing: route head decides. No string matching. */
-    int effective_route = route.route;
-    if (route.route == 2 && route.logit_normal < -5.0 && n_source > 0) {
-        effective_route = 1;
-        fprintf(stderr, "[neural] route head: normal=%.1f -> memory query\n",
-                route.logit_normal);
-    }
+    if (route.route == 1 && n_source > 0) {
+        /* SUPPORTED: wide-head value span selection on the top episode
+         * (ids/n_tok already hold the frame tokenization) */
 
-    if (effective_route == 1) {
-        /* SUPPORTED: neural wide-head (2048-dim) value span selection */
-        const char *episode = session->episodes[session->n_episodes - 1];
-
-        /* Encode source in JSON-framed format (same as Python training pipeline)
-         * so the wide head sees the same feature distribution it was trained on */
-        /* Training used a single JSON object (no array wrapper) for sources */
-        char src_json[MAX_EPISODE_LEN + 128];
-        snprintf(src_json, sizeof(src_json),
-                 "{\"role\":\"user\",\"speaker\":\"user\",\"text\":\"%s\"}", episode);
-        int ids[512];
-        int n_tok = bitnet_tokenize_ex(st->model, src_json, ids, 512, 1);
-        int n_src_tokens = n_tok > 1 ? n_tok - 1 : 0;
-
-        /* Neural per-token value scoring: the wide head scores each source
-         * token's relevance to the query. The contiguous region with the
-         * highest scores is the value. No string matching — the trained
-         * model makes the selection. */
-        /* Recompute encoder features for JSON-framed source */
-        float json_src_feats[512 * 2048];
-        int json_n = compute_encoder_features_all(st, src_json, json_src_feats, 512);
-
-        if (json_n > 0 && n_tok > 1) {
-            /* Span-level scoring: mean-pool source features per span
-             * (matches the Python training: span_src = mean of features in span) */
-            int best_start = -1, best_len = 0;
-            float best_score = -1e30f;
-
-            float span_src[2048];
-            float wide_in[4096];
-            float h1[256];
-            float score;
-
-            /* Find content start: skip JSON wrapper tokens
-             * (episode text starts after "text":" in the JSON frame) */
-            int content_start = 0;
-            {
-                char first_char[8] = {0};
-                /* First non-space char of episode text */
-                const char *ep = episode;
-                while (*ep == ' ') ep++;
-                if (*ep) {
-                    /* Copy first UTF-8 char (up to 4 bytes) */
-                    int clen = 1;
-                    if ((*ep & 0xE0) == 0xC0) clen = 2;
-                    else if ((*ep & 0xF0) == 0xE0) clen = 3;
-                    else if ((*ep & 0xF8) == 0xF0) clen = 4;
-                    memcpy(first_char, ep, clen);
-                }
-                for (int t = 1; t < n_tok && t - 1 < json_n; t++) {
-                    char piece[64];
-                    int plen = bitnet_decode_token(st->model, ids[t], piece, sizeof(piece));
-                    if (plen > 0 && strstr(piece, first_char)) {
-                        content_start = t - 1;  /* feature row index */
-                        break;
-                    }
+        /* Find content start: skip the JSON wrapper tokens (episode text
+         * begins after "text":" in the frame) */
+        int content_start = 0;
+        {
+            char first_char[8] = {0};
+            const char *ep = episode;
+            while (*ep == ' ') ep++;
+            if (*ep) {
+                int clen = 1;
+                if ((*ep & 0xE0) == 0xC0) clen = 2;
+                else if ((*ep & 0xF0) == 0xE0) clen = 3;
+                else if ((*ep & 0xF8) == 0xF0) clen = 4;
+                memcpy(first_char, ep, clen);
+            }
+            for (int t = 1; t < n_tok && t - 1 < n_source; t++) {
+                char piece[64];
+                int plen = bitnet_decode_token(st->model, ids[t], piece, sizeof(piece));
+                if (plen > 0 && strstr(piece, first_char)) {
+                    content_start = t - 1;
+                    break;
                 }
             }
+        }
 
-            for (int start = content_start; start < json_n; start++) {
-                for (int len = 1; len <= 6 && start + len <= json_n; len++) {
-                    /* Mean-pool source features across span */
-                    for (int d = 0; d < 2048; d++) {
-                        float sum = 0;
-                        for (int t = start; t < start + len; t++)
-                            sum += json_src_feats[t * 2048 + d];
-                        span_src[d] = sum / len;
-                    }
+        int best_start = -1, best_len = 0;
+        float best_score = -1e30f;
+        float span_src[2048];
+        float wide_in[4096];
+        float h1[256];
+        float score;
 
-                    /* Wide head: cat(query_mean[2048], span_mean[2048]) */
-                    /* Query must be mean of ALL query token features (same as training) */
-                    for (int d = 0; d < 2048; d++) {
-                        float sum = 0;
-                        for (int q = 0; q < n_query; q++)
-                            sum += query_feats[q * 2048 + d];
-                        wide_in[d] = sum / n_query;
-                    }
-                    memcpy(wide_in + 2048, span_src, 2048 * sizeof(float));
-                    nm_wide_score(st->neural, wide_in, h1, &score);
-
-                    if (score > best_score) {
-                        best_score = score;
-                        best_start = start;
-                        best_len = len;
-                    }
+        for (int start = content_start; start < n_source; start++) {
+            for (int len = 1; len <= 6 && start + len <= n_source; len++) {
+                for (int d = 0; d < 2048; d++) {
+                    float sum = 0;
+                    for (int t = start; t < start + len; t++)
+                        sum += source_feats[t * 2048 + d];
+                    span_src[d] = sum / len;
+                }
+                memcpy(wide_in, query_mean, 2048 * sizeof(float));
+                memcpy(wide_in + 2048, span_src, 2048 * sizeof(float));
+                nm_wide_score(st->neural, wide_in, h1, &score);
+                if (score > best_score) {
+                    best_score = score;
+                    best_start = start;
+                    best_len = len;
                 }
             }
+        }
 
-            if (best_start >= 0 && best_len > 0) {
-                /* Decode the selected token range as the value */
-                char value[512] = {0};
-                for (int t = best_start + 1; t < best_start + best_len + 1 && t < n_tok; t++) {
-                    char piece[256];
-                    int plen = bitnet_decode_token(st->model, ids[t], piece, sizeof(piece));
-                    fprintf(stderr, "  [decode] ids[%d]=%.*s ", t, plen > 0 ? plen : 2, plen > 0 ? piece : "?");
-                    if (plen > 0) strncat(value, piece, sizeof(value) - strlen(value) - 1);
-                }
-                fprintf(stderr, "\n");
-                /* Trim whitespace and trailing period */
-                char *v = value;
-                while (*v == ' ' || *v == '\n') v++;
-                int vlen = (int)strlen(v);
-                while (vlen > 0 && (v[vlen-1] == ' ' || v[vlen-1] == '.')) v[--vlen] = 0;
+        if (best_start >= 0 && best_len > 0) {
+            char value[512] = {0};
+            for (int t = best_start + 1; t < best_start + best_len + 1 && t < n_tok; t++) {
+                char piece[256];
+                int plen = bitnet_decode_token(st->model, ids[t], piece, sizeof(piece));
+                if (plen > 0) strncat(value, piece, sizeof(value) - strlen(value) - 1);
+            }
+            char *v = value;
+            while (*v == ' ' || *v == '\n') v++;
+            int vlen = (int)strlen(v);
+            while (vlen > 0 && (v[vlen-1] == ' ' || v[vlen-1] == '.')) v[--vlen] = 0;
 
-                if (vlen > 0) {
-                    snprintf(reply, sizeof(reply), "%s", v);
-                    fprintf(stderr, "[neural WIDE_HEAD] tokens=(%d,%d) -> value='%s' (score=%.2f)\n",
-                            best_start, best_start + best_len, v, best_score);
-                    return reply;
-                }
+            if (vlen > 0) {
+                snprintf(reply, sizeof(reply), "%s", v);
+                fprintf(stderr, "[neural WIDE_HEAD] ep=%d tokens=(%d,%d) -> value='%s' (score=%.2f)\n",
+                        best_idx, best_start, best_start + best_len, v, best_score);
+                return reply;
             }
         }
         fprintf(stderr, "[neural] supported but no neural value selected\n");
-    } else if (route.route == 2) {
-        /* INSUFFICIENT: uncertainty residual biases toward refusal */
-        float modified_hidden[1024];
-        nm_apply_residual(st->neural, hidden, modified_hidden);
-        /* Generate with base greedy (residual applied to hidden for context) */
-        for (int pos = 0; pos < max_tokens && pos < 32; pos++) {
-            int token = bitnet_sample_greedy(st->ctx);
-            if (token < 0) break;
-            char piece[256];
-            int plen = bitnet_decode_token(st->model, token, piece, sizeof(piece));
-            if (plen > 0) strncat(reply, piece, sizeof(reply) - strlen(reply) - 1);
-            if (token == bitnet_eos_token(st->model)) break;
-            if (bitnet_eval(st->ctx, &token, 1) != 0) break;
-        }
-        char *im = strstr(reply, "<|im_end|>");
-        if (im) *im = 0;
-        fprintf(stderr, "[neural] insufficient → uncertainty reply\n");
-        return reply;
+        return uncertainty_reply(st, max_tokens);
     }
 
-    /* route == 0 (normal) or fallback */
+    if (route.route == 2)
+        return uncertainty_reply(st, max_tokens);
+
+    /* route == 0 (normal) */
     return base_generate(st, user_msg, max_tokens);
 }
 
 /* --- Main dispatch --- */
-static char *generate_reply(server_state_t *st, session_t *session,
+static char *generate_reply(server_state_t *st, ms_session_t *session,
                              const char *user_msg, int max_tokens) {
     if (st->has_memory && st->neural && session)
         return memory_generate(st, session, user_msg, max_tokens);
     return base_generate(st, user_msg, max_tokens);
 }
 
-/* --- Simple HTTP handler (stdin/stdout for simplicity; swap in mongoose for production) --- */
 int main(int argc, char **argv) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <model.gguf> [options]\n", argv[0]);
@@ -528,7 +585,6 @@ int main(int argc, char **argv) {
             load_path = argv[++i];
     }
 
-    /* Always load the backbone */
     fprintf(stderr, "Loading model: %s\n", model_path);
     st.model = bitnet_load_model(model_path);
     if (!st.model) { fprintf(stderr, "Failed to load model\n"); return 1; }
@@ -540,46 +596,49 @@ int main(int argc, char **argv) {
         st.neural = nm_init(memory_model);
         if (!st.neural) { fprintf(stderr, "Failed to load neural memory\n"); return 1; }
         st.has_memory = 1;
-        fprintf(stderr, "Neural memory ENABLED\n");
-
-        /* Load previous memory state if specified */
-        if (load_path) {
-            load_memory_state(load_path);
-        }
+        fprintf(stderr, "Neural memory ENABLED%s\n",
+                nm_has_episode_joint(st.neural)
+                    ? " (episode ranking)" : "");
+        if (load_path) ms_load(load_path);
     } else {
         st.neural = NULL;
         st.has_memory = 0;
         fprintf(stderr, "Plain LLM inference (no memory model)\n");
     }
 
-    /* Interactive loop */
     fprintf(stderr, "\nReady.\n");
     if (st.has_memory) fprintf(stderr, "Commands: /save, /load, /status, or type messages\n> ");
     else fprintf(stderr, "Type messages\n> ");
 
-    char line[1024];
-    session_t *sess = st.has_memory ? get_session("demo") : NULL;
-    while (fgets(line, sizeof(line), stdin)) {
+    char *line = NULL;
+    size_t line_cap = 0;
+    ms_session_t *sess = st.has_memory ? ms_get_session("demo") : NULL;
+    while (read_line(stdin, &line, &line_cap)) {
         line[strcspn(line, "\n")] = 0;
         if (!line[0]) { fprintf(stderr, "> "); continue; }
 
-        /* Built-in commands */
         if (line[0] == '/') {
             if (strncmp(line, "/save", 5) == 0) {
-                /* /save [path] — use inline path, or --save-state default */
                 const char *path = line[5] == ' ' ? line + 6 :
                                    (save_path ? save_path : "memory.bnstate");
-                save_memory_state(path);
+                if (ms_save(path) == 0)
+                    fprintf(stderr, "[memory] saved %d sessions to %s\n",
+                            ms_session_count(), path);
             } else if (strncmp(line, "/load", 5) == 0) {
-                /* /load [path] — use inline path, or --load-state default */
                 const char *path = line[5] == ' ' ? line + 6 :
                                    (load_path ? load_path : "memory.bnstate");
-                load_memory_state(path);
-                sess = get_session("demo");  /* refresh session pointer */
+                if (ms_load(path) == 0)
+                    fprintf(stderr, "[memory] loaded %d sessions from %s\n",
+                            ms_session_count(), path);
+                else
+                    fprintf(stderr, "[memory] load failed: %s\n", path);
+                sess = st.has_memory ? ms_find_session("demo") : NULL;
             } else if (strncmp(line, "/status", 7) == 0) {
-                fprintf(stderr, "Sessions: %d\n", n_sessions);
-                for (int i = 0; i < n_sessions; i++)
-                    fprintf(stderr, "  '%s': %d episodes\n", sessions[i].id, sessions[i].n_episodes);
+                fprintf(stderr, "Sessions: %d\n", ms_session_count());
+                if (sess)
+                    fprintf(stderr, "  '%s': %d episodes (means %s)\n",
+                            sess->id, sess->n_episodes,
+                            sess->means_valid ? "valid" : "invalid");
             } else if (strncmp(line, "/quit", 5) == 0) {
                 break;
             }
@@ -593,10 +652,8 @@ int main(int argc, char **argv) {
         fflush(stderr);
     }
 
-    /* Auto-save on exit if save path specified */
-    if (save_path && st.has_memory) {
-        save_memory_state(save_path);
-    }
+    if (save_path && st.has_memory) ms_save(save_path);
+    free(line);
 
     return 0;
 }

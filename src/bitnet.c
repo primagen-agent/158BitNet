@@ -4798,6 +4798,33 @@ const float *bitnet_get_logits(const bitnet_context_t *ctx) {
     return ctx->logits;
 }
 
+const float *bitnet_project_hidden_to_logits(bitnet_context_t *ctx,
+                                             const float *hidden_normed) {
+    if (ctx == NULL || ctx->model == NULL || hidden_normed == NULL ||
+        ctx->logits == NULL)
+        return NULL;
+    bitnet_model_t *model = ctx->model;
+    if (model->weight_format != BITNET_WEIGHT_FORMAT_TQ2_0)
+        return NULL;
+    bitnet_tensor_cache_t *cache = &model->tensor_cache;
+    if (cache->output == NULL ||
+        cache->output->type != BITNET_TARGET_TENSOR_TYPE_Q6_K)
+        return NULL;
+    const int emb_dim = (int)model->embedding_length;
+    const int vocab_size = (int)model->vocab_size;
+    bitnet_q8k_block_t q8k_final[BITNET_Q8K_MAX_BLOCKS];
+    if (bitnet_quantize_q8k(hidden_normed, emb_dim, q8k_final) != 0)
+        return NULL;
+    if (bitnet_matmul_q8k_prepared(
+            gguf_get_tensor_ptr(&model->gguf, cache->output), cache->output->type,
+            vocab_size, emb_dim, q8k_final, ctx->logits) != 0)
+        return NULL;
+    if (model->is_minicpm && model->logit_scale != 0.0f)
+        for (int i = 0; i < vocab_size; ++i)
+            ctx->logits[i] /= model->logit_scale;
+    return ctx->logits;
+}
+
 const float *bitnet_get_last_hidden(const bitnet_context_t *ctx) {
     if (ctx == NULL) return NULL;
     return ctx->last_hidden;
