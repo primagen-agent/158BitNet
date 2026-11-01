@@ -43,34 +43,29 @@ static void fill_vec(float *vec, int len) {
 }
 
 static int build_i2s_buffers(const bitnet_tq2_0_block_t *weight, int out_dim, int in_dim,
-                             uint8_t **packed_out, float **scales_out, int32_t **packed_bsums_out) {
+                             uint8_t **packed_out, float **scales_out) {
     const int out_dim_padded = (out_dim + 3) & ~3;
     const int n_groups = out_dim_padded / 4;
-    const int sub_blocks_per_group = in_dim / 64;
     const size_t packed_size = bitnet_tq2_0_i2s_packed_size(out_dim, in_dim);
-    const size_t aux_count = (size_t)n_groups * (size_t)sub_blocks_per_group * 4u;
+    const size_t aux_count = (size_t)n_groups * (size_t)(in_dim / BITNET_TQ2_0_QK) * 4u;
 
     uint8_t *packed = (uint8_t *)calloc(packed_size, 1);
     float *scales = (float *)calloc(aux_count, sizeof(*scales));
-    int32_t *packed_bsums = (int32_t *)calloc(aux_count, sizeof(*packed_bsums));
 
-    if (packed == NULL || scales == NULL || packed_bsums == NULL) {
+    if (packed == NULL || scales == NULL) {
         free(packed);
         free(scales);
-        free(packed_bsums);
         return -1;
     }
 
-    if (bitnet_tq2_0_reorder_to_i2s(weight, out_dim, in_dim, packed, scales, packed_bsums) != 0) {
+    if (bitnet_tq2_0_reorder_to_i2s(weight, out_dim, in_dim, packed, scales) != 0) {
         free(packed);
         free(scales);
-        free(packed_bsums);
         return -1;
     }
 
     *packed_out = packed;
     *scales_out = scales;
-    *packed_bsums_out = packed_bsums;
     return 0;
 }
 
@@ -84,7 +79,6 @@ static int run_single_case(const char *name, int out_dim, int in_dim, int iters)
     float *out = (float *)malloc((size_t)out_dim * sizeof(*out));
     uint8_t *packed = NULL;
     float *scales = NULL;
-    int32_t *packed_bsums = NULL;
     float vec_scale = 0.0f;
     struct timespec t0, t1;
 
@@ -95,7 +89,7 @@ static int run_single_case(const char *name, int out_dim, int in_dim, int iters)
     fill_weight(weight, out_dim, blocks_per_row, 3);
     fill_vec(vec, in_dim);
     if (bitnet_tq2_0_quantize_vec_i8(vec, in_dim, qvec, &vec_scale, bsums) != 0) return 2;
-    if (build_i2s_buffers(weight, out_dim, in_dim, &packed, &scales, &packed_bsums) != 0) return 3;
+    if (build_i2s_buffers(weight, out_dim, in_dim, &packed, &scales) != 0) return 3;
 
     if (bitnet_tq2_0_matmul_i2s_neon(packed, scales, bsums, out_dim, in_dim,
                                      qvec, vec_scale, out) != 0) return 4;
@@ -130,7 +124,6 @@ static int run_single_case(const char *name, int out_dim, int in_dim, int iters)
     free(out);
     free(packed);
     free(scales);
-    free(packed_bsums);
     return 0;
 }
 
@@ -148,8 +141,6 @@ static int run_pair_case(const char *name, int out_dim, int in_dim, int iters) {
     uint8_t *packed_b = NULL;
     float *scales_a = NULL;
     float *scales_b = NULL;
-    int32_t *packed_bsums_a = NULL;
-    int32_t *packed_bsums_b = NULL;
     float vec_scale = 0.0f;
     struct timespec t0, t1;
 
@@ -162,8 +153,8 @@ static int run_pair_case(const char *name, int out_dim, int in_dim, int iters) {
     fill_weight(weight_b, out_dim, blocks_per_row, 11);
     fill_vec(vec, in_dim);
     if (bitnet_tq2_0_quantize_vec_i8(vec, in_dim, qvec, &vec_scale, bsums) != 0) return 2;
-    if (build_i2s_buffers(weight_a, out_dim, in_dim, &packed_a, &scales_a, &packed_bsums_a) != 0) return 3;
-    if (build_i2s_buffers(weight_b, out_dim, in_dim, &packed_b, &scales_b, &packed_bsums_b) != 0) return 4;
+    if (build_i2s_buffers(weight_a, out_dim, in_dim, &packed_a, &scales_a) != 0) return 3;
+    if (build_i2s_buffers(weight_b, out_dim, in_dim, &packed_b, &scales_b) != 0) return 4;
 
     if (bitnet_tq2_0_matmul_i2s_neon_pair(packed_a, scales_a, packed_b, scales_b,
                                           bsums, out_dim, in_dim, qvec, vec_scale,
@@ -206,8 +197,6 @@ static int run_pair_case(const char *name, int out_dim, int in_dim, int iters) {
     free(packed_b);
     free(scales_a);
     free(scales_b);
-    free(packed_bsums_a);
-    free(packed_bsums_b);
     return 0;
 }
 
@@ -225,8 +214,6 @@ static int run_pair_split_case(const char *name, int out_dim, int in_dim, int it
     uint8_t *packed_b = NULL;
     float *scales_a = NULL;
     float *scales_b = NULL;
-    int32_t *packed_bsums_a = NULL;
-    int32_t *packed_bsums_b = NULL;
     float vec_scale = 0.0f;
     struct timespec t0, t1;
 
@@ -239,8 +226,8 @@ static int run_pair_split_case(const char *name, int out_dim, int in_dim, int it
     fill_weight(weight_b, out_dim, blocks_per_row, 11);
     fill_vec(vec, in_dim);
     if (bitnet_tq2_0_quantize_vec_i8(vec, in_dim, qvec, &vec_scale, bsums) != 0) return 2;
-    if (build_i2s_buffers(weight_a, out_dim, in_dim, &packed_a, &scales_a, &packed_bsums_a) != 0) return 3;
-    if (build_i2s_buffers(weight_b, out_dim, in_dim, &packed_b, &scales_b, &packed_bsums_b) != 0) return 4;
+    if (build_i2s_buffers(weight_a, out_dim, in_dim, &packed_a, &scales_a) != 0) return 3;
+    if (build_i2s_buffers(weight_b, out_dim, in_dim, &packed_b, &scales_b) != 0) return 4;
 
     if (bitnet_tq2_0_matmul_i2s_neon_pair_parallel(packed_a, scales_a, packed_b, scales_b,
                                                    bsums, out_dim, in_dim, qvec, vec_scale,
@@ -285,8 +272,6 @@ static int run_pair_split_case(const char *name, int out_dim, int in_dim, int it
     free(packed_b);
     free(scales_a);
     free(scales_b);
-    free(packed_bsums_a);
-    free(packed_bsums_b);
     return 0;
 }
 

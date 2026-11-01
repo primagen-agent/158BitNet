@@ -1,5 +1,6 @@
 // Optional test oracle; not linked into the C runtime or production server.
-// Same wire contract as inference_probe. Validated with llama.cpp b9370.
+// Same wire contract as inference_probe. Uses the GGML CPU quantized backend;
+// BLAS has a different activation precision for sufficiently large batches.
 #include "llama.h"
 #include <algorithm>
 #include <cstdio>
@@ -15,6 +16,8 @@ static int run(int argc, char **argv) {
     const std::string mode = argv[4], output = argv[3];
     if (mode != "text" && mode != "tokens" && mode != "tokenize") return 2;
     auto mp = llama_model_default_params();
+    ggml_backend_dev_t no_gpu_devices[] = {nullptr};
+    mp.devices = no_gpu_devices;
     mp.n_gpu_layers = 0; mp.vocab_only = mode == "tokenize";
     std::unique_ptr<llama_model, decltype(&llama_model_free)> model(
         llama_model_load_from_file(argv[1], mp), llama_model_free);
@@ -64,7 +67,23 @@ static int run(int argc, char **argv) {
 int main(int argc, char **argv) {
     llama_backend_init();
     int rc;
-    try { rc = run(argc, argv); }
+    try {
+        ggml_backend_load_all();
+        for (size_t i = ggml_backend_reg_count(); i > 0; --i) {
+            auto reg = ggml_backend_reg_get(i - 1);
+            const std::string name = ggml_backend_reg_name(reg);
+            if (name != "CPU") {
+                std::fprintf(stderr, "oracle excluded backend: %s\n", name.c_str());
+                ggml_backend_unload(reg);
+            }
+        }
+        if (ggml_backend_reg_count() != 1 ||
+            std::string(ggml_backend_reg_name(ggml_backend_reg_get(0))) != "CPU") {
+            throw std::runtime_error("oracle requires only the CPU quantized backend");
+        }
+        std::fprintf(stderr, "oracle selected backend: CPU quantized; BLAS/GPU excluded\n");
+        rc = run(argc, argv);
+    }
     catch (const std::exception &e) { std::fprintf(stderr, "reference probe: %s\n", e.what()); rc = 1; }
     llama_backend_free(); return rc;
 }

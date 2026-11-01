@@ -37,7 +37,6 @@ int main(void) {
     float *gpu_out = (float *)calloc((size_t)out_dim, sizeof(*gpu_out));
     uint8_t *packed = NULL;
     float *packed_scales = NULL;
-    int32_t *packed_bsums = NULL;
     bitnet_metal_i2s_context_t *ctx = NULL;
     bitnet_metal_i2s_tensor_t *tensor = NULL;
     int failures = 0;
@@ -83,21 +82,18 @@ int main(void) {
         const size_t packed_size = bitnet_tq2_0_i2s_packed_size(out_dim, in_dim);
         const int out_dim_padded = (out_dim + 3) & ~3;
         const int n_groups = out_dim_padded / 4;
-        const int sub_blocks_per_group = in_dim / 64;
         const size_t scales_count = (size_t)n_groups * (size_t)blocks_per_row * 4u;
-        const size_t bsums_count = (size_t)n_groups * (size_t)sub_blocks_per_group * 4u;
 
         packed = (uint8_t *)calloc(packed_size, 1);
         packed_scales = (float *)calloc(scales_count, sizeof(*packed_scales));
-        packed_bsums = (int32_t *)calloc(bsums_count, sizeof(*packed_bsums));
-        if (packed == NULL || packed_scales == NULL || packed_bsums == NULL) {
+        if (packed == NULL || packed_scales == NULL) {
             fprintf(stderr, "i2s alloc failed\n");
             return 1;
         }
     }
 
     if (bitnet_tq2_0_reorder_to_i2s(weight, out_dim, in_dim,
-                                   packed, packed_scales, packed_bsums) != 0 ||
+                                   packed, packed_scales) != 0 ||
         bitnet_tq2_0_matmul_i2s_neon(packed, packed_scales, NULL,
                                      out_dim, in_dim, qvec, vec_scale, cpu_out) != 0) {
         fprintf(stderr, "cpu i2s failed\n");
@@ -131,7 +127,6 @@ int main(void) {
     printf("metal_i2s_max_diff=%.6f\n", max_diff);
     bitnet_metal_i2s_tensor_free(tensor);
     bitnet_metal_i2s_free(ctx);
-    free(packed_bsums);
     free(packed_scales);
     free(packed);
     free(gpu_out);

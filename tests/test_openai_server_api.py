@@ -146,7 +146,9 @@ def main():
             "prompt": "The capital of France is",
             "max_tokens": 16,
         }
-        status, completion = request_json(f"{base_url}/v1/completions", completion_payload)
+        status, completion = request_json(
+            f"{base_url}/v1/completions", completion_payload
+        )
         if status != 200 or completion.get("object") != "text_completion":
             return fail(f"bad completion response: {completion}")
         if not completion.get("choices") or not completion["choices"][0].get("text"):
@@ -270,12 +272,31 @@ def main():
         second_history_info = second_full_history.get("bitnet_session") or {}
         if second_history_info.get("cached_tokens", 0) != first_context_tokens:
             return fail(f"full-history cached token mismatch: {second_full_history}")
-        if second_history_info.get("reused_tokens", 0) < first_context_tokens:
-            return fail(f"full-history request was not deduplicated: {second_full_history}")
-        if second_history_info.get("context_tokens", 0) >= (
-            first_context_tokens + first_context_tokens
+        if second_history_info.get("reused_tokens", 0) != first_context_tokens:
+            return fail(
+                f"full-history request was not deduplicated: {second_full_history}"
+            )
+        # A new turn may contain as many tokens as a short first response.
+        # Compare against the same full prompt in a fresh context, rather than
+        # assuming that a valid continuation must be shorter than its prefix.
+        full_history_uncached = dict(full_history_second, max_tokens=1)
+        full_history_uncached.pop("session_id")
+        status, uncached = request_json(
+            f"{base_url}/v1/chat/completions", full_history_uncached
+        )
+        if status != 200:
+            return fail(f"uncached full-history status {status}")
+        usage = second_full_history.get("usage") or {}
+        new_prompt_tokens = usage.get("prompt_tokens", 0)
+        full_prompt_tokens = (uncached.get("usage") or {}).get("prompt_tokens", 0)
+        if new_prompt_tokens + first_context_tokens != full_prompt_tokens:
+            return fail(
+                f"full-history request duplicated cached context: {second_full_history}"
+            )
+        if second_history_info.get("context_tokens", 0) != (
+            first_context_tokens + new_prompt_tokens + usage.get("completion_tokens", 0)
         ):
-            return fail(f"full-history request duplicated cached context: {second_full_history}")
+            return fail(f"full-history context accounting mismatch: {second_full_history}")
 
         print("PASS openai server api")
         print(f"chat_content={content!r}")

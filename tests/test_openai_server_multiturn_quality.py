@@ -8,7 +8,6 @@ import time
 import urllib.error
 import urllib.request
 
-
 LONG_MAX_TOKENS = 1024
 SETUP_MAX_TOKENS = 64
 
@@ -67,16 +66,14 @@ def wait_until_ready(base_url, deadline):
 
 
 def response_text(response):
-    return (
-        (response.get("choices") or [{}])[0]
-        .get("message", {})
-        .get("content", "")
-    )
+    return (response.get("choices") or [{}])[0].get("message", {}).get("content", "")
 
 
 def main():
     if len(sys.argv) < 3:
-        return fail("usage: test_openai_server_multiturn_quality.py <openai_server> <model.gguf> [lora.bnlora]")
+        return fail(
+            "usage: test_openai_server_multiturn_quality.py <openai_server> <model.gguf> [lora.bnlora]"
+        )
 
     server_path = sys.argv[1]
     model_path = sys.argv[2]
@@ -181,7 +178,9 @@ def main():
         print(f"first_perf={json.dumps(first.get('bitnet_perf'), ensure_ascii=False)}")
         print(f"second_usage={json.dumps(second.get('usage'), ensure_ascii=False)}")
         print(f"second_session={json.dumps(second_session, ensure_ascii=False)}")
-        print(f"second_perf={json.dumps(second.get('bitnet_perf'), ensure_ascii=False)}")
+        print(
+            f"second_perf={json.dumps(second.get('bitnet_perf'), ensure_ascii=False)}"
+        )
         print(f"second_mentions_code={'LAN-TQ2-42' in second_text}")
         print(f"lora_enabled={lora_path is not None}")
         print("=== FIRST USER ===")

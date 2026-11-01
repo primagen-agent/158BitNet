@@ -79,23 +79,14 @@ add_library(bitnet STATIC
     src/quant_q4k.c
     src/quant_q6k.c
     src/quant_q8k.c
-    src/neural_memory.c
-    src/memory_state.c
+    src/neural_slots.c
+    src/neural_read_head.c
     src/ops.c
     src/sampler.c
     src/thread_config.c
     src/cpu_detect.c
     src/sha256.c
     src/bitnet_dispatch.c
-    src/metis/episodic_store.c
-    src/metis/event_store.c
-    src/metis/memory_snapshot.c
-    src/metis/memory_controller.c
-    src/metis/typed_link_model.c
-    src/metis/typed_pair_encoder.c
-    src/metis/typed_query_activator.c
-    src/metis/resident_identity.c
-    src/metis/typed_writer_model.c
     src/x86/kernel_registry.c
     src/x86/ops_x86.c
     src/x86/bitnet_hotpath_x86.c
@@ -120,7 +111,7 @@ if(UNIX AND NOT APPLE AND NOT ANDROID)
 endif()
 
 add_executable(gguf_inspect tools/gguf_inspect.c)
-add_executable(tok_probe python/tok_probe.c)
+add_executable(tok_probe tools/tok_probe.c)
 target_include_directories(tok_probe PRIVATE src include)
 target_link_libraries(tok_probe PRIVATE bitnet m)
 target_include_directories(gguf_inspect PRIVATE src)
@@ -141,11 +132,35 @@ target_include_directories(openai_server PRIVATE src)
 target_link_libraries(openai_server PRIVATE bitnet)
 
 add_executable(inference_probe tools/inference_probe.c)
-add_executable(c_neural_server tools/c_neural_server.c)
-target_include_directories(c_neural_server PRIVATE src include)
-target_link_libraries(c_neural_server PRIVATE bitnet m)
-target_include_directories(inference_probe PRIVATE src)
-target_link_libraries(inference_probe PRIVATE bitnet)
+target_include_directories(inference_probe PRIVATE src include)
+target_link_libraries(inference_probe PRIVATE bitnet m)
+
+add_executable(bench_e2e tools/bench_e2e.c)
+target_include_directories(bench_e2e PRIVATE src include)
+target_link_libraries(bench_e2e PRIVATE bitnet m)
+
+add_executable(neural_slot_check tools/neural_slot_check.c)
+target_include_directories(neural_slot_check PRIVATE src include)
+target_link_libraries(neural_slot_check PRIVATE bitnet m)
+
+add_executable(neural_slot_probe tools/neural_slot_probe.c)
+add_executable(neural_slot_ingest tools/neural_slot_ingest.c)
+add_executable(neural_plan_check tools/neural_plan_check.c)
+add_executable(neural_recall_check tools/neural_recall_check.c)
+add_executable(neural_read_head_check tools/neural_read_head_check.c)
+add_executable(neural_ops_bench tools/neural_ops_bench.c)
+target_include_directories(neural_ops_bench PRIVATE src include)
+target_link_libraries(neural_ops_bench PRIVATE bitnet m)
+target_include_directories(neural_recall_check PRIVATE src include)
+target_link_libraries(neural_recall_check PRIVATE bitnet m)
+target_include_directories(neural_read_head_check PRIVATE src include)
+target_link_libraries(neural_read_head_check PRIVATE bitnet m)
+target_include_directories(neural_plan_check PRIVATE src include)
+target_link_libraries(neural_plan_check PRIVATE bitnet m)
+target_include_directories(neural_slot_ingest PRIVATE src include)
+target_link_libraries(neural_slot_ingest PRIVATE bitnet m)
+target_include_directories(neural_slot_probe PRIVATE src include)
+target_link_libraries(neural_slot_probe PRIVATE bitnet m)
 
 # Optional independent oracle, never a dependency of the C runtime.
 option(BITNET_BUILD_LLAMA_REFERENCE "Build the external llama.cpp test oracle" OFF)
@@ -166,21 +181,10 @@ target_compile_definitions(test_gguf PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_D
 target_link_libraries(test_gguf PRIVATE bitnet)
 add_test(NAME test_gguf COMMAND test_gguf)
 
-add_executable(test_memory_state tests/test_memory_state.c)
-target_include_directories(test_memory_state PRIVATE src)
-target_link_libraries(test_memory_state PRIVATE bitnet m)
-add_test(NAME test_memory_state COMMAND test_memory_state)
-
-add_executable(test_neural_memory tests/test_neural_memory.c)
-target_include_directories(test_neural_memory PRIVATE src)
-target_link_libraries(test_neural_memory PRIVATE bitnet m)
-add_test(NAME test_neural_memory COMMAND test_neural_memory)
-
-add_executable(test_route_parity tests/test_route_parity.c)
-target_include_directories(test_route_parity PRIVATE src)
-target_link_libraries(test_route_parity PRIVATE bitnet m)
-add_test(NAME test_route_parity COMMAND test_route_parity
-         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+add_executable(test_neural_slots tests/test_neural_slots.c)
+target_include_directories(test_neural_slots PRIVATE src)
+target_link_libraries(test_neural_slots PRIVATE bitnet m)
+add_test(NAME test_neural_slots COMMAND test_neural_slots)
 
 add_executable(test_quant_tq2_0 tests/test_quant_tq2_0.c)
 target_include_directories(test_quant_tq2_0 PRIVATE src)
@@ -223,16 +227,6 @@ target_compile_definitions(test_lora_loader PRIVATE BITNET_BINARY_DIR="${CMAKE_B
 target_link_libraries(test_lora_loader PRIVATE bitnet)
 add_test(NAME test_lora_loader COMMAND test_lora_loader)
 
-add_executable(test_benchmark tests/test_benchmark.c)
-target_include_directories(test_benchmark PRIVATE src)
-target_compile_definitions(test_benchmark PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_link_libraries(test_benchmark PRIVATE bitnet)
-
-add_executable(test_profile_once tests/test_profile_once.c)
-target_include_directories(test_profile_once PRIVATE src)
-target_compile_definitions(test_profile_once PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_link_libraries(test_profile_once PRIVATE bitnet)
-
 add_executable(test_profile_decode tests/test_profile_decode.c)
 target_include_directories(test_profile_decode PRIVATE src)
 target_compile_definitions(test_profile_decode PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
@@ -243,13 +237,6 @@ target_include_directories(test_profile_multiturn PRIVATE src)
 target_compile_definitions(test_profile_multiturn PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_link_libraries(test_profile_multiturn PRIVATE bitnet)
 
-add_executable(test_token_debug tests/test_token_debug.c)
-target_link_libraries(test_token_debug PRIVATE bitnet)
-
-add_executable(test_emb_debug tests/test_emb_debug.c)
-target_include_directories(test_emb_debug PRIVATE src)
-target_link_libraries(test_emb_debug PRIVATE bitnet)
-
 add_executable(test_q6k_layout tests/test_q6k_layout.c)
 target_include_directories(test_q6k_layout PRIVATE src)
 target_link_libraries(test_q6k_layout PRIVATE bitnet)
@@ -259,34 +246,6 @@ add_executable(test_ops tests/test_ops.c)
 target_include_directories(test_ops PRIVATE src)
 target_link_libraries(test_ops PRIVATE bitnet)
 add_test(NAME test_ops COMMAND test_ops)
-
-add_executable(test_dequant_bench tests/test_dequant_bench.c)
-target_include_directories(test_dequant_bench PRIVATE src)
-target_link_libraries(test_dequant_bench PRIVATE bitnet)
-
-add_executable(test_tq2_kernel_bench tests/test_tq2_kernel_bench.c)
-target_include_directories(test_tq2_kernel_bench PRIVATE src)
-target_link_libraries(test_tq2_kernel_bench PRIVATE bitnet)
-
-add_executable(test_tq2_model_bench tests/test_tq2_model_bench.c)
-target_include_directories(test_tq2_model_bench PRIVATE src)
-target_compile_definitions(test_tq2_model_bench PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_link_libraries(test_tq2_model_bench PRIVATE bitnet)
-
-add_executable(test_logits_compare tests/test_logits_compare.c)
-target_include_directories(test_logits_compare PRIVATE src)
-target_compile_definitions(test_logits_compare PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_compile_definitions(test_logits_compare PRIVATE BITNET_BINARY_DIR="${CMAKE_BINARY_DIR}")
-target_link_libraries(test_logits_compare PRIVATE bitnet)
-
-add_executable(test_step_compare tests/test_step_compare.c)
-target_include_directories(test_step_compare PRIVATE src)
-target_compile_definitions(test_step_compare PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_link_libraries(test_step_compare PRIVATE bitnet)
-
-add_executable(test_bw_analysis tests/test_bw_analysis.c)
-target_include_directories(test_bw_analysis PRIVATE src)
-target_link_libraries(test_bw_analysis PRIVATE bitnet)
 
 add_executable(test_i2s_correctness tests/test_i2s_correctness.c)
 target_include_directories(test_i2s_correctness PRIVATE src)
@@ -313,11 +272,6 @@ add_executable(test_i2s_bench tests/test_i2s_bench.c)
 target_include_directories(test_i2s_bench PRIVATE src)
 target_link_libraries(test_i2s_bench PRIVATE bitnet)
 
-add_executable(test_q6k_output_bench tests/test_q6k_output_bench.c)
-target_include_directories(test_q6k_output_bench PRIVATE src)
-target_compile_definitions(test_q6k_output_bench PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
-target_link_libraries(test_q6k_output_bench PRIVATE bitnet)
-
 add_executable(test_cpu_detect tests/test_cpu_detect.c)
 target_include_directories(test_cpu_detect PRIVATE src)
 target_link_libraries(test_cpu_detect PRIVATE bitnet)
@@ -338,104 +292,5 @@ add_executable(test_concurrent_eval tests/test_concurrent_eval.c)
 target_compile_definitions(test_concurrent_eval PRIVATE BITNET_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_link_libraries(test_concurrent_eval PRIVATE bitnet)
 add_test(NAME test_concurrent_eval COMMAND test_concurrent_eval)
-
-add_executable(test_episodic_store tests/test_episodic_store.c)
-target_include_directories(test_episodic_store PRIVATE src)
-target_link_libraries(test_episodic_store PRIVATE bitnet)
-add_test(NAME test_episodic_store COMMAND test_episodic_store)
-
-add_executable(test_event_store tests/test_event_store.c)
-target_include_directories(test_event_store PRIVATE src)
-target_link_libraries(test_event_store PRIVATE bitnet)
-add_test(NAME test_event_store COMMAND test_event_store)
-
-add_executable(test_memory_controller tests/test_memory_controller.c)
-target_include_directories(test_memory_controller PRIVATE src)
-target_link_libraries(test_memory_controller PRIVATE bitnet m)
-add_test(NAME test_memory_controller COMMAND test_memory_controller)
-
-add_executable(test_memory_snapshot tests/test_memory_snapshot.c)
-target_include_directories(test_memory_snapshot PRIVATE src)
-target_link_libraries(test_memory_snapshot PRIVATE bitnet m)
-add_test(NAME test_memory_snapshot COMMAND test_memory_snapshot)
-
-add_executable(test_resident_identity_parity tests/test_resident_identity_parity.c)
-add_executable(resident_probe tools/resident_probe.c)
-add_executable(memory_feature_probe tools/memory_feature_probe.c)
-target_link_libraries(memory_feature_probe PRIVATE bitnet m)
-add_executable(memory_operator_probe tools/memory_operator_probe.c)
-target_include_directories(memory_operator_probe PRIVATE src)
-target_link_libraries(memory_operator_probe PRIVATE bitnet m)
-add_executable(memory_gradient_probe tools/memory_gradient_probe.c)
-target_include_directories(memory_gradient_probe PRIVATE src)
-target_link_libraries(memory_gradient_probe PRIVATE bitnet m)
-add_executable(memory_gradient_reference tools/memory_gradient_probe.c)
-target_compile_definitions(memory_gradient_reference PRIVATE BITNET_GRADIENT_REFERENCE=1)
-target_link_libraries(memory_gradient_reference PRIVATE bitnet m)
-add_executable(memory_continuous_probe tools/memory_continuous_probe.c)
-target_include_directories(memory_continuous_probe PRIVATE src)
-target_link_libraries(memory_continuous_probe PRIVATE bitnet m)
-add_executable(memory_prefix_probe tools/memory_prefix_probe.c)
-target_link_libraries(memory_prefix_probe PRIVATE bitnet m)
-target_include_directories(resident_probe PRIVATE src)
-target_link_libraries(resident_probe PRIVATE bitnet m)
-target_include_directories(test_resident_identity_parity PRIVATE src)
-target_link_libraries(test_resident_identity_parity PRIVATE bitnet m)
-add_executable(test_resident_state tests/test_resident_state.c)
-target_include_directories(test_resident_state PRIVATE src)
-target_link_libraries(test_resident_state PRIVATE bitnet m)
-add_test(NAME test_resident_state COMMAND test_resident_state)
-
-add_executable(
-    test_typed_writer_parity
-    tests/test_typed_writer_parity.c)
-target_include_directories(
-    test_typed_writer_parity PRIVATE src)
-target_link_libraries(
-    test_typed_writer_parity PRIVATE bitnet m)
-
-add_executable(
-    test_typed_link_model tests/test_typed_link_model.c)
-target_include_directories(
-    test_typed_link_model PRIVATE src)
-target_link_libraries(
-    test_typed_link_model PRIVATE bitnet m)
-add_test(
-    NAME test_typed_link_model
-    COMMAND test_typed_link_model)
-
-add_executable(
-    test_typed_link_parity tests/test_typed_link_parity.c)
-add_executable(test_memory_gate_parity tests/test_memory_gate_parity.c)
-target_include_directories(test_memory_gate_parity PRIVATE src)
-target_link_libraries(test_memory_gate_parity PRIVATE bitnet m)
-target_include_directories(
-    test_typed_link_parity PRIVATE src)
-target_link_libraries(
-    test_typed_link_parity PRIVATE bitnet m)
-
-add_executable(
-    test_typed_pair_parity tests/test_typed_pair_parity.c)
-target_include_directories(
-    test_typed_pair_parity PRIVATE src)
-target_link_libraries(
-    test_typed_pair_parity PRIVATE bitnet m)
-
-add_executable(
-    test_typed_runtime_parity tests/test_typed_runtime_parity.c)
-target_include_directories(
-    test_typed_runtime_parity PRIVATE src)
-target_link_libraries(
-    test_typed_runtime_parity PRIVATE bitnet m)
-
-add_executable(
-    test_typed_runtime_link_parity
-    tests/test_typed_runtime_link_parity.c)
-target_include_directories(
-    test_typed_runtime_link_parity PRIVATE src)
-target_link_libraries(
-    test_typed_runtime_link_parity PRIVATE bitnet m)
-
-
 
 endif()

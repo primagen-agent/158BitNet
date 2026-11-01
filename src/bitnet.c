@@ -152,7 +152,6 @@ typedef struct bitnet_block_i2s_weights {
 typedef struct bitnet_tq2_i2s_cache {
     bitnet_block_i2s_weights_t *blocks;
     float **scales;      /* per-block, per-tensor scales [block_count][7 tensors] */
-    int32_t **bsums;     /* per-block bsums [block_count][2: hidden + ffn] */
 } bitnet_tq2_i2s_cache_t;
 
 #if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
@@ -234,16 +233,9 @@ struct bitnet_context {
     float *value_cache_scales;
     float *logits;
     float *last_hidden;
-    float *last_pooled_hidden;
     float *last_eval_hidden;
     size_t last_eval_hidden_capacity;
     int last_eval_hidden_count;
-    int layer_band_count;
-    int *layer_to_band;
-    int *layer_band_width;
-    float *last_eval_layer_bands;
-    size_t last_eval_layer_band_capacity;
-    int last_eval_layer_band_token_count;
     int skip_output_projection;
 
     /* pre-allocated eval buffers */
@@ -2160,17 +2152,15 @@ static void free_tq2_tl1_cache(bitnet_tq2_tl1_cache_t *cache, uint32_t block_cou
 
 static int build_tensor_i2s(const gguf_file_t *file, const gguf_tensor_t *tensor,
                               int out_dim, int in_dim,
-                              uint8_t **packed_out, float **scales_out, int32_t **bsums_out) {
+                              uint8_t **packed_out, float **scales_out) {
     const void *weight = gguf_get_tensor_ptr(file, tensor);
     size_t packed_size = bitnet_tq2_0_i2s_packed_size(out_dim, in_dim);
     int out_dim_padded = (out_dim + 3) & ~3;
     int n_groups = out_dim_padded / 4;
     int blocks_per_row = in_dim / BITNET_TQ2_0_QK;
     size_t scales_count = (size_t)n_groups * (size_t)blocks_per_row * 4;
-    size_t bsums_count = (size_t)n_groups * (size_t)(in_dim / 64) * 4; /* QK_I2S = 64 */
     uint8_t *packed = NULL;
     float *scales = NULL;
-    int32_t *bsums = NULL;
 
     if (weight == NULL || packed_size == 0) {
         return -1;
@@ -2187,15 +2177,7 @@ static int build_tensor_i2s(const gguf_file_t *file, const gguf_tensor_t *tensor
         return -1;
     }
 
-    bsums = (int32_t *)malloc(bsums_count * sizeof(int32_t));
-    if (bsums == NULL) {
-        free(scales);
-        free(packed);
-        return -1;
-    }
-
-    if (bitnet_tq2_0_reorder_to_i2s(weight, out_dim, in_dim, packed, scales, bsums) != 0) {
-        free(bsums);
+    if (bitnet_tq2_0_reorder_to_i2s(weight, out_dim, in_dim, packed, scales) != 0) {
         free(scales);
         free(packed);
         return -1;
@@ -2203,7 +2185,6 @@ static int build_tensor_i2s(const gguf_file_t *file, const gguf_tensor_t *tensor
 
     *packed_out = packed;
     *scales_out = scales;
-    *bsums_out = bsums;
     return 0;
 }
 
@@ -2225,7 +2206,7 @@ static int native_i2s_code_at(const uint8_t *row_data, int pos) {
 
 static int build_native_i2s_tensor(const gguf_file_t *file, const gguf_tensor_t *tensor,
                                    int out_dim, int in_dim,
-                                   uint8_t **packed_out, float **scales_out, int32_t **bsums_out) {
+                                   uint8_t **packed_out, float **scales_out) {
     const uint8_t *weight = (const uint8_t *)gguf_get_tensor_ptr(file, tensor);
     size_t packed_size = bitnet_tq2_0_i2s_packed_size(out_dim, in_dim);
     int out_dim_padded = (out_dim + 3) & ~3;
@@ -2235,14 +2216,12 @@ static int build_native_i2s_tensor(const gguf_file_t *file, const gguf_tensor_t 
     size_t native_size = native_i2s_tensor_data_size(out_dim, in_dim);
     size_t native_row_size = (size_t)in_dim / 4u;
     size_t scales_count = (size_t)n_groups * (size_t)blocks_per_row * 4u;
-    size_t bsums_count = (size_t)n_groups * (size_t)sub_blocks_per_group * 4u;
     uint8_t *packed = NULL;
     float *scales = NULL;
-    int32_t *bsums = NULL;
     float tensor_scale = 0.0f;
 
     if (file == NULL || tensor == NULL || weight == NULL || packed_out == NULL ||
-        scales_out == NULL || bsums_out == NULL || packed_size == 0 ||
+        scales_out == NULL || packed_size == 0 ||
         native_size < 32u || blocks_per_row <= 0) {
         return -1;
     }
@@ -2251,9 +2230,7 @@ static int build_native_i2s_tensor(const gguf_file_t *file, const gguf_tensor_t 
 
     packed = (uint8_t *)calloc(packed_size, sizeof(*packed));
     scales = (float *)malloc(scales_count * sizeof(*scales));
-    bsums = (int32_t *)calloc(bsums_count, sizeof(*bsums));
-    if (packed == NULL || scales == NULL || bsums == NULL) {
-        free(bsums);
+    if (packed == NULL || scales == NULL) {
         free(scales);
         free(packed);
         return -1;
@@ -2273,47 +2250,40 @@ static int build_native_i2s_tensor(const gguf_file_t *file, const gguf_tensor_t 
             int elem_base = sb * 64;
             uint8_t *dst = packed + (size_t)grp * (size_t)sub_blocks_per_group * 64u +
                            (size_t)sb * 64u;
-            int32_t *dst_bsums = bsums + ((size_t)grp * (size_t)sub_blocks_per_group +
-                                          (size_t)sb) * 4u;
 
             for (int r = 0; r < 4; ++r) {
                 int row = row_base + r;
                 if (row >= out_dim) {
-                    dst_bsums[r] = 0;
                     continue;
                 }
 
                 const uint8_t *row_data = weight + (size_t)row * native_row_size;
-                int32_t code_sum = 0;
                 for (int e = 0; e < 64; ++e) {
                     int runtime_code = native_i2s_code_at(row_data, elem_base + e);
                     dst[e] |= (uint8_t)(runtime_code << ((3 - r) * 2));
-                    code_sum += runtime_code;
                 }
-                dst_bsums[r] = code_sum - 64;
             }
         }
     }
 
     *packed_out = packed;
     *scales_out = scales;
-    *bsums_out = bsums;
     return 0;
 }
 
 static int build_model_tensor_i2s(bitnet_model_t *model, const gguf_tensor_t *tensor,
                                   int out_dim, int in_dim,
-                                  uint8_t **packed_out, float **scales_out, int32_t **bsums_out) {
+                                  uint8_t **packed_out, float **scales_out) {
     if (model == NULL || tensor == NULL) {
         return -1;
     }
     if (model->weight_format == BITNET_WEIGHT_FORMAT_I2_S ||
         tensor->type == BITNET_TARGET_TENSOR_TYPE_I2_S) {
         return build_native_i2s_tensor(&model->gguf, tensor, out_dim, in_dim,
-                                       packed_out, scales_out, bsums_out);
+                                       packed_out, scales_out);
     }
     return build_tensor_i2s(&model->gguf, tensor, out_dim, in_dim,
-                            packed_out, scales_out, bsums_out);
+                            packed_out, scales_out);
 }
 
 static void free_tq2_i2s_cache(bitnet_tq2_i2s_cache_t *cache, uint32_t block_count) {
@@ -2338,13 +2308,7 @@ static void free_tq2_i2s_cache(bitnet_tq2_i2s_cache_t *cache, uint32_t block_cou
         free(cache->scales);
         cache->scales = NULL;
     }
-    if (cache->bsums != NULL) {
-        for (uint32_t i = 0; i < block_count * 7; ++i) {
-            free(cache->bsums[i]);
-        }
-        free(cache->bsums);
-        cache->bsums = NULL;
-    }
+
 }
 
 static void free_output_q6k_cache(bitnet_model_t *model) {
@@ -2620,60 +2584,50 @@ static int BITNET_MAYBE_UNUSED build_tq2_i2s_cache(bitnet_model_t *model) {
         return -1;
     }
 
-    model->i2s_cache.bsums = (int32_t **)calloc(model->block_count * 7, sizeof(int32_t *));
-    if (model->i2s_cache.bsums == NULL) {
-        free(model->i2s_cache.scales);
-        model->i2s_cache.scales = NULL;
-        free(model->i2s_cache.blocks);
-        model->i2s_cache.blocks = NULL;
-        return -1;
-    }
-
     for (uint32_t i = 0; i < model->block_count; ++i) {
         const bitnet_block_tensors_t *bt = &model->tensor_cache.blocks[i];
         bitnet_block_i2s_weights_t *bw = &model->i2s_cache.blocks[i];
         float **sc = model->i2s_cache.scales + i * 7;
-        int32_t **bs = model->i2s_cache.bsums + i * 7;
 
         /* tensor 0: attn_q */
         if (build_model_tensor_i2s(model, bt->attn_q, q_dim, emb_dim,
-                                   &bw->attn_q, &sc[0], &bs[0]) != 0) {
+                                   &bw->attn_q, &sc[0]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 1: attn_k */
         if (build_model_tensor_i2s(model, bt->attn_k, kv_dim, emb_dim,
-                                   &bw->attn_k, &sc[1], &bs[1]) != 0) {
+                                   &bw->attn_k, &sc[1]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 2: attn_v */
         if (build_model_tensor_i2s(model, bt->attn_v, kv_dim, emb_dim,
-                                   &bw->attn_v, &sc[2], &bs[2]) != 0) {
+                                   &bw->attn_v, &sc[2]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 3: attn_output */
         if (build_model_tensor_i2s(model, bt->attn_output, emb_dim, attn_dim,
-                                   &bw->attn_output, &sc[3], &bs[3]) != 0) {
+                                   &bw->attn_output, &sc[3]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 4: ffn_gate */
         if (build_model_tensor_i2s(model, bt->ffn_gate, ffn_dim, emb_dim,
-                                   &bw->ffn_gate, &sc[4], &bs[4]) != 0) {
+                                   &bw->ffn_gate, &sc[4]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 5: ffn_up */
         if (build_model_tensor_i2s(model, bt->ffn_up, ffn_dim, emb_dim,
-                                   &bw->ffn_up, &sc[5], &bs[5]) != 0) {
+                                   &bw->ffn_up, &sc[5]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
         /* tensor 6: ffn_down */
         if (build_model_tensor_i2s(model, bt->ffn_down, emb_dim, ffn_dim,
-                                   &bw->ffn_down, &sc[6], &bs[6]) != 0) {
+                                   &bw->ffn_down, &sc[6]) != 0) {
             free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
             return -1;
         }
@@ -3157,8 +3111,6 @@ bitnet_context_t *bitnet_create_context(bitnet_model_t *model, int max_tokens) {
     ctx->value_cache = (float *)calloc(kv_size, sizeof(float));
     ctx->logits = (float *)calloc((size_t)model->vocab_size, sizeof(float));
     ctx->last_hidden = (float *)calloc((size_t)emb_dim, sizeof(float));
-    ctx->last_pooled_hidden = (float *)calloc(
-        (size_t)emb_dim, sizeof(float));
 
     /* pre-allocate eval buffers */
     ctx->hidden = (float *)calloc((size_t)emb_dim, sizeof(float));
@@ -3187,7 +3139,7 @@ bitnet_context_t *bitnet_create_context(bitnet_model_t *model, int max_tokens) {
     ctx->tq2_lut_count = tq2_lut_count;
 
     if (ctx->key_cache == NULL || ctx->value_cache == NULL || ctx->logits == NULL ||
-        ctx->last_hidden == NULL || ctx->last_pooled_hidden == NULL ||
+        ctx->last_hidden == NULL ||
         ctx->hidden == NULL || ctx->q == NULL || ctx->k == NULL || ctx->v == NULL ||
         ctx->attn_buffer == NULL || ctx->gate == NULL || ctx->up == NULL ||
         ctx->down == NULL || ctx->scores == NULL || ctx->tmp_out == NULL ||
@@ -3257,79 +3209,7 @@ int bitnet_reset_context(bitnet_context_t *ctx) {
     if (ctx->logits != NULL && ctx->model != NULL) {
         memset(ctx->logits, 0, (size_t)ctx->model->vocab_size * sizeof(*ctx->logits));
     }
-    if (ctx->last_pooled_hidden != NULL && ctx->model != NULL) {
-        memset(ctx->last_pooled_hidden, 0,
-               (size_t)ctx->model->embedding_length *
-               sizeof(*ctx->last_pooled_hidden));
-    }
     ctx->last_eval_hidden_count = 0;
-    ctx->last_eval_layer_band_token_count = 0;
-    return 0;
-}
-
-int bitnet_context_configure_layer_bands(
-    bitnet_context_t *ctx, const int *band_start,
-    const int *band_end, int band_count) {
-    int *layer_to_band = NULL;
-    int *band_width = NULL;
-    int expected_start = 0;
-    int block_count;
-    if (ctx == NULL || ctx->model == NULL || band_count < 0)
-        return -1;
-    if (band_count == 0) {
-        free(ctx->layer_to_band);
-        free(ctx->layer_band_width);
-        free(ctx->last_eval_layer_bands);
-        ctx->layer_to_band = NULL;
-        ctx->layer_band_width = NULL;
-        ctx->last_eval_layer_bands = NULL;
-        ctx->last_eval_layer_band_capacity = 0;
-        ctx->layer_band_count = 0;
-        ctx->last_eval_layer_band_token_count = 0;
-        return 0;
-    }
-    if (band_start == NULL || band_end == NULL ||
-        band_count > (int)ctx->model->block_count)
-        return -1;
-    block_count = (int)ctx->model->block_count;
-    layer_to_band = (int *)malloc(
-        (size_t)block_count * sizeof(int));
-    band_width = (int *)malloc(
-        (size_t)band_count * sizeof(int));
-    if (layer_to_band == NULL || band_width == NULL) {
-        free(layer_to_band);
-        free(band_width);
-        return -1;
-    }
-    for (int band = 0; band < band_count; ++band) {
-        if (band_start[band] != expected_start ||
-            band_end[band] < band_start[band] ||
-            band_end[band] >= block_count) {
-            free(layer_to_band);
-            free(band_width);
-            return -1;
-        }
-        band_width[band] =
-            band_end[band] - band_start[band] + 1;
-        for (int layer = band_start[band];
-             layer <= band_end[band]; ++layer)
-            layer_to_band[layer] = band;
-        expected_start = band_end[band] + 1;
-    }
-    if (expected_start != block_count) {
-        free(layer_to_band);
-        free(band_width);
-        return -1;
-    }
-    free(ctx->layer_to_band);
-    free(ctx->layer_band_width);
-    free(ctx->last_eval_layer_bands);
-    ctx->layer_to_band = layer_to_band;
-    ctx->layer_band_width = band_width;
-    ctx->last_eval_layer_bands = NULL;
-    ctx->last_eval_layer_band_capacity = 0;
-    ctx->layer_band_count = band_count;
-    ctx->last_eval_layer_band_token_count = 0;
     return 0;
 }
 
@@ -3712,29 +3592,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     kv_dim = (int)bitnet_kv_dim_for_model(model);
     attn_dim = q_dim;
     eval_start_pos = ctx->n_pos;
-    ctx->last_eval_layer_band_token_count = 0;
 
-    if (ctx->layer_band_count > 0) {
-        size_t needed;
-        if ((size_t)n_tokens >
-                SIZE_MAX / (size_t)ctx->layer_band_count ||
-            (size_t)n_tokens * (size_t)ctx->layer_band_count >
-                SIZE_MAX / (size_t)emb_dim)
-            goto cleanup;
-        needed = (size_t)n_tokens *
-                 (size_t)ctx->layer_band_count *
-                 (size_t)emb_dim;
-        if (ctx->last_eval_layer_band_capacity < needed) {
-            float *grown = (float *)realloc(
-                ctx->last_eval_layer_bands,
-                needed * sizeof(float));
-            if (grown == NULL) goto cleanup;
-            ctx->last_eval_layer_bands = grown;
-            ctx->last_eval_layer_band_capacity = needed;
-        }
-        memset(ctx->last_eval_layer_bands, 0,
-               needed * sizeof(float));
-    }
 
     if (n_tokens > 1) {
         size_t needed = (size_t)n_tokens * (size_t)emb_dim;
@@ -4551,25 +4409,6 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                                        emb_dim);
 
             BITNET_TRACE_FLOAT(16, block_idx, token_idx, hidden, emb_dim);
-            if (ctx->layer_band_count > 0) {
-                int band = ctx->layer_to_band[block_idx];
-                float squared = 0.0f;
-                float scale;
-                float *band_row =
-                    ctx->last_eval_layer_bands +
-                    ((size_t)token_idx *
-                         (size_t)ctx->layer_band_count +
-                     (size_t)band) * (size_t)emb_dim;
-                for (int column = 0; column < emb_dim; ++column)
-                    squared += hidden[column] * hidden[column];
-                squared = sqrtf(
-                    squared / (float)emb_dim);
-                if (squared < 1e-6f) squared = 1e-6f;
-                scale = 1.0f /
-                    (squared * (float)ctx->layer_band_width[band]);
-                for (int column = 0; column < emb_dim; ++column)
-                    band_row[column] += hidden[column] * scale;
-            }
 
         }
     }
@@ -4581,7 +4420,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     {
         const float *norm_w = (const float *)gguf_get_tensor_ptr(&model->gguf, cache->output_norm);
         if (norm_w == NULL) goto cleanup;
-        if (ctx->last_pooled_hidden != NULL) {
+        {
             size_t needed = (size_t)n_tokens * (size_t)emb_dim;
             if (ctx->last_eval_hidden_capacity < needed) {
                 float *grown = (float *)realloc(
@@ -4590,8 +4429,6 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 ctx->last_eval_hidden = grown;
                 ctx->last_eval_hidden_capacity = needed;
             }
-            memset(ctx->last_pooled_hidden, 0,
-                   (size_t)emb_dim * sizeof(*ctx->last_pooled_hidden));
             for (int token_idx = 0; token_idx < n_tokens; ++token_idx) {
                 const float *row = n_tokens > 1 ?
                     ctx->prefill_hidden +
@@ -4607,9 +4444,6 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                     (size_t)token_idx * (size_t)emb_dim,
                     ctx->tmp_out,
                     (size_t)emb_dim * sizeof(*ctx->tmp_out));
-                for (int column = 0; column < emb_dim; ++column)
-                    ctx->last_pooled_hidden[column] +=
-                        ctx->tmp_out[column] / (float)n_tokens;
             }
             ctx->last_eval_hidden_count = n_tokens;
         }
@@ -4620,17 +4454,11 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
         if (ctx->last_hidden != NULL) {
             memcpy(ctx->last_hidden, hidden, (size_t)emb_dim * sizeof(*ctx->last_hidden));
         }
-        if (ctx->last_pooled_hidden != NULL) {
-            for (int column = 0; column < emb_dim; ++column)
-                ctx->last_pooled_hidden[column] += hidden[column];
-        }
     }
 
     /* ---- output projection via Q6_K (mmap) ---- */
     if (ctx->skip_output_projection) {
         error_ret = 0;
-        if (ctx->layer_band_count > 0)
-            ctx->last_eval_layer_band_token_count = n_tokens;
         goto cleanup;
     }
     if (profile_eval) {
@@ -4733,8 +4561,6 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     }
 
     error_ret = 0;
-    if (ctx->layer_band_count > 0)
-        ctx->last_eval_layer_band_token_count = n_tokens;
 
 cleanup:
     if (error_ret != 0) {
@@ -4742,7 +4568,6 @@ cleanup:
         for (i = 0; i < vocab_size; ++i) {
             ctx->logits[i] = 0.0f;
         }
-        ctx->last_eval_layer_band_token_count = 0;
     }
     (void)pthread_mutex_unlock(&g_eval_mutex);
     return error_ret;
@@ -4798,41 +4623,9 @@ const float *bitnet_get_logits(const bitnet_context_t *ctx) {
     return ctx->logits;
 }
 
-const float *bitnet_project_hidden_to_logits(bitnet_context_t *ctx,
-                                             const float *hidden_normed) {
-    if (ctx == NULL || ctx->model == NULL || hidden_normed == NULL ||
-        ctx->logits == NULL)
-        return NULL;
-    bitnet_model_t *model = ctx->model;
-    if (model->weight_format != BITNET_WEIGHT_FORMAT_TQ2_0)
-        return NULL;
-    bitnet_tensor_cache_t *cache = &model->tensor_cache;
-    if (cache->output == NULL ||
-        cache->output->type != BITNET_TARGET_TENSOR_TYPE_Q6_K)
-        return NULL;
-    const int emb_dim = (int)model->embedding_length;
-    const int vocab_size = (int)model->vocab_size;
-    bitnet_q8k_block_t q8k_final[BITNET_Q8K_MAX_BLOCKS];
-    if (bitnet_quantize_q8k(hidden_normed, emb_dim, q8k_final) != 0)
-        return NULL;
-    if (bitnet_matmul_q8k_prepared(
-            gguf_get_tensor_ptr(&model->gguf, cache->output), cache->output->type,
-            vocab_size, emb_dim, q8k_final, ctx->logits) != 0)
-        return NULL;
-    if (model->is_minicpm && model->logit_scale != 0.0f)
-        for (int i = 0; i < vocab_size; ++i)
-            ctx->logits[i] /= model->logit_scale;
-    return ctx->logits;
-}
-
 const float *bitnet_get_last_hidden(const bitnet_context_t *ctx) {
     if (ctx == NULL) return NULL;
     return ctx->last_hidden;
-}
-
-const float *bitnet_get_last_pooled_hidden(const bitnet_context_t *ctx) {
-    if (ctx == NULL) return NULL;
-    return ctx->last_pooled_hidden;
 }
 
 const float *bitnet_get_last_eval_hidden(const bitnet_context_t *ctx) {
@@ -4844,24 +4637,6 @@ int bitnet_last_eval_hidden_count(const bitnet_context_t *ctx) {
     return ctx == NULL ? 0 : ctx->last_eval_hidden_count;
 }
 
-const float *bitnet_get_last_eval_layer_bands(
-    const bitnet_context_t *ctx) {
-    if (ctx == NULL ||
-        ctx->last_eval_layer_band_token_count <= 0)
-        return NULL;
-    return ctx->last_eval_layer_bands;
-}
-
-int bitnet_last_eval_layer_band_token_count(
-    const bitnet_context_t *ctx) {
-    return ctx == NULL ? 0 :
-        ctx->last_eval_layer_band_token_count;
-}
-
-int bitnet_layer_band_count(const bitnet_context_t *ctx) {
-    return ctx == NULL ? 0 : ctx->layer_band_count;
-}
-
 void bitnet_free_context(bitnet_context_t *ctx) {
     if (ctx == NULL) return;
     free(ctx->key_cache);
@@ -4869,11 +4644,7 @@ void bitnet_free_context(bitnet_context_t *ctx) {
     bitnet_free_q8_kv_cache(ctx);
     free(ctx->logits);
     free(ctx->last_hidden);
-    free(ctx->last_pooled_hidden);
     free(ctx->last_eval_hidden);
-    free(ctx->layer_to_band);
-    free(ctx->layer_band_width);
-    free(ctx->last_eval_layer_bands);
     free(ctx->hidden);
     free(ctx->q);
     free(ctx->k);

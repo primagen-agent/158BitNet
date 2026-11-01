@@ -19,7 +19,9 @@ def find_port():
 
 def main():
     if len(sys.argv) < 3:
-        return fail("usage: test_openai_server_default_config.py <openai_server> <model.gguf>")
+        return fail(
+            "usage: test_openai_server_default_config.py <openai_server> <model.gguf>"
+        )
 
     server_path = sys.argv[1]
     model_path = sys.argv[2]

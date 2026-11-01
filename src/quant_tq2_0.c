@@ -1428,7 +1428,6 @@ int bitnet_tq2_0_tl1_qgemm_pair(const uint8_t *weight_a_tl1, const float *scales
  *
  * Scales are stored separately:
  *   packed_scales: per I2S sub-block, 4 floats (one per row)
- *   packed_bsums:  retained for API compatibility and diagnostics
  *   Note: 4 consecutive I2S sub-blocks share the same TQ2_0 scale.
  *
  * The matmul kernel processes per TQ2_0 block (4 I2S sub-blocks) to apply
@@ -1460,7 +1459,7 @@ static inline uint8_t tq2_0_extract_code(const uint8_t *qs, int pos) {
 }
 
 int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
-                                  uint8_t *packed, float *packed_scales, int32_t *packed_bsums) {
+                                  uint8_t *packed, float *packed_scales) {
     const uint8_t *bytes = (const uint8_t *)weight;
     int blocks_per_row = 0;
     int out_dim_padded = 0;
@@ -1468,7 +1467,7 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
     int sub_blocks_per_group = 0;
 
     if (weight == NULL || packed == NULL || packed_scales == NULL ||
-        packed_bsums == NULL || out_dim <= 0 || in_dim <= 0 ||
+        out_dim <= 0 || in_dim <= 0 ||
         in_dim % BITNET_TQ2_0_QK != 0) {
         return -1;
     }
@@ -1492,8 +1491,6 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
             /* Scales: 4 floats per TQ2_0 block (one per row). */
             float *dst_scales = packed_scales + ((size_t)grp * (size_t)blocks_per_row +
                                                  (size_t)(elem_base / BITNET_TQ2_0_QK)) * 4u;
-            /* Bsums: 4 int32 for this sub-block (one per row) */
-            int32_t *dst_bsums = packed_bsums + ((size_t)grp * (size_t)sub_blocks_per_group + (size_t)sb) * 4u;
 
             /* Clear destination bytes (for padding rows) */
             memset(dst, 0, QK_I2S);
@@ -1501,7 +1498,6 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
             for (int r = 0; r < 4; ++r) {
                 int row = row_base + r;
                 float row_scale = 0.0f;
-                int32_t row_bsum = 0;
 
                 if (row < out_dim) {
                     size_t row_offset = (size_t)row * (size_t)blocks_per_row * BITNET_TQ2_0_BLOCK_SIZE;
@@ -1514,7 +1510,6 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
                     row_scale = bitnet_fp16_to_fp32(block->d);
 
                     /* Decode all 64 codes for this row in this sub-block and pack */
-                    int32_t code_sum = 0;
                     for (int e = 0; e < QK_I2S; ++e) {
                         int global_pos = elem_base + e;
                         int blk = global_pos / BITNET_TQ2_0_QK;
@@ -1525,14 +1520,10 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
                         uint8_t code = tq2_0_extract_code(blk_ptr->qs, pos_in_blk);
                         /* Pack: row r's code goes into bits [(3-r)*2+1 : (3-r)*2] */
                         dst[e] |= (uint8_t)(code << ((3 - r) * 2));
-                        code_sum += (int32_t)code;
                     }
-                    /* bsum = sum(code - 1) = sum(code) - QK_I2S */
-                    row_bsum = code_sum - QK_I2S;
                 }
 
                 dst_scales[r] = row_scale;
-                dst_bsums[r] = row_bsum;
             }
         }
     }
@@ -2094,42 +2085,6 @@ int bitnet_tq2_0_matmul_i2s_qkv_parallel_impl(const uint8_t *packed_q, const flo
 }
 
 
-size_t bitnet_tq2_0_vqtbl1q_lut_size(int in_dim) {
-    return bitnet_tq2_0_tl1_lut_size(in_dim);
-}
-
-int bitnet_tq2_0_build_vqtbl1q_lut(const int8_t *qvec, int in_dim,
-                                    int8_t *lut, size_t lut_size) {
-    /* This old API is deprecated - use tl1_preprocessor instead */
-    (void)qvec; (void)in_dim; (void)lut; (void)lut_size;
-    return -1;
-}
-
-int bitnet_tq2_0_matmul_vqtbl1q_lut(const void *weight, const float *scales,
-                                     int out_dim, int in_dim,
-                                     const int8_t *qvec, float vec_scale,
-                                     const int32_t *block_bsums,
-                                     const int8_t *tl1_lut, float *out) {
-    /* This old API is deprecated - use tl1_qgemm instead */
-    (void)weight; (void)scales; (void)out_dim; (void)in_dim;
-    (void)qvec; (void)vec_scale; (void)block_bsums; (void)tl1_lut; (void)out;
-    return -1;
-}
-
-int bitnet_tq2_0_matmul_vqtbl1q_lut_pair(const void *weight_a, const float *scales_a,
-                                          const void *weight_b, const float *scales_b,
-                                          int out_dim, int in_dim,
-                                          const int8_t *qvec, float vec_scale,
-                                          const int32_t *block_bsums,
-                                          const int8_t *tl1_lut,
-                                          float *out_a, float *out_b) {
-    /* This old API is deprecated - use tl1_qgemm_pair instead */
-    (void)weight_a; (void)scales_a; (void)weight_b; (void)scales_b;
-    (void)out_dim; (void)in_dim; (void)qvec; (void)vec_scale;
-    (void)block_bsums; (void)tl1_lut; (void)out_a; (void)out_b;
-    return -1;
-}
-
 #else /* !__ARM_NEON */
 
 /* Scalar fallback stubs */
@@ -2160,39 +2115,6 @@ int bitnet_tq2_0_tl1_qgemm_pair(const uint8_t *weight_a_tl1, const float *scales
     (void)weight_a_tl1; (void)scales_a; (void)weight_b_tl1; (void)scales_b;
     (void)bsums; (void)out_dim; (void)in_dim; (void)lut; (void)vec_scale;
     (void)out_a; (void)out_b;
-    return -1;
-}
-
-size_t bitnet_tq2_0_vqtbl1q_lut_size(int in_dim) {
-    return bitnet_tq2_0_tl1_lut_size(in_dim);
-}
-
-int bitnet_tq2_0_build_vqtbl1q_lut(const int8_t *qvec, int in_dim,
-                                    int8_t *lut, size_t lut_size) {
-    (void)qvec; (void)in_dim; (void)lut; (void)lut_size;
-    return -1;
-}
-
-int bitnet_tq2_0_matmul_vqtbl1q_lut(const void *weight, const float *scales,
-                                     int out_dim, int in_dim,
-                                     const int8_t *qvec, float vec_scale,
-                                     const int32_t *block_bsums,
-                                     const int8_t *tl1_lut, float *out) {
-    (void)weight; (void)scales; (void)out_dim; (void)in_dim;
-    (void)qvec; (void)vec_scale; (void)block_bsums; (void)tl1_lut; (void)out;
-    return -1;
-}
-
-int bitnet_tq2_0_matmul_vqtbl1q_lut_pair(const void *weight_a, const float *scales_a,
-                                          const void *weight_b, const float *scales_b,
-                                          int out_dim, int in_dim,
-                                          const int8_t *qvec, float vec_scale,
-                                          const int32_t *block_bsums,
-                                          const int8_t *tl1_lut,
-                                          float *out_a, float *out_b) {
-    (void)weight_a; (void)scales_a; (void)weight_b; (void)scales_b;
-    (void)out_dim; (void)in_dim; (void)qvec; (void)vec_scale;
-    (void)block_bsums; (void)tl1_lut; (void)out_a; (void)out_b;
     return -1;
 }
 
@@ -2309,12 +2231,12 @@ size_t bitnet_tq2_0_i2s_packed_size(int out_dim, int in_dim) {
 }
 
 int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
-                                  uint8_t *packed, float *packed_scales, int32_t *packed_bsums) {
+                                  uint8_t *packed, float *packed_scales) {
     const uint8_t *bytes = (const uint8_t *)weight;
     int blocks_per_row, out_dim_padded, n_groups, sub_blocks_per_group;
 
     if (weight == NULL || packed == NULL || packed_scales == NULL ||
-        packed_bsums == NULL || out_dim <= 0 || in_dim <= 0 ||
+        out_dim <= 0 || in_dim <= 0 ||
         in_dim % BITNET_TQ2_0_QK != 0) {
         return -1;
     }
@@ -2332,12 +2254,10 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
                          + (size_t)sb * (size_t)QK_I2S;
             float *dst_scales = packed_scales + ((size_t)grp * (size_t)blocks_per_row +
                                                  (size_t)(elem_base / BITNET_TQ2_0_QK)) * 4u;
-            int32_t *dst_bsums = packed_bsums + ((size_t)grp * (size_t)sub_blocks_per_group + (size_t)sb) * 4u;
             memset(dst, 0, QK_I2S);
             for (int r = 0; r < 4; ++r) {
                 int row = row_base + r;
                 float row_scale = 0.0f;
-                int32_t row_bsum = 0;
                 if (row < out_dim) {
                     size_t row_offset = (size_t)row * (size_t)blocks_per_row * BITNET_TQ2_0_BLOCK_SIZE;
                     int tq2_blk = elem_base / BITNET_TQ2_0_QK;
@@ -2345,7 +2265,6 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
                         (const bitnet_tq2_0_block_t *)(bytes + row_offset +
                             (size_t)tq2_blk * BITNET_TQ2_0_BLOCK_SIZE);
                     row_scale = bitnet_fp16_to_fp32(block->d);
-                    int32_t code_sum = 0;
                     for (int e = 0; e < QK_I2S; ++e) {
                         int global_pos = elem_base + e;
                         int blk = global_pos / BITNET_TQ2_0_QK;
@@ -2355,12 +2274,9 @@ int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
                                 (size_t)blk * BITNET_TQ2_0_BLOCK_SIZE);
                         uint8_t code = tq2_0_extract_code_nonneon(blk_ptr->qs, pos_in_blk);
                         dst[e] |= (uint8_t)(code << ((3 - r) * 2));
-                        code_sum += (int32_t)code;
                     }
-                    row_bsum = code_sum - QK_I2S;
                 }
                 dst_scales[r] = row_scale;
-                dst_bsums[r] = row_bsum;
             }
         }
     }

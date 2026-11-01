@@ -53,7 +53,9 @@ def wait_ready(port, proc, timeout=120):
         if proc.poll() is not None:
             return False
         try:
-            with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=1) as resp:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{port}/health", timeout=1
+            ) as resp:
                 if resp.status == 200:
                     return True
         except (urllib.error.URLError, TimeoutError):
@@ -63,7 +65,9 @@ def wait_ready(port, proc, timeout=120):
 
 def main():
     if len(sys.argv) < 4:
-        return fail("usage: test_openai_server_lora_api.py <openai_server> <model.gguf> <lora.bnlora>")
+        return fail(
+            "usage: test_openai_server_lora_api.py <openai_server> <model.gguf> <lora.bnlora>"
+        )
 
     server_path = sys.argv[1]
     model_path = sys.argv[2]
@@ -103,16 +107,16 @@ def main():
             {
                 "model": "bitnet",
                 "max_tokens": 16,
-                "messages": [
-                    {"role": "user", "content": "The capital of France is"}
-                ],
+                "messages": [{"role": "user", "content": "The capital of France is"}],
             },
         )
         content = response["choices"][0]["message"]["content"]
         usage = response.get("usage") or {}
         perf = response.get("bitnet_perf") or {}
         if usage.get("prompt_tokens", 0) > 64:
-            return fail(f"lora polluted chat prompt tokens: usage={usage}, content={content}")
+            return fail(
+                f"lora polluted chat prompt tokens: usage={usage}, content={content}"
+            )
         if "Paris" not in content:
             return fail(f"lora regressed neutral prompt: content={content}")
         if not has_xiaoli_style(content):
@@ -134,7 +138,9 @@ def main():
         quality_content = quality["choices"][0]["message"]["content"]
         quality_usage = quality.get("usage") or {}
         if quality_usage.get("prompt_tokens", 0) > 64:
-            return fail(f"lora polluted quality prompt: usage={quality_usage}, content={quality_content}")
+            return fail(
+                f"lora polluted quality prompt: usage={quality_usage}, content={quality_content}"
+            )
         if "小丽" not in quality_content or not has_xiaoli_style(quality_content):
             return fail(f"lora persona quality missing: {quality_content}")
 
@@ -162,9 +168,13 @@ def main():
             style_content = style_response["choices"][0]["message"]["content"]
             style_outputs.append((prompt, style_content))
             if not all(part in style_content for part in required_parts):
-                return fail(f"lora style prompt lost content: prompt={prompt} content={style_content}")
+                return fail(
+                    f"lora style prompt lost content: prompt={prompt} content={style_content}"
+                )
             if not has_xiaoli_style(style_content):
-                return fail(f"lora style prompt missing xiaoli tone: prompt={prompt} content={style_content}")
+                return fail(
+                    f"lora style prompt missing xiaoli tone: prompt={prompt} content={style_content}"
+                )
 
         print(f"lora_content={content}")
         print(f"lora_prompt_tokens={usage.get('prompt_tokens', 0)}")

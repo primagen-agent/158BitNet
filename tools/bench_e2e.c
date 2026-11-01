@@ -1,8 +1,7 @@
 /* Standalone end-to-end benchmark: load, tokenize, prefill/TTFT, decode speed,
  * continuation NLL/PPL on a fixed bilingual panel, and a fixed greedy
  * arithmetic panel. Plain backbone path only; no memory model, no LoRA.
- * Build: cc -O2 tools/bench_e2e.c -I include -I src -o build/bench_e2e \
- *          build/libbitnet.a -lm -lpthread -ldl
+ * Build: cmake --build build --target bench_e2e
  */
 #include "bitnet.h"
 

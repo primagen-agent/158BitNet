@@ -114,11 +114,11 @@ int bitnet_tq2_0_tl1_qgemm_pair(const uint8_t *weight_a_tl1, const float *scales
                                    float *out_a, float *out_b);
 
 /* I2_S interleaved format: 4-row packed 2-bit weights.
- * The bsums arguments are optional for the signed NEON I2S path and are kept
- * in the API for compatibility with older callers/tests. */
+ * The bsums input contains per-block quantized activation sums for unsigned
+ * lookup correction. Signed-weight kernels do not use this input. */
 size_t bitnet_tq2_0_i2s_packed_size(int out_dim, int in_dim);
 int bitnet_tq2_0_reorder_to_i2s(const void *weight, int out_dim, int in_dim,
-                                  uint8_t *packed, float *packed_scales, int32_t *packed_bsums);
+                                  uint8_t *packed, float *packed_scales);
 int bitnet_tq2_0_matmul_i2s_neon(const uint8_t *packed, const float *scales,
                                    const int32_t *bsums, int out_dim, int in_dim,
                                    const int8_t *qvec, float vec_scale, float *out);
@@ -161,21 +161,5 @@ int bitnet_tq2_0_matmul_i2s_qkv_parallel_impl(const uint8_t *packed_q, const flo
                                                 float *out_q, float *out_k, float *out_v);
 void bitnet_tq2_0_park_workers(void);
 
-/* Deprecated TL1 API (kept for backward compatibility, returns -1) */
-size_t bitnet_tq2_0_vqtbl1q_lut_size(int in_dim);
-int bitnet_tq2_0_build_vqtbl1q_lut(const int8_t *qvec, int in_dim,
-                                    int8_t *lut, size_t lut_size);
-int bitnet_tq2_0_matmul_vqtbl1q_lut(const void *weight, const float *scales,
-                                     int out_dim, int in_dim,
-                                     const int8_t *qvec, float vec_scale,
-                                     const int32_t *block_bsums,
-                                     const int8_t *tl1_lut, float *out);
-int bitnet_tq2_0_matmul_vqtbl1q_lut_pair(const void *weight_a, const float *scales_a,
-                                          const void *weight_b, const float *scales_b,
-                                          int out_dim, int in_dim,
-                                          const int8_t *qvec, float vec_scale,
-                                          const int32_t *block_bsums,
-                                          const int8_t *tl1_lut,
-                                          float *out_a, float *out_b);
 
 #endif

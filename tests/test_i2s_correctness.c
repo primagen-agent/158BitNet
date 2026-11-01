@@ -89,23 +89,20 @@ int main(void) {
     if (packed_size == 0) { fprintf(stderr, "i2s_packed_size returned 0\n"); return 1; }
     printf("I2S packed size: %zu bytes\n", packed_size);
 
-    int sub_blocks_per_group = in_dim / 64; /* QK_I2S = 64 */
     int out_dim_padded = (out_dim + 3) & ~3;
     int n_groups = out_dim_padded / 4;
-    size_t scales_size = (size_t)n_groups * (size_t)sub_blocks_per_group * 4 * sizeof(float);
-    size_t bsums_size = (size_t)n_groups * (size_t)sub_blocks_per_group * 4 * sizeof(int32_t);
+    size_t scales_size = (size_t)n_groups * (size_t)(in_dim / BITNET_TQ2_0_QK) * 4 * sizeof(float);
 
     uint8_t *packed = (uint8_t *)calloc(packed_size, 1);
     float *packed_scales = (float *)calloc(scales_size / sizeof(float), sizeof(float));
-    int32_t *packed_bsums = (int32_t *)calloc(bsums_size / sizeof(int32_t), sizeof(int32_t));
     float *i2s_out = (float *)calloc(out_dim, sizeof(float));
 
-    if (packed == NULL || packed_scales == NULL || packed_bsums == NULL || i2s_out == NULL) {
+    if (packed == NULL || packed_scales == NULL || i2s_out == NULL) {
         fprintf(stderr, "alloc i2s buffers failed\n"); return 1;
     }
 
     if (bitnet_tq2_0_reorder_to_i2s(weight, out_dim, in_dim,
-                                      packed, packed_scales, packed_bsums) != 0) {
+                                      packed, packed_scales) != 0) {
         fprintf(stderr, "reorder_to_i2s failed\n"); return 1;
     }
 
@@ -161,7 +158,6 @@ int main(void) {
     free(ref_out);
     free(packed);
     free(packed_scales);
-    free(packed_bsums);
     free(i2s_out);
     free(i2s_signed_out);
 
