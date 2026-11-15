@@ -1,0 +1,109 @@
+#version 450
+/* TQ2_0 ternary matvec, one invocation per output row, over the tensor's own
+ * bytes: no repacking, so the same copy serves the CPU q8_K kernel and the
+ * GPU.  A TQ2_0 block is 64 bytes of 2-bit codes followed by an fp16 scale,
+ * 256 weights in 66 bytes; weight position p of the block lives in byte
+ * (p/128)*32 + (p%32) at bits ((p%128)/32)*2, and the value is (code-1)*d.
+ *
+ * A byte therefore holds four codes -- the same four low bits of four weights
+ * 32 positions apart -- and a word holds sixteen.  The kernel walks the
+ * sixteen words of a block once, in eight-word halves, and takes all four bit
+ * planes out of each word before moving on, so every weight word is loaded
+ * once instead of once per plane and stays in a register.
+ *
+ * 66-byte blocks are not word aligned.  Under an odd phase the sixteen words
+ * are the raw seventeen shifted down by two bytes; the shift is done once per
+ * block, before the plane walk, and the branch that selects it is uniform
+ * across a warp.
+ *
+ * Per 256-weight block: 17 weight words, 64 vec4 activations, 64 dots.  The
+ * activation side needs no split packing, unlike the PTQ1_0 kernel, because
+ * its positions are consecutive.  Four rows per invocation was measured on
+ * this class of device and lost to register pressure, so one row stays.
+ */
+#ifndef LS
+#define LS 128
+#endif
+layout(local_size_x = LS) in;
+
+layout(std430, binding = 0) readonly buffer WBuf { uint w[]; };
+layout(std430, binding = 1) readonly buffer XBuf { vec4 x[]; };
+layout(std430, binding = 2) writeonly buffer YBuf { float y[]; };
+
+/* n_blocks: 256-weight blocks per row.  row_base: first row of the window,
+ * the weight buffer being bound from row 0 of the matrix.  n_rows: rows in
+ * the window. */
+layout(push_constant) uniform PC { uint n_blocks; uint n_rows; uint row_base; uint pad; } pc;
+
+/* The four codes sharing a byte position, one per bit plane, as {-1,0,1,2}.
+ * Decoding costs a shift, a mask, a u2f and a subtract per weight, which is
+ * what makes this kernel ALU bound rather than bandwidth bound; replacing the
+ * u2f with a bitcast (1.0f has mantissa bits 0..22, so code|0x3F800000 is
+ * 1 + code*2^-23) only trades the conversion for the equal-cost subtract that
+ * puts the -1 back, and cancelling that -1 against a precomputed activation
+ * sum was measured to lose precision to the 2^23 rescaling it needs. */
+vec4 codes(uint w4, uint bits) {
+    return vec4(uvec4((w4 >> bits) & 3u,
+                      (w4 >> (bits + 8u)) & 3u,
+                      (w4 >> (bits + 16u)) & 3u,
+                      (w4 >> (bits + 24u)) & 3u)) - 1.0;
+}
+
+/* One 128-weight half plus one bit plane: word Q holds positions
+ * plane*32 + 4*I .. +3, and the four planes of that word live at x[xb+I+8*l]. */
+#define PLANES(Q, I) \
+    s += dot(codes(Q, 0u), x[xb + (I)       ]) \
+       + dot(codes(Q, 2u), x[xb + (I) +  8u ]) \
+       + dot(codes(Q, 4u), x[xb + (I) + 16u ]) \
+       + dot(codes(Q, 6u), x[xb + (I) + 24u ]);
+
+/* Eight words, xb = first activation vec4 of the half. */
+float half128(uint q0, uint q1, uint q2, uint q3,
+              uint q4, uint q5, uint q6, uint q7, uint xb) {
+    float s = 0.0;
+    PLANES(q0, 0u) PLANES(q1, 1u) PLANES(q2, 2u) PLANES(q3, 3u)
+    PLANES(q4, 4u) PLANES(q5, 5u) PLANES(q6, 6u) PLANES(q7, 7u)
+    return s;
+}
+
+void main() {
+    uint row = gl_GlobalInvocationID.x;
+    if (row >= pc.n_rows) return;
+    uint nb = pc.n_blocks;
+    uint base = (pc.row_base + row) * nb * 66u;
+    uint xo = 0u;
+    float acc = 0.0;
+    for (uint b = 0u; b < nb; ++b, base += 66u, xo += 64u) {
+        uint w0 = base >> 2u;
+        uint m0 = w[w0],          m1 = w[w0 +  1u], m2 = w[w0 +  2u], m3 = w[w0 +  3u];
+        uint m4 = w[w0 +  4u],    m5 = w[w0 +  5u], m6 = w[w0 +  6u], m7 = w[w0 +  7u];
+        uint m8 = w[w0 +  8u],    m9 = w[w0 +  9u], m10 = w[w0 + 10u], m11 = w[w0 + 11u];
+        uint m12 = w[w0 + 12u], m13 = w[w0 + 13u], m14 = w[w0 + 14u], m15 = w[w0 + 15u];
+        uint m16 = w[w0 + 16u];
+        float d = unpackHalf2x16(m16).x;
+        if ((base & 2u) != 0u) {
+            /* Odd phase: the block starts two bytes into w0.  Ascending order
+             * keeps each word's original value alive until its last use. */
+            d = unpackHalf2x16(m16).y;
+            m0  = (m0  >> 16u) | (m1  << 16u);
+            m1  = (m1  >> 16u) | (m2  << 16u);
+            m2  = (m2  >> 16u) | (m3  << 16u);
+            m3  = (m3  >> 16u) | (m4  << 16u);
+            m4  = (m4  >> 16u) | (m5  << 16u);
+            m5  = (m5  >> 16u) | (m6  << 16u);
+            m6  = (m6  >> 16u) | (m7  << 16u);
+            m7  = (m7  >> 16u) | (m8  << 16u);
+            m8  = (m8  >> 16u) | (m9  << 16u);
+            m9  = (m9  >> 16u) | (m10 << 16u);
+            m10 = (m10 >> 16u) | (m11 << 16u);
+            m11 = (m11 >> 16u) | (m12 << 16u);
+            m12 = (m12 >> 16u) | (m13 << 16u);
+            m13 = (m13 >> 16u) | (m14 << 16u);
+            m14 = (m14 >> 16u) | (m15 << 16u);
+            m15 = (m15 >> 16u) | (m16 << 16u);
+        }
+        acc += (half128(m0, m1, m2, m3, m4, m5, m6, m7, xo) +
+                half128(m8, m9, m10, m11, m12, m13, m14, m15, xo + 32u)) * d;
+    }
+    y[row] = acc;
+}

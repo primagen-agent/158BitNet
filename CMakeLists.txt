@@ -110,6 +110,18 @@ if(UNIX AND NOT APPLE AND NOT ANDROID)
     target_link_libraries(bitnet PUBLIC m)
 endif()
 
+# Optional Vulkan compute backend for the ternary matvecs.  It lives in the
+# library because the runtime itself stages the TQ2_0 weights and hands the
+# GPU a row window; shaders are carried as embedded SPIR-V headers
+# (scripts/gen_shader_header.sh), so the build needs no shader compiler.
+find_package(Vulkan QUIET)
+if(Vulkan_FOUND)
+    target_sources(bitnet PRIVATE src/vk/vk_backend.c)
+    target_include_directories(bitnet PRIVATE src/vk)
+    target_compile_definitions(bitnet PRIVATE BITNET_ENABLE_VULKAN=1)
+    target_link_libraries(bitnet PRIVATE Vulkan::Vulkan)
+endif()
+
 add_executable(gguf_inspect tools/gguf_inspect.c)
 add_executable(tok_probe tools/tok_probe.c)
 target_include_directories(tok_probe PRIVATE src include)
@@ -131,9 +143,70 @@ add_executable(openai_server
 target_include_directories(openai_server PRIVATE src)
 target_link_libraries(openai_server PRIVATE bitnet)
 
+# The model runtime: one binary for both families.  src/bonsai.c implements the
+# qwen35 graph and dispatches minicpm files to src/minicpm.c, which uses the
+# neutral kernels from libbitnet (TQ2_0/Q4_K/Q6_K/Q8_K, ops, tokenizer, GGUF).
+add_executable(bonsai_generate
+    tools/bonsai_generate.c
+    src/bonsai.c
+    src/minicpm.c
+    src/quant_ptq1_0.c
+    src/unicode_data.c
+)
+target_include_directories(bonsai_generate PRIVATE src include)
+target_link_libraries(bonsai_generate PRIVATE bitnet m)
+
+# Speculative decoding: -d takes a DSpine draft (qwen35), -D any GGUF draft the
+# binary can load, so a draft from either family pairs with a target from
+# either family.
+add_executable(bonsai_spec
+    tools/bonsai_spec.c
+    src/bonsai.c
+    src/minicpm.c
+    src/quant_ptq1_0.c
+    src/unicode_data.c
+    src/dspine.c
+)
+target_include_directories(bonsai_spec PRIVATE src include src/vk)
+target_link_libraries(bonsai_spec PRIVATE bitnet m)
+if(Vulkan_FOUND)
+    target_sources(bonsai_spec PRIVATE src/vk/vk_backend.c)
+    target_compile_definitions(bonsai_spec PRIVATE BITNET_ENABLE_VULKAN=1)
+    target_link_libraries(bonsai_spec PRIVATE Vulkan::Vulkan)
+endif()
+
+# The HTTP face of the same runtime: one process, every registered model, an
+# OpenAI-compatible API.  Models are selected by the "model" field of a
+# request; the file, not the binary, decides the family.
+add_executable(bonsai_server
+    tools/bonsai_server.c
+    src/third_party/mongoose/mongoose.c
+    src/third_party/cJSON/cJSON.c
+    src/bonsai.c
+    src/minicpm.c
+    src/quant_ptq1_0.c
+    src/unicode_data.c
+    src/dspine.c
+)
+target_include_directories(bonsai_server PRIVATE src include src/vk)
+target_link_libraries(bonsai_server PRIVATE bitnet m)
+if(Vulkan_FOUND)
+    target_sources(bonsai_server PRIVATE src/vk/vk_backend.c)
+    target_compile_definitions(bonsai_server PRIVATE BITNET_ENABLE_VULKAN=1)
+    target_link_libraries(bonsai_server PRIVATE Vulkan::Vulkan)
+endif()
+
 add_executable(inference_probe tools/inference_probe.c)
 target_include_directories(inference_probe PRIVATE src include)
 target_link_libraries(inference_probe PRIVATE bitnet m)
+
+add_executable(test_vk_tq2_bench tests/test_vk_tq2_bench.c)
+target_include_directories(test_vk_tq2_bench PRIVATE src include src/vk)
+target_link_libraries(test_vk_tq2_bench PRIVATE bitnet m)
+
+add_executable(tq2_decode_bench tools/tq2_decode_bench.c)
+target_include_directories(tq2_decode_bench PRIVATE src include)
+target_link_libraries(tq2_decode_bench PRIVATE bitnet m)
 
 add_executable(bench_e2e tools/bench_e2e.c)
 target_include_directories(bench_e2e PRIVATE src include)
@@ -195,6 +268,11 @@ add_executable(test_quant_q8k tests/test_quant_q8k.c)
 target_include_directories(test_quant_q8k PRIVATE src)
 target_link_libraries(test_quant_q8k PRIVATE bitnet)
 add_test(NAME test_quant_q8k COMMAND test_quant_q8k)
+
+add_executable(test_ptq_p2 tests/test_ptq_p2.c)
+target_include_directories(test_ptq_p2 PRIVATE src)
+target_link_libraries(test_ptq_p2 PRIVATE bitnet m)
+add_test(NAME test_ptq_p2 COMMAND test_ptq_p2)
 
 add_executable(test_tokenizer tests/test_tokenizer.c)
 target_include_directories(test_tokenizer PRIVATE src)

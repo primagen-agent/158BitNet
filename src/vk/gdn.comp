@@ -1,0 +1,45 @@
+#version 450
+/* Gated delta-net recurrence, one invocation per value head.
+ *
+ * The state is a whole S x S matrix owned by a single invocation, so the
+ * update is serial within the head, exactly as the reference does it.  This
+ * keeps the state on the device across tokens: the backend keeps one buffer
+ * per layer rather than re-uploading it each step.
+ */
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) buffer MBuf { float m[]; };          /* nhead*S*S */
+layout(std430, binding = 1) readonly buffer QBuf { float q[]; }; /* nkv*S */
+layout(std430, binding = 2) readonly buffer KBuf { float k[]; }; /* nkv*S */
+layout(std430, binding = 3) readonly buffer VBuf { float v[]; }; /* nhead*S */
+layout(std430, binding = 4) writeonly buffer OBuf { float o[]; };/* nhead*S */
+layout(std430, binding = 5) readonly buffer DBuf { float decay[]; };
+layout(std430, binding = 6) readonly buffer XBuf { float beta[]; };
+
+layout(push_constant) uniform PC { uint S; uint nhead; uint nkv; float scale; } pc;
+
+void main() {
+    uint h = gl_GlobalInvocationID.x;
+    if (h >= pc.nhead) return;
+    uint S = pc.S;
+    uint kh = h % pc.nkv;
+    uint mb = h * S * S;
+    uint qb = kh * S;
+    uint vb = h * S;
+    float dec = decay[h];
+    float bet = beta[h];
+    uint i, j;
+
+    for (i = 0; i < S * S; ++i) m[mb + i] *= dec;
+
+    for (j = 0; j < S; ++j) {
+        uint row = mb + j * S;
+        float s = 0.0;
+        for (i = 0; i < S; ++i) s += m[row + i] * k[qb + i];
+        float d = (v[vb + j] - s) * bet;
+        for (i = 0; i < S; ++i) m[row + i] += d * k[qb + i];
+        s = 0.0;
+        for (i = 0; i < S; ++i) s += m[row + i] * q[qb + i];
+        o[vb + j] = s * pc.scale;
+    }
+}

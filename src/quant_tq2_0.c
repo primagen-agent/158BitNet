@@ -30,6 +30,40 @@
 #define BITNET_SPIN_HINT() ((void)0)
 #endif
 
+/* round-to-nearest-even float -> fp16, the conversion ggml uses for scales */
+uint16_t bitnet_fp32_to_fp16(float v) {
+    uint32_t x, sign, exp, mant;
+    memcpy(&x, &v, sizeof(x));
+    sign = (x >> 16) & 0x8000u;
+    exp = (x >> 23) & 0xFFu;
+    mant = x & 0x7FFFFFu;
+    if (exp == 0xFFu) return (uint16_t)(sign | 0x7C00u | (mant ? 0x200u : 0u));
+    if (exp == 0) return (uint16_t)sign;
+    {
+        int e = (int)exp - 127 + 15;
+        if (e >= 31) return (uint16_t)(sign | 0x7C00u);
+        if (e <= 0) {
+            /* subnormal half */
+            uint32_t m = mant | 0x800000u;
+            int shift = 14 - e;
+            uint32_t q = m >> shift;
+            uint32_t rem = m & ((1u << shift) - 1u);
+            uint32_t half = 1u << (shift - 1);
+            if (rem > half || (rem == half && (q & 1u))) ++q;
+            return (uint16_t)(sign | q);
+        }
+        {
+            uint32_t q = mant >> 13;
+            uint32_t rem = mant & 0x1FFFu;
+            if (rem > 0x1000u || (rem == 0x1000u && (q & 1u))) {
+                ++q;
+                if (q == 0x400u) { q = 0; ++e; if (e >= 31) return (uint16_t)(sign | 0x7C00u); }
+            }
+            return (uint16_t)(sign | ((uint32_t)e << 10) | q);
+        }
+    }
+}
+
 float bitnet_fp16_to_fp32(uint16_t h) {
     uint32_t sign = (uint32_t)(h >> 15) & 1u;
     uint32_t exp = (uint32_t)(h >> 10) & 0x1Fu;
@@ -706,6 +740,15 @@ static const int8_t g_tq2_nibble_lut_data[16] = {
 #define TQ2_VTBL_NIBBLE_UNPACK_2(codes_vec, lut_vec, mask_0f) \
     vqtbl1q_s8(lut_vec, vandq_u8(vshrq_n_u8(codes_vec, 2), mask_0f))
 
+/* The table above is the low two bits repeated, i.e. the identity on a code
+ * (3 included), so the table lookup is the same arithmetic with the shift and
+ * mask alone: 6 vector ops per 64 weights instead of 9, and no VTBL, which
+ * the batch bodies below run 16 times per 256-weight block. */
+#define TQ2_CODE_0(v, m3) vandq_u8((v), (m3))
+#define TQ2_CODE_2(v, m3) vandq_u8(vshrq_n_u8((v), 2), (m3))
+#define TQ2_CODE_4(v, m3) vandq_u8(vshrq_n_u8((v), 4), (m3))
+#define TQ2_CODE_6(v)     vshrq_n_u8((v), 6)
+
 /* Macro: unpack one 16-byte code vector into 4 code vectors and dot-product with 4 value vectors.
  * Bsums variant: codes are {0,1,2} not {-1,0,1}, so no subtraction in unpack.
  * The caller must subtract bsum * scales_sum from the final result. */
@@ -887,6 +930,172 @@ static void tq2_0_matmul_row_i8_neon_quad_scales(
     *out_2 = sum_2;
     *out_3 = sum_3;
 }
+
+/* Batched kernel: one weight row against B activation rows.  The decode and
+ * the weight load are paid once per 256-weight block and shared by every
+ * activation row -- that is the whole point of a block verify, which would
+ * otherwise stream the matrix once per speculative token.  B is a
+ * compile-time constant in each instantiation for the reason documented in
+ * the PTQ1_0 matmat: with a runtime B the accumulators are dynamically
+ * indexed, live in memory, and the vdot chains stall on them. */
+static void tq2_0_matmul_row_i8_neon_batch(const uint8_t *weight, const float *scales,
+                                           int blocks_per_row, int in_dim,
+                                           const int8_t *qvec_b, const float *vscale_b,
+                                           const int32_t *bsums_b, int B,
+                                           float *out, size_t out_stride) {
+    const uint8x16_t mask_03 = vdupq_n_u8(0x03);
+
+/* Codes are already unpacked here, so this is the dot half of
+ * TQ2_UNPACK_AND_DOT_4_DUAL: one decode feeds every activation row. */
+#define TQ2_DOT_4_DUAL(acc_lo, acc_hi, c0, c1, c2, c3, v0, v1, v2, v3) \
+    do { \
+        acc_lo = vdotq_s32(acc_lo, c0, v0); \
+        acc_hi = vdotq_s32(acc_hi, c1, v1); \
+        acc_lo = vdotq_s32(acc_lo, c2, v2); \
+        acc_hi = vdotq_s32(acc_hi, c3, v3); \
+    } while (0)
+
+#define TQ2_BATCH_BODY(BB) { \
+        float acc[BB]; \
+        int b; \
+        for (b = 0; b < BB; ++b) acc[b] = 0.0f; \
+        for (int k = 0; k < blocks_per_row; ++k) { \
+            const bitnet_tq2_0_block_t *blk = \
+                (const bitnet_tq2_0_block_t *)(weight + (size_t)k * BITNET_TQ2_0_BLOCK_SIZE); \
+            const float d = scales[k]; \
+            int32x4_t alo[BB], ahi[BB]; \
+            for (b = 0; b < BB; ++b) { alo[b] = vdupq_n_s32(0); ahi[b] = vdupq_n_s32(0); } \
+            for (int g = 0; g < 2; ++g) { \
+                uint8x16x2_t qs = vld1q_u8_x2(blk->qs + (size_t)g * 32u); \
+                for (int p = 0; p < 2; ++p) { \
+                    int8x16_t c0 = TQ2_CODE_0(qs.val[p], mask_03); \
+                    int8x16_t c1 = TQ2_CODE_2(qs.val[p], mask_03); \
+                    int8x16_t c2 = TQ2_CODE_4(qs.val[p], mask_03); \
+                    int8x16_t c3 = TQ2_CODE_6(qs.val[p]); \
+                    const int off = g * 128 + p * 16; \
+                    for (b = 0; b < BB; ++b) { \
+                        const int8_t *v = qvec_b + (size_t)b * (size_t)in_dim + \
+                                          (size_t)k * BITNET_TQ2_0_QK + (size_t)off; \
+                        TQ2_DOT_4_DUAL(alo[b], ahi[b], c0, c1, c2, c3, \
+                                       vld1q_s8(v), vld1q_s8(v + 32), \
+                                       vld1q_s8(v + 64), vld1q_s8(v + 96)); \
+                    } \
+                } \
+            } \
+            for (b = 0; b < BB; ++b) \
+                acc[b] += (float)(vaddvq_s32(vaddq_s32(alo[b], ahi[b])) - \
+                                  bsums_b[(size_t)b * (size_t)blocks_per_row + (size_t)k]) * \
+                          d * vscale_b[b]; \
+        } \
+        for (b = 0; b < BB; ++b) out[(size_t)b * out_stride] = acc[b]; \
+    }
+
+#define TQ2_SWITCH_QUAD \
+    case 1: TQ2_BATCH_BODY_QUAD(1) break; \
+    case 2: TQ2_BATCH_BODY_QUAD(2) break; \
+    case 3: TQ2_BATCH_BODY_QUAD(3) break; \
+    case 4: TQ2_BATCH_BODY_QUAD(4) break;
+
+/* Four accumulator lanes per activation row.  With two, the second vdot into
+ * the same register waits out the first one's latency, which set the kernel
+ * floor at ~4 weights/cycle on the A77 (~10 GB/s of TQ2_0 weights); one vdot
+ * per accumulator per 64-weight group removes that wait.  It costs 4*BB
+ * accumulator registers, so B <= 4 keeps to the dual form above. */
+#define TQ2_DOT_4_QUAD(a0, a1, a2, a3, c0, c1, c2, c3, v0, v1, v2, v3) \
+    do { \
+        a0 = vdotq_s32(a0, c0, v0); \
+        a1 = vdotq_s32(a1, c1, v1); \
+        a2 = vdotq_s32(a2, c2, v2); \
+        a3 = vdotq_s32(a3, c3, v3); \
+    } while (0)
+
+#define TQ2_BATCH_BODY_QUAD(BB) { \
+        float acc[BB]; \
+        int b; \
+        for (b = 0; b < BB; ++b) acc[b] = 0.0f; \
+        for (int k = 0; k < blocks_per_row; ++k) { \
+            const bitnet_tq2_0_block_t *blk = \
+                (const bitnet_tq2_0_block_t *)(weight + (size_t)k * BITNET_TQ2_0_BLOCK_SIZE); \
+            const float d = scales[k]; \
+            int32x4_t a0[BB], a1[BB], a2[BB], a3[BB]; \
+            for (b = 0; b < BB; ++b) { \
+                a0[b] = vdupq_n_s32(0); a1[b] = vdupq_n_s32(0); \
+                a2[b] = vdupq_n_s32(0); a3[b] = vdupq_n_s32(0); \
+            } \
+            for (int g = 0; g < 2; ++g) { \
+                uint8x16x2_t qs = vld1q_u8_x2(blk->qs + (size_t)g * 32u); \
+                for (int p = 0; p < 2; ++p) { \
+                    int8x16_t c0 = TQ2_CODE_0(qs.val[p], mask_03); \
+                    int8x16_t c1 = TQ2_CODE_2(qs.val[p], mask_03); \
+                    int8x16_t c2 = TQ2_CODE_4(qs.val[p], mask_03); \
+                    int8x16_t c3 = TQ2_CODE_6(qs.val[p]); \
+                    const int off = g * 128 + p * 16; \
+                    for (b = 0; b < BB; ++b) { \
+                        const int8_t *v = qvec_b + (size_t)b * (size_t)in_dim + \
+                                          (size_t)k * BITNET_TQ2_0_QK + (size_t)off; \
+                        TQ2_DOT_4_QUAD(a0[b], a1[b], a2[b], a3[b], c0, c1, c2, c3, \
+                                       vld1q_s8(v), vld1q_s8(v + 32), \
+                                       vld1q_s8(v + 64), vld1q_s8(v + 96)); \
+                    } \
+                } \
+            } \
+            for (b = 0; b < BB; ++b) \
+                acc[b] += (float)(vaddvq_s32(vaddq_s32(vaddq_s32(a0[b], a1[b]), \
+                                                       vaddq_s32(a2[b], a3[b]))) - \
+                                  bsums_b[(size_t)b * (size_t)blocks_per_row + (size_t)k]) * \
+                          d * vscale_b[b]; \
+        } \
+        for (b = 0; b < BB; ++b) out[(size_t)b * out_stride] = acc[b]; \
+    }
+
+    switch (B) { TQ2_SWITCH_QUAD
+    case 5: TQ2_BATCH_BODY(5) break;
+    case 6: TQ2_BATCH_BODY(6) break;
+    case 7: TQ2_BATCH_BODY(7) break;
+    case 8: TQ2_BATCH_BODY(8) break;
+    default: {
+        /* 9..16 (a prefill chunk).  The block is decoded once and its sixteen
+         * code vectors are reused by every activation row; decoding inside
+         * the row loop instead cost 5x the prefill rate on a 16-row chunk. */
+        float acc[16];
+        int b;
+        for (b = 0; b < B; ++b) acc[b] = 0.0f;
+        for (int k = 0; k < blocks_per_row; ++k) {
+            const bitnet_tq2_0_block_t *blk =
+                (const bitnet_tq2_0_block_t *)(weight + (size_t)k * BITNET_TQ2_0_BLOCK_SIZE);
+            const float d = scales[k];
+            int8x16_t code[16];
+            for (int q = 0; q < 4; ++q) {
+                const uint8x16_t raw = vld1q_u8(blk->qs + (size_t)q * 16u);
+                code[q * 4 + 0] = vreinterpretq_s8_u8(TQ2_CODE_0(raw, mask_03));
+                code[q * 4 + 1] = vreinterpretq_s8_u8(TQ2_CODE_2(raw, mask_03));
+                code[q * 4 + 2] = vreinterpretq_s8_u8(TQ2_CODE_4(raw, mask_03));
+                code[q * 4 + 3] = vreinterpretq_s8_u8(TQ2_CODE_6(raw));
+            }
+            for (b = 0; b < B; ++b) {
+                const int8_t *qv = qvec_b + (size_t)b * (size_t)in_dim +
+                                   (size_t)k * BITNET_TQ2_0_QK;
+                int32x4_t alo = vdupq_n_s32(0), ahi = vdupq_n_s32(0);
+                for (int q = 0; q < 4; ++q) {
+                    /* qs byte q*16 covers activation offset (q/2)*128 + (q%2)*16 */
+                    const int8_t *v = qv + (size_t)(q >> 1) * 128u + (size_t)(q & 1) * 16u;
+                    TQ2_DOT_4_DUAL(alo, ahi, code[q * 4 + 0], code[q * 4 + 1],
+                                   code[q * 4 + 2], code[q * 4 + 3],
+                                   vld1q_s8(v), vld1q_s8(v + 32),
+                                   vld1q_s8(v + 64), vld1q_s8(v + 96));
+                }
+                acc[b] += (float)(vaddvq_s32(vaddq_s32(alo, ahi)) -
+                                  bsums_b[(size_t)b * (size_t)blocks_per_row + (size_t)k]) *
+                          d * vscale_b[b];
+            }
+        }
+        for (b = 0; b < B; ++b) out[(size_t)b * out_stride] = acc[b];
+        break;
+    }
+    }
+#undef TQ2_BATCH_BODY
+#undef TQ2_DOT_4_DUAL
+}
 #else
 static void tq2_0_matmul_row_i8_neon_scales(const uint8_t *weight, const float *scales,
                                             int blocks_per_row, const int8_t *qvec,
@@ -917,6 +1126,20 @@ static void tq2_0_matmul_row_i8_neon_quad_scales(
     tq2_0_matmul_row_i8_scales(weight_1, scales_1, blocks_per_row, qvec, vec_scale, out_1);
     tq2_0_matmul_row_i8_scales(weight_2, scales_2, blocks_per_row, qvec, vec_scale, out_2);
     tq2_0_matmul_row_i8_scales(weight_3, scales_3, blocks_per_row, qvec, vec_scale, out_3);
+}
+static void tq2_0_matmul_row_i8_neon_batch(const uint8_t *weight, const float *scales,
+                                           int blocks_per_row, int in_dim,
+                                           const int8_t *qvec_b, const float *vscale_b,
+                                           const int32_t *bsums_b, int B,
+                                           float *out, size_t out_stride) {
+    int b;
+    (void)bsums_b;
+    for (b = 0; b < B; ++b) {
+        float v;
+        tq2_0_matmul_row_i8_scales(weight, scales, blocks_per_row,
+                                   qvec_b + (size_t)b * (size_t)in_dim, vscale_b[b], &v);
+        out[(size_t)b * out_stride] = v;
+    }
 }
 #endif
 
@@ -2598,6 +2821,7 @@ typedef struct {
     /* Synchronization — all atomic, no mutex */
     atomic_uint generation;   /* incremented by dispatcher to signal new work */
     atomic_int next_row;      /* work-stealing row index */
+    int row_chunk;            /* rows per work-stealing grab (dispatch 4) */
     atomic_int completed;     /* number of workers finished */
     atomic_int stop;          /* 1 = shutdown */
     atomic_int park;          /* 1 = avoid busy-waiting while another pool runs */
@@ -2615,7 +2839,7 @@ static tq2_lut_thread_pool_t g_lut_pool = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     0, 0, 0, 0, 0, 0, 0, 0, 0,
     NULL, NULL, NULL,
-    0, 0, 0, 0, 0, NULL, NULL
+    0, 0, 0, 0, 0, 0, NULL, NULL
 };
 static pthread_once_t g_lut_pool_once = PTHREAD_ONCE_INIT;
 
@@ -2770,9 +2994,10 @@ static void tq2_lut_compute_rows_tiled_scales(const uint8_t *bytes, const uint8_
 static void tq2_lut_pool_run_chunks(void) {
     for (;;) {
         if (g_lut_pool.dispatch_type == 4) {
-            int first = atomic_fetch_add_explicit(&g_lut_pool.next_row, 16, memory_order_relaxed);
+            const int cg = g_lut_pool.row_chunk;
+            int first = atomic_fetch_add_explicit(&g_lut_pool.next_row, cg, memory_order_relaxed);
             if (first >= g_lut_pool.out_count) break;
-            int last = first + 16;
+            int last = first + cg;
             if (last > g_lut_pool.out_count) last = g_lut_pool.out_count;
             g_lut_pool.row_compute(g_lut_pool.row_opaque, first, last);
             continue;
@@ -3183,6 +3408,27 @@ static void init_lut_pool_once(void) {
     g_lut_pool.initialized = 1;
 }
 
+/* Rows per work-stealing grab.  With 16-row grabs every core's stream
+ * advances in 4 KB steps interleaved against the other cores', and the DRAM
+ * sees four interleaved partial streams instead of four long runs: the
+ * 4096-row gate projection measured 12.4 GB/s at 16 rows and 18.6 GB/s at
+ * 256 on the SM8250 board.  Four grabs per thread keeps the tail balanced
+ * while each grab is long enough to stream properly. */
+static int tq2_row_chunk(int rows) {
+    static int override = -1;
+    int c;
+    if (override < 0) {
+        const char *env = getenv("BQ_ROWS_CHUNK");
+        long n = (env != NULL && env[0] != '\0') ? strtol(env, NULL, 10) : 0;
+        override = (n >= 16) ? (int)n : 0;
+    }
+    if (override > 0) return override;
+    c = rows / (4 * (g_lut_pool.n_threads > 0 ? g_lut_pool.n_threads : 1));
+    if (c < 16) c = 16;
+    if (c > 1024) c = 1024;
+    return c;
+}
+
 int bitnet_quant_run_rows(void (*compute)(void *, int, int), void *opaque, int rows) {
     if (!compute || rows <= 0) return -1;
     (void)pthread_once(&g_lut_pool_once, init_lut_pool_once);
@@ -3192,6 +3438,7 @@ int bitnet_quant_run_rows(void (*compute)(void *, int, int), void *opaque, int r
     g_lut_pool.dispatch_type = 4;
     g_lut_pool.row_compute = compute;
     g_lut_pool.row_opaque = opaque;
+    g_lut_pool.row_chunk = tq2_row_chunk(rows);
     g_lut_pool.out_count = rows;
     atomic_store_explicit(&g_lut_pool.park, 0, memory_order_release);
     atomic_store_explicit(&g_lut_pool.next_row, 0, memory_order_relaxed);
@@ -3201,6 +3448,75 @@ int bitnet_quant_run_rows(void (*compute)(void *, int, int), void *opaque, int r
     while (atomic_load_explicit(&g_lut_pool.completed, memory_order_acquire) < g_lut_pool.n_threads)
         BITNET_SPIN_HINT();
     return 0;
+}
+
+/* A block verify: Y[b][row] = W[row] . x_b for b < B.  Each worker takes a
+ * strip of weight rows and runs every activation row against them, so the
+ * matrix is read once per verify instead of once per speculative token. */
+typedef struct {
+    const uint8_t *bytes;
+    const float *scales;
+    int blocks_per_row;
+    int in_dim;
+    int B;
+    const int8_t *qvec_b;
+    const float *vscale_b;
+    const int32_t *bsums_b;
+    float *out;
+    size_t out_stride;
+    int row0;        /* first output row, when only a window is computed */
+} tq2_batch_job_t;
+
+static void tq2_batch_rows_compute(void *opaque, int first, int last) {
+    const tq2_batch_job_t *j = (const tq2_batch_job_t *)opaque;
+    const size_t row_bytes = (size_t)j->blocks_per_row * BITNET_TQ2_0_BLOCK_SIZE;
+    int r;
+    for (r = first; r < last; ++r) {
+        const int row = j->row0 + r;
+        tq2_0_matmul_row_i8_neon_batch(j->bytes + (size_t)row * row_bytes,
+                                       j->scales + (size_t)row * (size_t)j->blocks_per_row,
+                                       j->blocks_per_row, j->in_dim,
+                                       j->qvec_b, j->vscale_b, j->bsums_b, j->B,
+                                       j->out + (size_t)row, j->out_stride);
+    }
+}
+
+/* Rows [row0, row1) of the matrix, written at the same row index of `out` whose
+ * row stride is out_dim.  A caller that hands the other rows to the GPU calls
+ * this for its own share and gets the results in place. */
+int bitnet_tq2_0_matmul_batched_i8_rows(const void *weight, const float *scales,
+                                        int out_dim, int row0, int row1, int in_dim,
+                                        const int8_t *qvec_b, const float *vec_scale_b,
+                                        const int32_t *block_bsums_b, int B, float *out) {
+    tq2_batch_job_t job;
+
+    if (weight == NULL || scales == NULL || qvec_b == NULL || vec_scale_b == NULL ||
+        block_bsums_b == NULL || out == NULL ||
+        out_dim <= 0 || in_dim <= 0 || in_dim % BITNET_TQ2_0_QK != 0 ||
+        B < 1 || B > 16 || row0 < 0 || row1 > out_dim || row0 >= row1) {
+        return -1;
+    }
+    job.bytes = (const uint8_t *)weight;
+    job.scales = scales;
+    job.blocks_per_row = in_dim / BITNET_TQ2_0_QK;
+    job.in_dim = in_dim;
+    job.B = B;
+    job.qvec_b = qvec_b;
+    job.vscale_b = vec_scale_b;
+    job.bsums_b = block_bsums_b;
+    job.out = out;
+    job.out_stride = (size_t)out_dim;
+    job.row0 = row0;
+    return bitnet_quant_run_rows(tq2_batch_rows_compute, &job, row1 - row0);
+}
+
+int bitnet_tq2_0_matmul_batched_i8(const void *weight, const float *scales,
+                                   int out_dim, int in_dim,
+                                   const int8_t *qvec_b, const float *vec_scale_b,
+                                   const int32_t *block_bsums_b, int B, float *out) {
+    return bitnet_tq2_0_matmul_batched_i8_rows(weight, scales, out_dim, 0, out_dim,
+                                               in_dim, qvec_b, vec_scale_b,
+                                               block_bsums_b, B, out);
 }
 
 /* Hybrid spin-wait: spin briefly for low latency, then back off to avoid wasting CPU */

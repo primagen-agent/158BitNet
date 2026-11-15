@@ -1,3 +1,6 @@
+/* posix_fadvise / pread */
+#define _GNU_SOURCE
+
 #include "gguf.h"
 
 #include <stdio.h>
@@ -5,6 +8,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #define GGUF_MAGIC 0x46554747u
@@ -13,6 +17,7 @@ static void gguf_reset(gguf_file_t *file) {
     if (file != NULL) {
         memset(file, 0, sizeof(*file));
         file->alignment = 32;
+        file->fd = -1;
     }
 }
 
@@ -416,6 +421,7 @@ int gguf_open(const char *path, gguf_file_t *file) {
 
     file->data_offset = align_up((uint64_t)end_pos, file->alignment);
 
+    file->fd = open(path, O_RDONLY);
     /* mmap the entire file for zero-I/O tensor access */
     {
         int fd = fileno(fp);
@@ -450,6 +456,10 @@ void gguf_close(gguf_file_t *file) {
     if (file->data_ptr != NULL) {
         munmap(file->data_ptr, file->file_size);
     }
+    if (file->fd >= 0) {
+        close(file->fd);
+        file->fd = -1;
+    }
 
     if (file->metadata != NULL) {
         for (uint64_t i = 0; i < file->metadata_count; ++i) {
@@ -476,6 +486,40 @@ void gguf_close(gguf_file_t *file) {
     }
 
     gguf_reset(file);
+}
+
+int gguf_read_tensor_at(gguf_file_t *file, const gguf_tensor_t *tensor, size_t offset,
+                       void *dst, size_t bytes) {
+    uint8_t *out = (uint8_t *)dst;
+    off_t off;
+    size_t done = 0;
+
+    if (file == NULL || tensor == NULL || dst == NULL || file->fd < 0) return -1;
+    off = (off_t)(file->data_offset + tensor->offset + offset);
+    while (done < bytes) {
+        size_t step = bytes - done;
+        ssize_t got;
+        if (step > (size_t)4 << 20) step = (size_t)4 << 20;
+        got = pread(file->fd, out + done, step, off + (off_t)done);
+        if (got <= 0) return -1;
+        done += (size_t)got;
+    }
+    /* the bytes now live in `dst`; do not let the read leave a resident copy */
+    posix_fadvise(file->fd, off, (off_t)bytes, POSIX_FADV_DONTNEED);
+    return 0;
+}
+
+int gguf_read_tensor(gguf_file_t *file, const gguf_tensor_t *tensor, void *dst, size_t bytes) {
+    return gguf_read_tensor_at(file, tensor, 0, dst, bytes);
+}
+
+void gguf_release_data(gguf_file_t *file) {
+    if (file == NULL || file->data_ptr == NULL) {
+        return;
+    }
+    munmap(file->data_ptr, file->file_size);
+    file->data_ptr = NULL;
+    file->file_size = 0;
 }
 
 const void *gguf_get_tensor_ptr(const gguf_file_t *file, const gguf_tensor_t *tensor) {

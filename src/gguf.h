@@ -55,6 +55,7 @@ typedef struct gguf_file {
     uint64_t data_offset;
     void *data_ptr;
     size_t file_size;
+    int fd;   /* kept open for gguf_read_tensor; -1 when unavailable */
     gguf_metadata_t *metadata;
     gguf_tensor_t *tensors;
 } gguf_file_t;
@@ -62,6 +63,20 @@ typedef struct gguf_file {
 int gguf_open(const char *path, gguf_file_t *file);
 void gguf_close(gguf_file_t *file);
 const void *gguf_get_tensor_ptr(const gguf_file_t *file, const gguf_tensor_t *tensor);
+/* Unmaps the tensor data region while keeping the parsed metadata alive.  Any
+ * pointer previously returned by gguf_get_tensor_ptr becomes invalid, so call
+ * this only once every tensor the caller keeps has been copied out. */
+void gguf_release_data(gguf_file_t *file);
+
+/* Copies `bytes` of a tensor straight from the file into `dst`, bypassing the
+ * mapping, and drops the pages it read from the page cache.  Returns 0 on
+ * success.  Used to stream weights into GPU-visible memory without ever
+ * holding a second resident copy of the model. */
+int gguf_read_tensor(gguf_file_t *file, const gguf_tensor_t *tensor, void *dst, size_t bytes);
+/* The same read starting `offset` bytes into the tensor, so a caller can stage
+ * only the window of a matrix the GPU will compute. */
+int gguf_read_tensor_at(gguf_file_t *file, const gguf_tensor_t *tensor, size_t offset,
+                        void *dst, size_t bytes);
 
 const gguf_metadata_t *gguf_find_metadata(const gguf_file_t *file, const char *key);
 const char *gguf_type_name(uint32_t type);

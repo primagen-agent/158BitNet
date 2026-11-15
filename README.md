@@ -7,6 +7,63 @@ examples, an OpenAI-compatible HTTP server, LoRA loading, KV-cache reuse, Androi
 cross-compilation, tests, profiling tools, and a learned persistent-memory
 subsystem on top of the frozen backbone.
 
+One runtime serves both model families: `bonsai_server` speaks the OpenAI API
+for the BitCPM 0.5B/1B/3B/8B files and for the Qwen3.5-hybrid Ternary-Bonsai
+27B checkpoint, with optional DSpine speculative decoding for the 27B.
+
+## Local Changes Versus The Published Repository
+
+The published tree (`origin/main`, commit `36376f3`) holds the BitCPM/CANN
+runtime and the neural-memory subsystem. Everything listed here is in the
+local branch and has not been pushed upstream; the published files are
+extended, not replaced.
+
+| Tracked file | Lines | What the change adds |
+| --- | ---: | --- |
+| `CMakeLists.txt` | +78 | `bonsai_generate`, `bonsai_spec`, `bonsai_server` targets, the optional Vulkan backend, `test_ptq_p2` and the Vulkan benches |
+| `src/bitnet.c` | +383/-26 | Vulkan staging and the CPU/GPU row split for the ternary matvecs; `bitnet_output_logits_blockscale` so a non-qwen35 family can share the output pool |
+| `src/gguf.c`, `src/gguf.h` | +59 | `gguf_read_tensor_at` and `gguf_release_data`: `pread` a tensor window straight into GPU-visible memory and drop the page-cache copy, so a 5.95 GB model is never resident twice |
+| `src/quant_tq2_0.c`, `src/quant_tq2_0.h` | +335/-3 | the batched B=1..16 matmul used by the block verify, its `_rows` form for a hybrid split, and `bitnet_fp32_to_fp16` |
+| `README.md` | +336 | the 27B, speculative-decoding, optimization and measured-accuracy sections, plus this comparison |
+
+New subsystems, all untracked in the published tree:
+
+- `src/bonsai.c`, `include/bonsai.h` -- the `qwen35` graph (Ternary-Bonsai
+  27B): PTQ1_0 weights, Prism-Hadamard folding, full-attention and gated delta
+  net blocks, `bonsai_eval_block` verify, replay cache, worker park.
+- `src/quant_ptq1_0.c`, `src/quant_ptq1_0.h` -- `PTQ1_0` kernels, including
+  the 2-bit i8mm repack the 27B verify runs on.
+- `src/dspine.c`, `include/dspine.h` -- the DSpine block drafter.
+- `src/minicpm.c`, `src/minicpm.h`, `src/output_head.h` -- the
+  `minicpm`/`llama` graph (BitCPM/MiniCPM4) under the same `bonsai_*` API,
+  its ternary output head and prefill chunking, and the shared output-pool
+  entry points.
+- `src/qwen3.c`, `src/qwen3.h` -- a dense Qwen3 GGUF runtime with block
+  verify (an experimental second target for the drafter).
+- `src/unicode_data.c`, `src/unicode_data.h` -- Unicode category tables used
+  by the tokenizer's byte fallback.
+- `src/vk/`, `src/gpu_ops.h` -- the Vulkan backend: `.comp` shaders with
+  embedded `_spv.h` headers, and the stage opcodes shared with
+  `src/bonsai.c`.
+- `tools/` -- `bonsai_server.c` (the unified OpenAI server), `bonsai_spec.c`
+  (speculative-decoding driver), `bonsai_generate.c`, `bonsai_ids.c`,
+  `ctx_probe.c`, `gguf_dump.c`, `tq2_decode_bench.c`.
+- `scripts/` -- device builds and deployment: `build_server_host.sh`,
+  `build_server_board.sh`, `build_bonsai.sh`, `build_spec_host.sh`,
+  `serve_phone.sh`, `serve_board.sh`, `sync_board_src.sh`,
+  `gen_shader_header.sh`, `test_vk_kernels.sh`, `validate_vk.sh`,
+  `deploy_and_validate.sh`, `bench_server.sh`.
+- `tests/` -- `test_ptq_encode.c`, `test_ptq_p2.c`, `bench_p2.c`,
+  `bench_ptq_cpu.c`, `bench_tq2_batched.c`, `test_vk_kernels.c`,
+  `test_vk_matmat.c`, `test_vk_hybrid.c`, `test_vk_tq2_bench.c`,
+  `test_vk_tq2_matmat_bench.c`.
+
+The rest of the difference is not source: stray `*.o` files and
+`build-bonsai/` are local build output, and `config.json` is the HF config
+that ships with the DSpine draft checkpoint (the runtime reads the
+`safetensors` headers, not this file). `git diff 36376f3` on the local
+branch reproduces this list exactly.
+
 ## Models
 
 The project targets BitCPM CANN GGUF models from OpenBMB, including the public
@@ -37,11 +94,61 @@ models/bitcpm4-3b-tq2_0.gguf
 models/bitcpm4-8b-tq2_0.gguf
 ```
 
+The 27B family has its own files, described in the next section:
+
+```sh
+models/Ternary-Bonsai-2-27B-PTQ1_0.gguf
+models/dspine27.safetensors
+```
+
 You can also inspect a model directly:
 
 ```sh
 ./build/gguf_inspect models/bitcpm4-1b-tq2_0.gguf
 ```
+
+## Ternary-Bonsai 27B (qwen35)
+
+The repo also runs a model that is not part of the BitCPM family: the
+Qwen3.5-hybrid `Ternary-Bonsai-2-27B-PTQ1_0.gguf` (5.95 GB,
+`general.architecture = qwen35`) with `PTQ1_0` ternary weights.
+
+- 64 blocks, hidden 5120, FFN 17408, 24 query heads and 4 KV heads of 256;
+  every fourth block is full attention and the rest are gated delta net (GDN).
+- The weights are Prism-Hadamard folded (`W_f = W * D * H`), so every matmul
+  input is transformed as `x' = H(D*x)` first, the embedding lookup applies the
+  inverse, and the GDN output projection permutes its heads. `src/bonsai.c`
+  implements the graph and the fold, `src/quant_ptq1_0.c` the weights.
+- The int8 LM head alone is 1.27 GB and is cached at load; the whole file is
+  5.95 GB, so a board that holds it should not hold a BitCPM next to it (the
+  server's `--max-resident 1` handles that).
+
+`bonsai_load_model()` opens a file of either family and dispatches on
+`general.architecture`: `qwen35` runs the `src/bonsai.c` graph, `minicpm` and
+`llama` the `src/minicpm.c` graph, through one API, one binary and one thread
+pool.
+
+Tuning that matters:
+
+- The 2-bit i8mm kernel is worth 1.6x on the block verify. `BQ_P2=1` (server
+  default) builds the repacked weights; on a CPU without `i8mm` the kernel
+  falls back to the dotprod path with the base-3 trit decode.
+- The GPU share is board-specific, not a free win: `--gpu-pct 45 --mm-gpu 0`
+  is the Cix board's optimum (its A720 cores with i8mm outrun the Mali), while
+  the SM8550 phone wants `--gpu-pct 69 --mm-gpu 30`. The library default
+  (`BQ_GPU_PCT=69`) is the Adreno setting.
+- 8 threads on the 8-core boards; `-t 3` halves the decode rate.
+
+Greedy decode, 32-64 output tokens:
+
+| Board | Plain | With the DSpine drafter |
+| --- | ---: | ---: |
+| Cix P1, Mali-G720, 8 threads | ~2.3 tok/s | 5.0-5.2 tok/s |
+| SM8550 phone, Adreno 740, 4 threads | 2.35-2.42 tok/s | 3.3-3.6 tok/s |
+
+Context is memory bound, not file bound: the checkpoint declares 262144
+positions, but its KV cache is 128 KB per token, so a 28 GB board runs out of
+memory long before the server's 32768 cap.
 
 ## Android 865 Best Known Results
 
@@ -69,6 +176,16 @@ The runtime is intentionally compact:
 - `src/bitnet.c`: model loading, forward pass, KV cache, LoRA application, output
   projection, and decode-facing API.
 - `src/quant_tq2_0.c`: ternary `TQ2_0` kernels, including ARM NEON paths.
+- `src/bonsai.c`: the `qwen35` graph (Ternary-Bonsai 27B) -- PTQ1_0 weights,
+  Prism-Hadamard folding, gated delta net blocks, block verify.
+- `src/minicpm.c`: the `minicpm`/`llama` graph (BitCPM/MiniCPM4) -- TQ2_0
+  projections, ternary output head, prefill chunking.
+- `src/dspine.c`: the DSpine block drafter used by speculative decoding.
+- `src/quant_ptq1_0.c`: `PTQ1_0` kernels, including the 2-bit i8mm repack.
+- `src/vk/vk_backend.c`: optional Vulkan compute back end for the ternary
+  matvecs (built when Vulkan is found).
+- `tools/bonsai_server.c`, `tools/bonsai_spec.c`, `tools/bonsai_generate.c`:
+  the unified HTTP server, the speculative-decoding driver and the CLI.
 - `src/quant_q6k.c`, `src/quant_q4k.c`: GGUF quantization helpers used by
   embeddings and output projection.
 - `src/tokenizer.c`: GGUF tokenizer support.
@@ -88,6 +205,10 @@ High-level decode flow:
    repetition penalty, append to history, and update KV cache.
 5. Reuse cached KV state for multi-turn requests when `session_id` is provided.
 
+A model that has a draft takes a different path: the drafter proposes a block,
+one batched forward verifies it (`bonsai_eval_block`), and the longest agreeing
+prefix is appended while the rest is rolled back.
+
 Key runtime features:
 
 - `TQ2_0` low-bit matrix-vector kernels for transformer projections.
@@ -97,6 +218,61 @@ Key runtime features:
 - OpenAI-compatible completions/chat API, including streaming SSE responses.
 - Session KV reuse and full-history de-duplication for multi-turn HTTP calls.
 - External LoRA loading with `--lora` and `--lora-scale`.
+- One binary for the BitCPM (`minicpm`/`llama`) and Ternary-Bonsai 27B
+  (`qwen35`) families, selected by `general.architecture`.
+- Speculative decoding with a DSpine block drafter or a GGUF draft model.
+- Ternary output head, batched TQ2_0 block verify and chunked prefill.
+- Optional Vulkan compute back end for the ternary matvecs.
+
+## Speculative Decoding
+
+A drafter proposes a block of tokens and the target verifies the whole block in
+one batched pass; the longest agreeing prefix is kept and the rest is rolled
+back. Acceptance is decided by comparing argmax rows, so the speculative path
+is greedy -- a request with `temperature > 0` falls back to sampling.
+
+Two kinds of draft are supported:
+
+- `-d draft.safetensors`: the DSpine block drafter, `qwen35` targets only. It
+  reads five residual-stream layers of the target and borrows its embedding, LM
+  head and thread pool (`src/dspine.c`).
+- `-D draft.gguf`: any GGUF this binary can load, from either family, as long
+  as the vocab matches. All four BitCPM files share one vocabulary.
+
+In the server the draft is attached to the `--model` before it:
+
+```sh
+./bonsai_server --threads 8 --ctx 2048 \
+  --model bonsai27b=models/Ternary-Bonsai-2-27B-PTQ1_0.gguf \
+  --draft models/dspine27.safetensors \
+  --model cpm8b=models/bitcpm4-8b-tq2_0.gguf
+```
+
+`--block N` sets the server default and `--model-block N` (after the `--model`
+it belongs to) or the per-request `spec_block` overrides it, and
+`"spec": false` forces the plain path on a model that has a draft, so both
+engines can be compared through one process; `perf.engine` reports which one
+ran (`decode`, `spec-dspine`, `spec-gguf`).
+
+What the block size buys: on the SM8550 the 27B keeps 1.8-2.7 tokens per round
+(acceptance ~73% per token) at B=2-3, and larger blocks grow the verify faster
+than the accepted-prefix length. On Cix B=2 is 1.80 tokens/round with a 346 ms
+verify; B=4 reaches 2.33 tokens/round but costs 503 ms, because the 2-bit
+kernel pairs rows (`pairs = ceil(B/2)`) and the SMMLAs double.
+
+When it pays: only for the 27B. After the output-head and thread fixes the
+BitCPM 8B decodes at 13.0 tok/s on its own against 9.3 with a 1B draft -- its
+block verify amortizes only 1.34-1.54x while acceptance is ~69%, so a draft
+loses unless the accepted prefix exceeds block/1.4.
+
+A rollback cache (`bonsai_replay_cache_init`, on by default, `BQ_RP_CACHE=0`
+disables it) reuses the GDN qkv/alpha/beta the verify already computed, so a
+partial acceptance re-runs only the recurrence: replay 61 -> 22 ms per round on
+the SM8550, byte-identical output.
+
+`tools/bonsai_spec.c` checks the machinery directly: `--check` compares the
+sequential forward against `bonsai_eval_block()`, `--bench` times one block
+verify against B single-token forwards.
 
 ## Important Optimizations
 
@@ -293,6 +469,91 @@ only updates those logits during decode.
 This keeps LoRA behavior in adapter weights while avoiding a dense full-vocab
 LoRA pass for mostly sparse output adapters.
 
+### Unified Runtime For Two Families
+
+`src/minicpm.c` is the BitCPM graph under the same `bonsai_*` API as the
+`qwen35` engine: `bonsai_load_model()` reads `general.architecture` and hands
+the file to the right graph, and the BitCPM side reuses the neutral library
+kernels (TQ2_0/Q4_K/Q6_K/Q8_K, ops, tokenizer, GGUF). The server exports
+`--threads` through `BITNET_NUM_THREADS` before the first load, because the
+TQ2_0 pool is sized from the environment, and it parks the decode workers once
+per request (`bonsai_park_workers()`); an unparked pool holds ~48% of eight
+cores and cost the next 27B request about 7%.
+
+### Batched TQ2_0 Block Verify
+
+`bitnet_tq2_0_matmul_batched_i8_rows` computes one weight row against up to 16
+activation rows, decoding each 256-weight block once and dotting it against
+every row, so a speculative verify streams the matrix once instead of once per
+drafted token. The bodies are compile-time sized: B <= 4 uses four accumulators
+per row, B 5-8 two, and B 9-16 a decode-once form. Measured on the 8B, a B=8
+block verify is 469 ms, 58.7 ms per row, 1.34x a sequential token. Prefill runs
+through the same kernel.
+
+### Prefill Chunking
+
+The prefill is instruction bound, not bandwidth bound: an A77 issues one
+`vdotq_s32` per cycle, so 113 G MAC/s on three cores, and the 8B reads only
+8 GB/s of a 23.5 GB/s ceiling. At B=16 the sixteen decoded code vectors plus
+their accumulator pairs no longer fit in the 32 vector registers and reload from
+the stack: a 12288x4096 microbenchmark gives 2794 tok/s at B=4 against 2259 at
+B=16, so the sixteen-row form is 19% slower; `mc_chunk_b()` in
+`src/minicpm.c` therefore runs prefill four rows at a time, and 8B prefill went
+from 11.0 to 14.9 tok/s. A call that scores at most 16 rows is a speculative
+verify and is never split -- it still gets the matrix in one pass.
+`BQ_MC_CHUNK` overrides the chunk.
+
+### Ternary Output Head
+
+`BQ_MC_HEAD=2` (default) keeps a TQ2_0 copy of the LM head, scans the whole
+vocabulary at 2.125 bits per weight, and then rescores the top 128 candidates
+with the exact checkpoint values -- `mc_dot_f16` for an f16 head, or
+`bitnet_q6k_dot_product_i8_neon` on per-256-block Q8_K activations for a Q6_K
+head. Only logits a sampler can act on are rescored, so greedy picks are
+unchanged while the per-token head traffic drops 4x: cpm05 53.6 -> 155-162,
+cpm1b 45.6 -> 52-56, cpm3b 20.8 -> 22-24, cpm8b 9.1 -> 9.7-10.1 tok/s on the
+865 board. Mode 1 is the older int8 copy (f16 heads only) and mode 0 the native
+per-token dequantize. Two details are load-bearing: a rescored logit must be
+divided by `logit_scale`, and the Q6_K rescore must use the per-block Q8_K
+activation (a single global int8 scale made the 1B pick a different token).
+Measured against mode 0, the answers were identical on every item tried
+(66/66 across 0.5B, 3B and 8B).
+
+### PTQ1_0 2-bit Repack For i8mm
+
+The 27B verify is dominated by the base-3 trit decode, not by weight bandwidth.
+`BQ_P2=1` repacks pairs of output rows into 2-bit biased trits at load, two
+rows sharing one packed stream, so one `smmla` operand covers eight weights of
+each row over the same eight columns and a shift-and-mask replaces the four
+multiply chains of the base-3 decoder; the bias is removed with a per-block
+activation sum (`rsum`). The repack is 2.71x in isolation and 1.64x end to end
+on the verify (568 -> 348 ms). Plain decode does not move (2.3 tok/s either
+way, because at B=1 half of the SMMLA lanes are idle); what the repack buys is
+the verify, so with the drafter the 27B goes from 3.1 to 5.0 tok/s on the Cix
+board.
+
+### Vulkan Matvec / Matmat Backend
+
+`src/vk/vk_backend.c` is an optional Vulkan compute path for the ternary
+matvecs, built when CMake finds Vulkan (shaders are embedded as SPIR-V headers
+by `scripts/gen_shader_header.sh`, so no shader compiler is needed). It is
+useful exactly where the CPU lacks `i8mm`: on the Cix board with the i8mm
+kernel the GPU earns nothing at any share (0/5/10/15/20% all land within 1%),
+while on Adreno boards a 10-30% verify share still buys about 5-10% end to end.
+Two device rules: the Adreno open-source driver (Turnip) hangs on the
+shared-memory path the Qualcomm blob handles, so the backend gates it on
+`driverID`, and Mali's coherent heap is uncached, so weights are staged with
+`bq_vk_buf_alloc_cached`.
+
+### Serving-Side Wins
+
+`--max-resident N` (default 1) keeps only the model the last request named
+open, unloading the LRU one first: an idle server then holds under 1 GB and the
+27B's 5.95 GB never competes with the BitCPM files for page cache, which
+measurably cost it ~5% of decode. Requests that end park the decode workers,
+and a model load is 2.5-3 s for a BitCPM against 22 s for the 27B, so the
+resident set is a request-level decision.
+
 ## Build
 
 All build output should stay under `build/`.
@@ -300,6 +561,24 @@ All build output should stay under `build/`.
 ```sh
 cmake -S . -B build
 cmake --build build --target openai_server minimal_generate gguf_inspect -j 8
+```
+
+The unified runtime builds as three more targets (`bonsai_server`,
+`bonsai_generate`, `bonsai_spec`); Vulkan is picked up automatically when the
+headers are installed.
+
+```sh
+cmake --build build --target bonsai_server bonsai_generate bonsai_spec -j 8
+```
+
+For a board or phone without a compiler, the scripts cross-build with the NDK
+or build on the device:
+
+```sh
+scripts/build_server_host.sh                 # NDK cross-build for bionic/Android
+scripts/build_server_board.sh                # on-board gcc build (Cix board)
+scripts/serve_phone.sh -s SERIAL:5555        # launch with the phone's knobs
+scripts/serve_board.sh                       # launch with the Cix board's knobs
 ```
 
 Build tests and benchmark binaries:
@@ -418,6 +697,25 @@ With `session_id`, the server keeps a context for the session and reports
 client sends full history again, the server de-duplicates the already cached
 prefix instead of evaluating it twice.
 
+### Unified Server For Every Family
+
+`bonsai_server` serves every registered model from one process; the file, not
+the binary, decides the family. Models load lazily on the first request that
+names them and are selected by the `model` field of the request.
+
+```sh
+./build/bonsai_server --host 127.0.0.1 --port 8080 --threads 8 --ctx 2048 \
+  --model cpm05=models/bitcpm4-0.5b-tq2_0.gguf \
+  --model cpm8b=models/bitcpm4-8b-tq2_0.gguf \
+  --model bonsai27b=models/Ternary-Bonsai-2-27B-PTQ1_0.gguf \
+  --draft models/dspine27.safetensors
+```
+
+`GET /v1/models` reports each model's family and the context it really allows.
+Per request the server accepts the same fields as the plain server plus `spec`,
+`spec_block` and a `perf` object in the response that names the engine
+(`decode`, `spec-dspine`, `spec-gguf`) with prefill and decode timings.
+
 ## LoRA
 
 Load an external LoRA adapter:
@@ -499,6 +797,18 @@ python3 tests/test_openai_server_lora_api.py build/openai_server models/bitcpm4-
 python3 tests/test_openai_server_multiturn_quality.py build/openai_server models/bitcpm4-1b-tq2_0.gguf build/lora/xiaoli.bnlora
 ```
 
+Speculative-decoding checks:
+
+```sh
+./build/bonsai_spec -m models/bitcpm4-8b-tq2_0.gguf -p "The capital of France is" --check
+./build/bonsai_spec -m models/Ternary-Bonsai-2-27B-PTQ1_0.gguf -p "Hello" --bench -B 4
+./build/bonsai_spec -m models/Ternary-Bonsai-2-27B-PTQ1_0.gguf -p "Hello" \
+  --spec -d models/dspine27.safetensors -B 2 -n 64
+```
+
+`--check` must report zero difference between the sequential forward and the
+block verify; `--bench` reports the block cost against B single-token forwards.
+
 Decode profiling:
 
 ```sh
@@ -515,6 +825,32 @@ Multi-turn KV-cache profiling:
 ./build/test_profile_multiturn models/bitcpm4-1b-tq2_0.gguf
 ./build/test_profile_multiturn models/bitcpm4-1b-tq2_0.gguf q8
 ```
+
+## Measured Accuracy
+
+MMLU and ARC for every local BitCPM size, 5-shot, greedy, `max_tokens 16`,
+2048 context, 4 threads, on the Snapdragon 865 board. MMLU takes 20 test items
+from each of six subjects with five `dev` examples; 105 items are answered
+because the `high_school_world_history` prompts (5.5-8.6 KB with five
+examples) do not fit the context. ARC takes 30 items from each config (60
+total) with five `train` examples. The +- is the binomial standard error.
+
+| Model | MMLU | ARC | s/item (MMLU / ARC) |
+| --- | ---: | ---: | ---: |
+| cpm05 0.5B | 45.7% +-4.9 (48/105) | 51.7% +-6.5 (31/60) | 4.8 / 2.7 |
+| cpm1b 1B | 46.7% +-4.9 (49/105) | 65.0% +-6.2 (39/60) | 14.7 / 6.9 |
+| cpm3b 3B | 60.0% +-4.8 (63/105) | 81.7% +-5.0 (49/60) | 32.5 / 15.3 |
+| cpm8b 8B | 70.5% +-4.5 (74/105) | 86.7% +-4.4 (52/60) | 61.4 / 31.4 |
+
+- 0-shot letter prompting does not work on this family at any size: the model
+  answers with reasoning text ("To find the degree ...") instead of a letter.
+  Five exemplars are what make the numbers comparable at all.
+- The 0.5B still misses the format on 9 of 105 items, all in
+  `abstract_algebra` and `econometrics`; 1B and up answer every item.
+- 0.5B and 1B are equal on MMLU (45.7 vs 46.7): the extra size buys format, not
+  knowledge. ARC grows monotonically, 51.7 / 65.0 / 81.7 / 86.7.
+- The ternary output head does not change answers: `BQ_MC_HEAD=0` (native head)
+  and the default mode 2 agreed on 66 of 66 items (22 each at 0.5B, 3B, 8B).
 
 ## Notes
 

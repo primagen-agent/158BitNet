@@ -1,0 +1,18 @@
+#version 450
+/* Causal depthwise convolution over the short-conv history, with the SiLU the
+ * reference fuses into it.  One invocation per channel. */
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) readonly buffer WBuf { float w[]; };    /* n_ch*K */
+layout(std430, binding = 1) readonly buffer HBuf { float hist[]; }; /* K*n_ch */
+layout(std430, binding = 2) writeonly buffer OBuf { float o[]; };   /* n_ch */
+
+layout(push_constant) uniform PC { uint K; uint n_ch; } pc;
+
+void main() {
+    uint c = gl_GlobalInvocationID.x;
+    if (c >= pc.n_ch) return;
+    float s = 0.0;
+    for (uint t = 0; t < pc.K; ++t) s += w[c * pc.K + t] * hist[t * pc.n_ch + c];
+    o[c] = s / (1.0 + exp(-s));
+}

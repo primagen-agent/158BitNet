@@ -1,0 +1,41 @@
+#version 450
+/* Decode-step attention, stage 1: score[h][t] = dot(q[h], K[t][h/rep]) * scale.
+ *
+ * One invocation per (head, cache slot), so no reduction is needed and the
+ * kernel needs neither shared memory nor a barrier.  The GQA mapping is done
+ * with a division by `rep`, which the driver folds into the index math.
+ */
+#ifndef LS
+#define LS 128
+#endif
+layout(local_size_x = LS) in;
+
+layout(std430, binding = 0) readonly buffer Q { float q[]; };      /* n_head * hd   */
+layout(std430, binding = 1) readonly buffer K { float k[]; };      /* nt * nkv * hd */
+layout(std430, binding = 2) writeonly buffer S { float s[]; };     /* n_head * nt   */
+
+layout(push_constant) uniform PC {
+    uint n_head;
+    uint nkv;
+    uint hd;
+    uint nt;
+    float scale;
+    uint rep;
+    uint pad0;
+    uint pad1;
+} pc;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    uint total = pc.n_head * pc.nt;
+    if (i >= total) return;
+    uint h = i / pc.nt;
+    uint t = i - h * pc.nt;
+    uint kh = h / pc.rep;
+
+    uint qo = h * pc.hd;
+    uint ko = (t * pc.nkv + kh) * pc.hd;
+    float acc = 0.0;
+    for (uint d = 0u; d < pc.hd; ++d) acc += q[qo + d] * k[ko + d];
+    s[i] = acc * pc.scale;
+}

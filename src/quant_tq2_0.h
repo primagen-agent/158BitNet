@@ -16,6 +16,7 @@ typedef struct bitnet_tq2_0_block {
 /* fp16 -> fp32 conversion (matches scalar reference). Public so per-arch
  * translation units can share a single implementation. */
 float bitnet_fp16_to_fp32(uint16_t h);
+uint16_t bitnet_fp32_to_fp16(float v);
 
 int bitnet_tq2_0_dequantize_block(const bitnet_tq2_0_block_t *block, float *out, size_t out_len);
 int bitnet_tq2_0_dot_product(const bitnet_tq2_0_block_t *block, const float *vec, size_t len, float *out);
@@ -44,6 +45,21 @@ int bitnet_tq2_0_matmul_vector_i8_neon_scales(const void *weight, const float *s
                                               int out_dim, int in_dim,
                                               const int8_t *qvec, float vec_scale,
                                               const int32_t *block_bsums, float *out);
+/* Block-verify form: B activation rows share one weight pass.  Row b of the
+ * activation is qvec_b + b*in_dim with scale vec_scale_b[b] and its own
+ * blocks_per_row block sums (block_bsums_b + b*blocks_per_row).  The result
+ * lands at out[b*out_dim + row].  B is 1..16. */
+int bitnet_tq2_0_matmul_batched_i8(const void *weight, const float *scales,
+                                   int out_dim, int in_dim,
+                                   const int8_t *qvec_b, const float *vec_scale_b,
+                                   const int32_t *block_bsums_b, int B, float *out);
+/* Rows [row0, row1) only, written in place at the same row index of `out` with
+ * row stride out_dim.  A hybrid caller hands the GPU the tail of the matrix and
+ * runs this kernel over the head, both writing the same [B][out_dim] result. */
+int bitnet_tq2_0_matmul_batched_i8_rows(const void *weight, const float *scales,
+                                        int out_dim, int row0, int row1, int in_dim,
+                                        const int8_t *qvec_b, const float *vec_scale_b,
+                                        const int32_t *block_bsums_b, int B, float *out);
 /* Single-threaded variant — avoids thread pool scheduling overhead.
  * Faster for small matrices where parallel overhead exceeds benefit. */
 int bitnet_tq2_0_matmul_vector_i8_neon_scales_single(const void *weight, const float *scales,

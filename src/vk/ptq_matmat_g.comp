@@ -1,0 +1,286 @@
+#version 450
+/* PTQ1_0 ternary matmat: one weight row against B int8 activation rows.
+ *
+ * One invocation owns one weight row.  Per 128-weight block it decodes the
+ * row's 128 trits into 32 register groups, stages the block's activation for
+ * every row in shared memory, and runs the DP4A chains over it.  The row loop
+ * (b) stays rolled with partial sums in shared memory: every fully unrolled
+ * variant at 8-16 rows -- register accumulators, constant row count, staged
+ * or direct activation -- lost more than an order of magnitude to the driver's
+ * spilling, while this shape keeps 32 decoded groups plus one chain in
+ * registers and nothing else.
+ *
+ * Trit groups of a block, in the order the activation is packed
+ * (bitnet_quantize_row_i8_groups()):
+ *   g  0..15  digits 0..3 of qs[g]           lanes = x[16d + g]
+ *   g 16..23  digits 0..3 of qs[g]           lanes = x[80 + 8d + (g-16)]
+ *   g 24..27  digit 4 of qs[4k..4k+3], k<4   lanes = x[64 + 4k + d]
+ *   g 28..29  digit 4 of qs[16+4k..], k<2    lanes = x[112 + 4k + d]
+ *   g 30..31  digits 0..3 of qh[0], qh[1]    lanes = x[120 + 2d], x[121 + 2d]
+ *
+ * Digit decoding is a lookup: lt4[byte] is the four low trits of a base-3
+ * byte as an int8x4, lt5[byte] the fifth.
+ */
+#extension GL_EXT_integer_dot_product : require
+#ifndef LS
+#define LS 64
+#endif
+layout(local_size_x = LS) in;
+
+layout(std430, binding = 0) readonly buffer WBuf { uint w[]; };
+layout(std430, binding = 1) readonly buffer XBuf { uint x[]; };
+layout(std430, binding = 2) writeonly buffer YBuf { float y[]; };
+layout(std430, binding = 3) readonly buffer LUT { uint lt4[256]; uint lt5[256]; };
+
+layout(push_constant) uniform PC {
+    uint n_blocks;   /* 128-weight blocks per row */
+    uint n_rows;     /* rows in this window */
+    uint B;          /* activation rows */
+    uint xstride;    /* uints per activation row = n_in/4 */
+    float xscale[16];
+} pc;
+
+/* Running partial sums, one slot per (lane, row). */
+shared float sacc[LS * 16];
+
+/* Activation word for (row b_, block k_) of group g_, read straight from the
+ * global buffer: every lane of a warp asks for the same address, so the
+ * L1 broadcast costs one transaction.  Staging it in shared memory instead
+ * needs two workgroup barriers per 128-weight block, which this driver
+ * serializes the whole workgroup on. */
+#define XW(b_, k_, g_) int(x[(uint(b_) * pc.xstride) + (uint(k_) * 32u) + uint(g_)])
+
+/* The fifth trit of the four qs bytes packed in one word, as an int8x4. */
+uint pack4(uint by4) {
+    return (lt5[by4 & 0xFFu] & 0xFFu)
+         | ((lt5[(by4 >> 8) & 0xFFu] & 0xFFu) << 8)
+         | ((lt5[(by4 >> 16) & 0xFFu] & 0xFFu) << 16)
+         | ((lt5[by4 >> 24] & 0xFFu) & 0xFFu) << 24;
+}
+
+void main() {
+    const uint lid = gl_LocalInvocationID.x;
+    const uint row = gl_GlobalInvocationID.x;
+    const uint nb = pc.n_blocks, B = pc.B;
+    const bool live = row < pc.n_rows;
+    const uint sbase = lid * 16u;
+    for (uint b = 0u; b < B; ++b) sacc[sbase + b] = 0.0;
+    for (uint k = 0u; k < nb; ++k) {
+        if (live) {
+            uint wp = row * nb * 7u + k * 7u;
+            uint w0 = w[wp + 0u], w1 = w[wp + 1u], w2 = w[wp + 2u];
+            uint w3 = w[wp + 3u], w4 = w[wp + 4u], w5 = w[wp + 5u];
+            uint w6 = w[wp + 6u];
+            float d = unpackHalf2x16(w6 >> 16u).x;
+            int g0 = int(lt4[w0 & 0xFFu]);
+            int g1 = int(lt4[(w0 >> 8) & 0xFFu]);
+            int g2 = int(lt4[(w0 >> 16) & 0xFFu]);
+            int g3 = int(lt4[(w0 >> 24) & 0xFFu]);
+            int g4 = int(lt4[w1 & 0xFFu]);
+            int g5 = int(lt4[(w1 >> 8) & 0xFFu]);
+            int g6 = int(lt4[(w1 >> 16) & 0xFFu]);
+            int g7 = int(lt4[(w1 >> 24) & 0xFFu]);
+            int g8 = int(lt4[w2 & 0xFFu]);
+            int g9 = int(lt4[(w2 >> 8) & 0xFFu]);
+            int g10 = int(lt4[(w2 >> 16) & 0xFFu]);
+            int g11 = int(lt4[(w2 >> 24) & 0xFFu]);
+            int g12 = int(lt4[w3 & 0xFFu]);
+            int g13 = int(lt4[(w3 >> 8) & 0xFFu]);
+            int g14 = int(lt4[(w3 >> 16) & 0xFFu]);
+            int g15 = int(lt4[(w3 >> 24) & 0xFFu]);
+            int g16 = int(lt4[w4 & 0xFFu]);
+            int g17 = int(lt4[(w4 >> 8) & 0xFFu]);
+            int g18 = int(lt4[(w4 >> 16) & 0xFFu]);
+            int g19 = int(lt4[(w4 >> 24) & 0xFFu]);
+            int g20 = int(lt4[w5 & 0xFFu]);
+            int g21 = int(lt4[(w5 >> 8) & 0xFFu]);
+            int g22 = int(lt4[(w5 >> 16) & 0xFFu]);
+            int g23 = int(lt4[(w5 >> 24) & 0xFFu]);
+            int g24 = int(pack4(w0));
+            int g25 = int(pack4(w1));
+            int g26 = int(pack4(w2));
+            int g27 = int(pack4(w3));
+            int g28 = int(pack4(w4));
+            int g29 = int(pack4(w5));
+            int g30 = int(lt4[w6 & 0xFFu]);
+            int g31 = int(lt4[(w6 >> 8) & 0xFFu]);
+            uint b = 0u;
+            for (; b + 3u < B; b += 4u) {
+                const int xa = int(b) * 32, xc = xa + 32;
+                const int xd = xa + 64, xe = xa + 96;
+                int sa = dotPacked4x8EXT(g0, XW(b, k, 0));
+                int sb = dotPacked4x8EXT(g0, XW(b + 1u, k, 0));
+                int sc = dotPacked4x8EXT(g0, XW(b + 2u, k, 0));
+                int sd = dotPacked4x8EXT(g0, XW(b + 3u, k, 0));
+                sa += dotPacked4x8EXT(g1, XW(b, k, 1));
+                sb += dotPacked4x8EXT(g1, XW(b + 1u, k, 1));
+                sc += dotPacked4x8EXT(g1, XW(b + 2u, k, 1));
+                sd += dotPacked4x8EXT(g1, XW(b + 3u, k, 1));
+                sa += dotPacked4x8EXT(g2, XW(b, k, 2));
+                sb += dotPacked4x8EXT(g2, XW(b + 1u, k, 2));
+                sc += dotPacked4x8EXT(g2, XW(b + 2u, k, 2));
+                sd += dotPacked4x8EXT(g2, XW(b + 3u, k, 2));
+                sa += dotPacked4x8EXT(g3, XW(b, k, 3));
+                sb += dotPacked4x8EXT(g3, XW(b + 1u, k, 3));
+                sc += dotPacked4x8EXT(g3, XW(b + 2u, k, 3));
+                sd += dotPacked4x8EXT(g3, XW(b + 3u, k, 3));
+                sa += dotPacked4x8EXT(g4, XW(b, k, 4));
+                sb += dotPacked4x8EXT(g4, XW(b + 1u, k, 4));
+                sc += dotPacked4x8EXT(g4, XW(b + 2u, k, 4));
+                sd += dotPacked4x8EXT(g4, XW(b + 3u, k, 4));
+                sa += dotPacked4x8EXT(g5, XW(b, k, 5));
+                sb += dotPacked4x8EXT(g5, XW(b + 1u, k, 5));
+                sc += dotPacked4x8EXT(g5, XW(b + 2u, k, 5));
+                sd += dotPacked4x8EXT(g5, XW(b + 3u, k, 5));
+                sa += dotPacked4x8EXT(g6, XW(b, k, 6));
+                sb += dotPacked4x8EXT(g6, XW(b + 1u, k, 6));
+                sc += dotPacked4x8EXT(g6, XW(b + 2u, k, 6));
+                sd += dotPacked4x8EXT(g6, XW(b + 3u, k, 6));
+                sa += dotPacked4x8EXT(g7, XW(b, k, 7));
+                sb += dotPacked4x8EXT(g7, XW(b + 1u, k, 7));
+                sc += dotPacked4x8EXT(g7, XW(b + 2u, k, 7));
+                sd += dotPacked4x8EXT(g7, XW(b + 3u, k, 7));
+                sa += dotPacked4x8EXT(g8, XW(b, k, 8));
+                sb += dotPacked4x8EXT(g8, XW(b + 1u, k, 8));
+                sc += dotPacked4x8EXT(g8, XW(b + 2u, k, 8));
+                sd += dotPacked4x8EXT(g8, XW(b + 3u, k, 8));
+                sa += dotPacked4x8EXT(g9, XW(b, k, 9));
+                sb += dotPacked4x8EXT(g9, XW(b + 1u, k, 9));
+                sc += dotPacked4x8EXT(g9, XW(b + 2u, k, 9));
+                sd += dotPacked4x8EXT(g9, XW(b + 3u, k, 9));
+                sa += dotPacked4x8EXT(g10, XW(b, k, 10));
+                sb += dotPacked4x8EXT(g10, XW(b + 1u, k, 10));
+                sc += dotPacked4x8EXT(g10, XW(b + 2u, k, 10));
+                sd += dotPacked4x8EXT(g10, XW(b + 3u, k, 10));
+                sa += dotPacked4x8EXT(g11, XW(b, k, 11));
+                sb += dotPacked4x8EXT(g11, XW(b + 1u, k, 11));
+                sc += dotPacked4x8EXT(g11, XW(b + 2u, k, 11));
+                sd += dotPacked4x8EXT(g11, XW(b + 3u, k, 11));
+                sa += dotPacked4x8EXT(g12, XW(b, k, 12));
+                sb += dotPacked4x8EXT(g12, XW(b + 1u, k, 12));
+                sc += dotPacked4x8EXT(g12, XW(b + 2u, k, 12));
+                sd += dotPacked4x8EXT(g12, XW(b + 3u, k, 12));
+                sa += dotPacked4x8EXT(g13, XW(b, k, 13));
+                sb += dotPacked4x8EXT(g13, XW(b + 1u, k, 13));
+                sc += dotPacked4x8EXT(g13, XW(b + 2u, k, 13));
+                sd += dotPacked4x8EXT(g13, XW(b + 3u, k, 13));
+                sa += dotPacked4x8EXT(g14, XW(b, k, 14));
+                sb += dotPacked4x8EXT(g14, XW(b + 1u, k, 14));
+                sc += dotPacked4x8EXT(g14, XW(b + 2u, k, 14));
+                sd += dotPacked4x8EXT(g14, XW(b + 3u, k, 14));
+                sa += dotPacked4x8EXT(g15, XW(b, k, 15));
+                sb += dotPacked4x8EXT(g15, XW(b + 1u, k, 15));
+                sc += dotPacked4x8EXT(g15, XW(b + 2u, k, 15));
+                sd += dotPacked4x8EXT(g15, XW(b + 3u, k, 15));
+                sa += dotPacked4x8EXT(g16, XW(b, k, 16));
+                sb += dotPacked4x8EXT(g16, XW(b + 1u, k, 16));
+                sc += dotPacked4x8EXT(g16, XW(b + 2u, k, 16));
+                sd += dotPacked4x8EXT(g16, XW(b + 3u, k, 16));
+                sa += dotPacked4x8EXT(g17, XW(b, k, 17));
+                sb += dotPacked4x8EXT(g17, XW(b + 1u, k, 17));
+                sc += dotPacked4x8EXT(g17, XW(b + 2u, k, 17));
+                sd += dotPacked4x8EXT(g17, XW(b + 3u, k, 17));
+                sa += dotPacked4x8EXT(g18, XW(b, k, 18));
+                sb += dotPacked4x8EXT(g18, XW(b + 1u, k, 18));
+                sc += dotPacked4x8EXT(g18, XW(b + 2u, k, 18));
+                sd += dotPacked4x8EXT(g18, XW(b + 3u, k, 18));
+                sa += dotPacked4x8EXT(g19, XW(b, k, 19));
+                sb += dotPacked4x8EXT(g19, XW(b + 1u, k, 19));
+                sc += dotPacked4x8EXT(g19, XW(b + 2u, k, 19));
+                sd += dotPacked4x8EXT(g19, XW(b + 3u, k, 19));
+                sa += dotPacked4x8EXT(g20, XW(b, k, 20));
+                sb += dotPacked4x8EXT(g20, XW(b + 1u, k, 20));
+                sc += dotPacked4x8EXT(g20, XW(b + 2u, k, 20));
+                sd += dotPacked4x8EXT(g20, XW(b + 3u, k, 20));
+                sa += dotPacked4x8EXT(g21, XW(b, k, 21));
+                sb += dotPacked4x8EXT(g21, XW(b + 1u, k, 21));
+                sc += dotPacked4x8EXT(g21, XW(b + 2u, k, 21));
+                sd += dotPacked4x8EXT(g21, XW(b + 3u, k, 21));
+                sa += dotPacked4x8EXT(g22, XW(b, k, 22));
+                sb += dotPacked4x8EXT(g22, XW(b + 1u, k, 22));
+                sc += dotPacked4x8EXT(g22, XW(b + 2u, k, 22));
+                sd += dotPacked4x8EXT(g22, XW(b + 3u, k, 22));
+                sa += dotPacked4x8EXT(g23, XW(b, k, 23));
+                sb += dotPacked4x8EXT(g23, XW(b + 1u, k, 23));
+                sc += dotPacked4x8EXT(g23, XW(b + 2u, k, 23));
+                sd += dotPacked4x8EXT(g23, XW(b + 3u, k, 23));
+                sa += dotPacked4x8EXT(g24, XW(b, k, 24));
+                sb += dotPacked4x8EXT(g24, XW(b + 1u, k, 24));
+                sc += dotPacked4x8EXT(g24, XW(b + 2u, k, 24));
+                sd += dotPacked4x8EXT(g24, XW(b + 3u, k, 24));
+                sa += dotPacked4x8EXT(g25, XW(b, k, 25));
+                sb += dotPacked4x8EXT(g25, XW(b + 1u, k, 25));
+                sc += dotPacked4x8EXT(g25, XW(b + 2u, k, 25));
+                sd += dotPacked4x8EXT(g25, XW(b + 3u, k, 25));
+                sa += dotPacked4x8EXT(g26, XW(b, k, 26));
+                sb += dotPacked4x8EXT(g26, XW(b + 1u, k, 26));
+                sc += dotPacked4x8EXT(g26, XW(b + 2u, k, 26));
+                sd += dotPacked4x8EXT(g26, XW(b + 3u, k, 26));
+                sa += dotPacked4x8EXT(g27, XW(b, k, 27));
+                sb += dotPacked4x8EXT(g27, XW(b + 1u, k, 27));
+                sc += dotPacked4x8EXT(g27, XW(b + 2u, k, 27));
+                sd += dotPacked4x8EXT(g27, XW(b + 3u, k, 27));
+                sa += dotPacked4x8EXT(g28, XW(b, k, 28));
+                sb += dotPacked4x8EXT(g28, XW(b + 1u, k, 28));
+                sc += dotPacked4x8EXT(g28, XW(b + 2u, k, 28));
+                sd += dotPacked4x8EXT(g28, XW(b + 3u, k, 28));
+                sa += dotPacked4x8EXT(g29, XW(b, k, 29));
+                sb += dotPacked4x8EXT(g29, XW(b + 1u, k, 29));
+                sc += dotPacked4x8EXT(g29, XW(b + 2u, k, 29));
+                sd += dotPacked4x8EXT(g29, XW(b + 3u, k, 29));
+                sa += dotPacked4x8EXT(g30, XW(b, k, 30));
+                sb += dotPacked4x8EXT(g30, XW(b + 1u, k, 30));
+                sc += dotPacked4x8EXT(g30, XW(b + 2u, k, 30));
+                sd += dotPacked4x8EXT(g30, XW(b + 3u, k, 30));
+                sa += dotPacked4x8EXT(g31, XW(b, k, 31));
+                sb += dotPacked4x8EXT(g31, XW(b + 1u, k, 31));
+                sc += dotPacked4x8EXT(g31, XW(b + 2u, k, 31));
+                sd += dotPacked4x8EXT(g31, XW(b + 3u, k, 31));
+                sacc[sbase + b + 0u] += float(sa) * d;
+                sacc[sbase + b + 1u] += float(sb) * d;
+                sacc[sbase + b + 2u] += float(sc) * d;
+                sacc[sbase + b + 3u] += float(sd) * d;
+            }
+            for (; b < B; ++b) {
+                const int xb = int(b) * 32;
+                int s0 = dotPacked4x8EXT(g0, XW(b, k, 0));
+                s0 += dotPacked4x8EXT(g1, XW(b, k, 1));
+                s0 += dotPacked4x8EXT(g2, XW(b, k, 2));
+                s0 += dotPacked4x8EXT(g3, XW(b, k, 3));
+                s0 += dotPacked4x8EXT(g4, XW(b, k, 4));
+                s0 += dotPacked4x8EXT(g5, XW(b, k, 5));
+                s0 += dotPacked4x8EXT(g6, XW(b, k, 6));
+                s0 += dotPacked4x8EXT(g7, XW(b, k, 7));
+                s0 += dotPacked4x8EXT(g8, XW(b, k, 8));
+                s0 += dotPacked4x8EXT(g9, XW(b, k, 9));
+                s0 += dotPacked4x8EXT(g10, XW(b, k, 10));
+                s0 += dotPacked4x8EXT(g11, XW(b, k, 11));
+                s0 += dotPacked4x8EXT(g12, XW(b, k, 12));
+                s0 += dotPacked4x8EXT(g13, XW(b, k, 13));
+                s0 += dotPacked4x8EXT(g14, XW(b, k, 14));
+                s0 += dotPacked4x8EXT(g15, XW(b, k, 15));
+                s0 += dotPacked4x8EXT(g16, XW(b, k, 16));
+                s0 += dotPacked4x8EXT(g17, XW(b, k, 17));
+                s0 += dotPacked4x8EXT(g18, XW(b, k, 18));
+                s0 += dotPacked4x8EXT(g19, XW(b, k, 19));
+                s0 += dotPacked4x8EXT(g20, XW(b, k, 20));
+                s0 += dotPacked4x8EXT(g21, XW(b, k, 21));
+                s0 += dotPacked4x8EXT(g22, XW(b, k, 22));
+                s0 += dotPacked4x8EXT(g23, XW(b, k, 23));
+                s0 += dotPacked4x8EXT(g24, XW(b, k, 24));
+                s0 += dotPacked4x8EXT(g25, XW(b, k, 25));
+                s0 += dotPacked4x8EXT(g26, XW(b, k, 26));
+                s0 += dotPacked4x8EXT(g27, XW(b, k, 27));
+                s0 += dotPacked4x8EXT(g28, XW(b, k, 28));
+                s0 += dotPacked4x8EXT(g29, XW(b, k, 29));
+                s0 += dotPacked4x8EXT(g30, XW(b, k, 30));
+                s0 += dotPacked4x8EXT(g31, XW(b, k, 31));
+                sacc[sbase + b] += float(s0) * d;
+            }
+        }
+    }
+    if (live) {
+        for (uint b = 0u; b < B; ++b)
+            y[b * pc.n_rows + row] = sacc[sbase + b] * pc.xscale[b];
+    }
+}

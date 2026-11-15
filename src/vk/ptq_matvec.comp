@@ -1,0 +1,72 @@
+#version 450
+/* PTQ1_0 ternary matvec, one invocation per output row.
+ *
+ * Split activation layout: xa holds the four low digits of every packed byte
+ * as an aligned vec4 (one 128-bit load per byte), xb the fifth digit, so the
+ * trit decode costs a multiply, a mask, a multiply and a shift per digit and
+ * the x side is a vector load.
+ *
+ * Per 128-weight block the packed data is 7 uint32 (24 base-3 bytes, 2 more
+ * for the tail, then the fp16 scale in the high half of the last word).
+ *
+ * Loads per block-row: 26 vec4 for xa, 24 scalars for xb, 7 weight words.
+ * Packing xb as six vec4 (39 loads instead of 57) was measured at 54.3 vs
+ * 46.3 G weights/s on an Adreno 740 but 9.6 vs 10.8 on the Adreno 650 this
+ * targets, so the scalar form stays.
+ */
+#ifndef LS
+#define LS 128
+#endif
+layout(local_size_x = LS) in;
+
+layout(std430, binding = 0) readonly buffer WBuf { uint w[]; };
+layout(std430, binding = 1) readonly buffer XA { vec4 xa[]; };
+layout(std430, binding = 2) writeonly buffer YBuf { float y[]; };
+layout(std430, binding = 3) readonly buffer XB { float xb[]; };
+
+layout(push_constant) uniform PC { uint n_blocks; float xscale; uint n_rows; uint pad; } pc;
+
+int trit(uint b, uint p3) { return int(((b * p3) & 0xFFu) * 3u >> 8u) - 1; }
+
+void main() {
+    uint row = gl_GlobalInvocationID.x;
+    if (row >= pc.n_rows) return;
+    uint nb = pc.n_blocks;
+    uint p = row * nb * 7u;
+    float acc = 0.0;
+    for (uint b = 0u; b < nb; ++b) {
+        uint wp = p + b * 7u;
+        uint ap = b * 26u;
+        uint bp = b * 24u;
+        float s = 0.0;
+        for (int i = 0; i < 4; ++i) {
+            uint by4 = w[wp + uint(i)];
+            for (int j = 0; j < 4; ++j) {
+                uint by = (by4 >> (uint(j) * 8u)) & 0xFFu;
+                vec4 x4 = xa[ap + uint(i * 4 + j)];
+                s += float(trit(by, 1u)) * x4.x + float(trit(by, 3u)) * x4.y
+                   + float(trit(by, 9u)) * x4.z + float(trit(by, 27u)) * x4.w
+                   + float(trit(by, 81u)) * xb[bp + uint(i * 4 + j)];
+            }
+        }
+        for (int i = 0; i < 2; ++i) {
+            uint by4 = w[wp + 4u + uint(i)];
+            for (int j = 0; j < 4; ++j) {
+                uint by = (by4 >> (uint(j) * 8u)) & 0xFFu;
+                vec4 x4 = xa[ap + 16u + uint(i * 4 + j)];
+                s += float(trit(by, 1u)) * x4.x + float(trit(by, 3u)) * x4.y
+                   + float(trit(by, 9u)) * x4.z + float(trit(by, 27u)) * x4.w
+                   + float(trit(by, 81u)) * xb[bp + 16u + uint(i * 4 + j)];
+            }
+        }
+        uint by2 = w[wp + 6u];
+        for (int h = 0; h < 2; ++h) {
+            uint by = (by2 >> (uint(h) * 8u)) & 0xFFu;
+            vec4 x4 = xa[ap + 24u + uint(h)];
+            s += float(trit(by, 1u)) * x4.x + float(trit(by, 3u)) * x4.y
+               + float(trit(by, 9u)) * x4.z + float(trit(by, 27u)) * x4.w;
+        }
+        acc += s * unpackHalf2x16(by2 >> 16u).x;
+    }
+    y[row] = acc * pc.xscale;
+}

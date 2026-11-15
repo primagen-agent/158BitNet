@@ -1,0 +1,26 @@
+#version 450
+/* Stage 2: numerically stable softmax over the cache axis, one invocation per
+ * head.  nt sequential steps per head; the whole row stays in registers-free
+ * memory (two passes over global memory) which is fine at decode sizes.
+ */
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) readonly buffer S { float s[]; };
+layout(std430, binding = 1) writeonly buffer P { float p[]; };
+
+layout(push_constant) uniform PC { uint nt; uint pad0; uint pad1; uint pad2; } pc;
+
+void main() {
+    uint h = gl_GlobalInvocationID.x;
+    uint base = h * pc.nt;
+    float m = -3.40282347e+38;
+    for (uint t = 0u; t < pc.nt; ++t) m = max(m, s[base + t]);
+    float sum = 0.0;
+    for (uint t = 0u; t < pc.nt; ++t) {
+        float e = exp(s[base + t] - m);
+        p[base + t] = e;
+        sum += e;
+    }
+    float inv = 1.0 / sum;
+    for (uint t = 0u; t < pc.nt; ++t) p[base + t] *= inv;
+}

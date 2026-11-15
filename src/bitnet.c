@@ -21,12 +21,16 @@
 #include "quant_q4k.h"
 #include "quant_q6k.h"
 #include "quant_tq2_0.h"
+#include "output_head.h"
 #include "sampler.h"
 #include "tensor.h"
 #include "thread_config.h"
 
 #if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
 #include "bitnet_metal.h"
+#endif
+#if defined(BITNET_ENABLE_VULKAN)
+#include "vk/vk_backend.h"
 #endif
 
 #if defined(__ARM_NEON)
@@ -179,6 +183,13 @@ struct bitnet_model {
     bitnet_tq2_scale_cache_t scale_cache;
     bitnet_tq2_tl1_cache_t tl1_cache;
     bitnet_tq2_i2s_cache_t i2s_cache;
+    /* Vulkan staging of the TQ2_0 matvecs: the tensor bytes live in one
+     * device-visible copy that both the GPU window and the CPU kernel read,
+     * as block_count*7 handles plus the CPU address of each. */
+    int vk_pct;
+    int vk_minw;   /* smallest matvec (thousands of weights) worth a dispatch */
+    void **vk_buf;
+    void **vk_ptr;
     int8_t *output_q8;
     float *output_q8_scales;
     int8_t *output_q8_scales_i8;
@@ -1639,6 +1650,19 @@ static void *bitnet_output_pool_worker_main(void *ptr) {
 
 static void init_output_pool_once(void) {
     int n_threads = bitnet_choose_thread_count();
+    const char *width = getenv("BITNET_OUTPUT_THREADS");
+
+    /* The head is a different shape of work from a matvec chain: it streams
+     * the whole vocabulary table, so it can saturate DRAM with fewer workers
+     * than the compute pool wants, and a wide pool just adds contention on a
+     * big.LITTLE board.  0 or unset keeps the compute count.  Measured on the
+     * 27B (a 1.27 GB int8 head, the largest here): 2..10 workers are all
+     * 5.05-5.07 tok/s, so at that size the projection is not the bottleneck
+     * and this only matters for a head that is slow in absolute terms. */
+    if (width != NULL && width[0] != '\0') {
+        int want = atoi(width);
+        if (want > 0) n_threads = want;
+    }
 
     if (n_threads > BITNET_MAX_OUTPUT_THREADS) {
         n_threads = BITNET_MAX_OUTPUT_THREADS;
@@ -1905,6 +1929,21 @@ static int BITNET_MAYBE_UNUSED bitnet_output_projection_q8_blockscale_neon_paral
     return 0;
 }
 
+/* Public face of the output pool for the other family engine (src/minicpm.c):
+ * same workers, same kernel, same chunking as the path above. */
+int bitnet_output_logits_blockscale(const int8_t *w8, const float *w8_d,
+                                    int emb_dim, int vocab,
+                                    const int8_t *qhidden, float hidden_scale, float *logits) {
+    int blocks_per_col;
+    if (w8 == NULL || w8_d == NULL || qhidden == NULL || logits == NULL ||
+        emb_dim <= 0 || emb_dim % BITNET_Q6K_QK != 0 || vocab <= 0) {
+        return -1;
+    }
+    blocks_per_col = emb_dim / BITNET_Q6K_QK;
+    return bitnet_output_projection_q8_blockscale_neon_parallel(w8, w8_d, blocks_per_col, vocab,
+                                                                qhidden, hidden_scale, logits);
+}
+
 static int metadata_string_equals(const gguf_file_t *file, const char *key, const char *expected) {
     const gguf_metadata_t *entry = gguf_find_metadata(file, key);
     return entry != NULL && entry->type == GGUF_TYPE_STRING && entry->string_value != NULL && strcmp(entry->string_value, expected) == 0;
@@ -2148,6 +2187,25 @@ static void free_tq2_tl1_cache(bitnet_tq2_tl1_cache_t *cache, uint32_t block_cou
         free(cache->blocks);
     }
     cache->blocks = NULL;
+}
+
+/* ---- optional Vulkan backend ----------------------------------------
+ * BITNET_VULKAN=1 stages every TQ2_0 matvec tensor in device-visible memory
+ * and gives the GPU a share of each matvec's rows while the CPU thread pool
+ * runs the rest; BITNET_VULKAN_PCT is that share in percent of rows.
+ * Without it nothing here is touched and the CPU path is unchanged. */
+#if defined(BITNET_ENABLE_VULKAN)
+static bq_vk_t *g_model_vk;
+static int g_vk_open;      /* a tq2 batch is recorded and awaiting submit */
+#endif
+
+static int bitnet_vk_wanted(void) {
+#if defined(BITNET_ENABLE_VULKAN)
+    const char *e = getenv("BITNET_VULKAN");
+    return e != NULL && e[0] == '1';
+#else
+    return 0;
+#endif
 }
 
 static int build_tensor_i2s(const gguf_file_t *file, const gguf_tensor_t *tensor,
@@ -2636,6 +2694,173 @@ static int BITNET_MAYBE_UNUSED build_tq2_i2s_cache(bitnet_model_t *model) {
     return 0;
 }
 
+/* ---- Vulkan staging for the TQ2_0 matvecs -------------------------- *
+ * The model keeps one copy of each matvec tensor in a device-visible buffer
+ * and hands the GPU a row window of it; the CPU kernel reads the same bytes
+ * for the rows the GPU did not take.  Nothing here duplicates weights, which
+ * is why the GPU share is a plain row count and not a device copy of the
+ * model.  All of it compiles to "CPU only" when the backend is absent. */
+
+static int vk_on(const bitnet_model_t *model) {
+#if defined(BITNET_ENABLE_VULKAN)
+    return model != NULL && g_model_vk != NULL && model->vk_pct > 0;
+#else
+    (void)model;
+    return 0;
+#endif
+}
+
+/* Rows of an out_dim-row matvec to hand the GPU.  Rounded down to four rows,
+ * because the packed codes of four rows share their bytes.
+ *
+ * A group below BITNET_VULKAN_MINW weights stays on the CPU entirely: the
+ * driver spends about 0.3 ms getting a dispatch running whatever it carries,
+ * and under this size that fixed cost alone exceeds the CPU's time for the
+ * whole group, so a GPU share could only lengthen the critical path.  The
+ * share is then chosen so that the GPU's window and the CPU's window finish
+ * together, which for this kernel means ~30% of a wide group. */
+static int vk_rows(const bitnet_model_t *model, int in_dim, int out_dim) {
+    int pct, rows;
+    if (!vk_on(model)) return 0;
+    if ((long long)in_dim * (long long)out_dim < (long long)model->vk_minw * 1000) return 0;
+    pct = model->vk_pct;
+    rows = out_dim * pct / 100;
+    rows &= ~3;
+    return rows >= 8 ? rows : 0;
+}
+
+/* Where the CPU kernel should read a matvec tensor from: the staged copy when
+ * the GPU has one, the mapped file otherwise. */
+static const void *tq2_matvec_ptr(const bitnet_model_t *model, int block, int slot,
+                                  const gguf_tensor_t *tensor) {
+    if (model != NULL && model->vk_ptr != NULL && block >= 0 &&
+        block < (int)model->block_count && model->vk_ptr[block * 7 + slot] != NULL) {
+        return model->vk_ptr[block * 7 + slot];
+    }
+    return gguf_get_tensor_ptr(&model->gguf, tensor);
+}
+
+/* Only the Vulkan load path calls this, so the stub build leaves it unused. */
+static BITNET_MAYBE_UNUSED int build_tq2_vk_cache(bitnet_model_t *model) {
+#if defined(BITNET_ENABLE_VULKAN)
+    int emb_dim, q_dim, kv_dim, ffn_dim, i, slot;
+    if (!vk_on(model)) return 0;
+    emb_dim = (int)model->embedding_length;
+    q_dim = (int)bitnet_attention_dim_for_model(model);
+    kv_dim = (int)bitnet_kv_dim_for_model(model);
+    ffn_dim = (int)model->feed_forward_length;
+    model->vk_buf = (void **)calloc((size_t)model->block_count * 7u, sizeof(void *));
+    model->vk_ptr = (void **)calloc((size_t)model->block_count * 7u, sizeof(void *));
+    if (model->vk_buf == NULL || model->vk_ptr == NULL) return -1;
+    for (i = 0; i < (int)model->block_count; ++i) {
+        struct { const gguf_tensor_t *t; int out_dim; int in_dim; } sp[7];
+        const bitnet_block_tensors_t *bt = &model->tensor_cache.blocks[i];
+        sp[0].t = bt->attn_q;      sp[0].out_dim = q_dim;   sp[0].in_dim = emb_dim;
+        sp[1].t = bt->attn_k;      sp[1].out_dim = kv_dim;  sp[1].in_dim = emb_dim;
+        sp[2].t = bt->attn_v;      sp[2].out_dim = kv_dim;  sp[2].in_dim = emb_dim;
+        sp[3].t = bt->attn_output; sp[3].out_dim = emb_dim; sp[3].in_dim = q_dim;
+        sp[4].t = bt->ffn_gate;    sp[4].out_dim = ffn_dim; sp[4].in_dim = emb_dim;
+        sp[5].t = bt->ffn_up;      sp[5].out_dim = ffn_dim; sp[5].in_dim = emb_dim;
+        sp[6].t = bt->ffn_down;    sp[6].out_dim = emb_dim; sp[6].in_dim = ffn_dim;
+        for (slot = 0; slot < 7; ++slot) {
+            const void *src = gguf_get_tensor_ptr(&model->gguf, sp[slot].t);
+            bq_vk_buf_t *buf = NULL;
+            size_t bytes;
+            void *dst;
+            if (src == NULL || sp[slot].in_dim % 256 != 0) continue;  /* slot stays on the CPU */
+            /* No point duplicating a tensor the GPU will never be given rows
+             * of; the CPU keeps reading it from the mapped file. */
+            if ((long long)sp[slot].in_dim * sp[slot].out_dim <
+                (long long)model->vk_minw * 1000) continue;
+            bytes = (size_t)sp[slot].out_dim * (size_t)(sp[slot].in_dim / 256) * 66u;
+            dst = bq_vk_buf_alloc(g_model_vk, bytes, &buf);
+            if (dst == NULL) return -1;
+            memcpy(dst, src, bytes);
+            model->vk_buf[i * 7 + slot] = buf;
+            model->vk_ptr[i * 7 + slot] = dst;
+        }
+    }
+    return 0;
+#else
+    (void)model;
+    return 0;
+#endif
+}
+
+static void free_tq2_vk_cache(bitnet_model_t *model) {
+    if (model == NULL) return;
+    if (model->vk_buf != NULL) {
+        int i, n = (int)model->block_count * 7;
+        for (i = 0; i < n; ++i) {
+#if defined(BITNET_ENABLE_VULKAN)
+            if (model->vk_buf[i] != NULL && g_model_vk != NULL) {
+                bq_vk_buf_free(g_model_vk, (bq_vk_buf_t *)model->vk_buf[i]);
+            }
+#endif
+            model->vk_buf[i] = NULL;
+        }
+        free(model->vk_buf);
+        model->vk_buf = NULL;
+    }
+    free(model->vk_ptr);
+    model->vk_ptr = NULL;
+}
+
+static int vk_begin(bitnet_model_t *model, const float *x, int n_in, int max_rows) {
+#if defined(BITNET_ENABLE_VULKAN)
+    if (!vk_on(model) || g_vk_open) return -1;
+    if (bq_vk_tq2_batch_begin(g_model_vk, x, n_in, max_rows) != 0) return -1;
+    g_vk_open = 1;
+    return 0;
+#else
+    (void)model; (void)x; (void)n_in; (void)max_rows;
+    return -1;
+#endif
+}
+
+static int vk_add(const bitnet_model_t *model, int block, int slot,
+                  int n_in, int row0, int row1, float *y) {
+#if defined(BITNET_ENABLE_VULKAN)
+    if (!g_vk_open || model == NULL || model->vk_buf == NULL) return -1;
+    if (block < 0 || block >= (int)model->block_count) return -1;
+    if (model->vk_buf[block * 7 + slot] == NULL) return -1;
+    return bq_vk_tq2_batch_add(g_model_vk,
+                               (const bq_vk_buf_t *)model->vk_buf[block * 7 + slot],
+                               n_in, row0, row1, y);
+#else
+    (void)model; (void)block; (void)slot; (void)n_in; (void)row0; (void)row1; (void)y;
+    return -1;
+#endif
+}
+
+static int vk_end(void) {
+#if defined(BITNET_ENABLE_VULKAN)
+    if (!g_vk_open) return -1;
+    g_vk_open = 0;
+    return bq_vk_tq2_batch_end(g_model_vk);
+#else
+    return -1;
+#endif
+}
+
+/* Drops a batch that was recorded but never submitted; the caller then redoes
+ * those rows on the CPU. */
+static void vk_abort(void) {
+#if defined(BITNET_ENABLE_VULKAN)
+    g_vk_open = 0;
+#endif
+}
+
+static int vk_wait(bitnet_model_t *model) {
+#if defined(BITNET_ENABLE_VULKAN)
+    if (!vk_on(model)) return 0;
+    return bq_vk_wait(g_model_vk);
+#else
+    (void)model;
+    return 0;
+#endif
+}
+
 static uint8_t *build_tensor_tl1(const gguf_file_t *file, const gguf_tensor_t *tensor,
                                    int out_dim, int in_dim) {
     const void *weight = gguf_get_tensor_ptr(file, tensor);
@@ -3025,17 +3250,55 @@ bitnet_model_t *bitnet_load_model(const char *path) {
     }
 #endif
 
+    /* A TQ2_0 file runs the q8_K matvec branch below, which never reads the
+     * I2_S pack; building it would cost a couple of gigabytes and several
+     * seconds of load time for nothing.  I2_S files still need it. */
 #if BITNET_USE_TQ2_I2S
-    if (build_tq2_i2s_cache(model) != 0) {
-        bitnet_free_model(model);
-        return NULL;
-    }
+    if (model->weight_format != BITNET_WEIGHT_FORMAT_TQ2_0) {
+        if (build_tq2_i2s_cache(model) != 0) {
+            bitnet_free_model(model);
+            return NULL;
+        }
 #if defined(__APPLE__) && defined(BITNET_ENABLE_METAL)
-    if (bitnet_should_use_metal_i2s()) {
-        (void)build_metal_i2s_cache(model);
+        if (bitnet_should_use_metal_i2s()) {
+            (void)build_metal_i2s_cache(model);
+        }
+#endif
     }
 #endif
+
+    /* Optional Vulkan staging: one device-visible copy of each matvec tensor,
+     * shared by the GPU row window and the CPU kernel. */
+    if (bitnet_vk_wanted()) {
+#if defined(BITNET_ENABLE_VULKAN)
+        if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
+            const char *pct;
+            g_model_vk = bq_vk_create();
+            if (g_model_vk != NULL && !bq_vk_tq2_available(g_model_vk)) {
+                bq_vk_destroy(g_model_vk);
+                g_model_vk = NULL;
+            }
+            if (g_model_vk != NULL) {
+                pct = getenv("BITNET_VULKAN_PCT");
+                model->vk_pct = pct != NULL ? atoi(pct) : 30;
+                pct = getenv("BITNET_VULKAN_MINW");
+                model->vk_minw = pct != NULL ? atoi(pct) : 30000;
+                if (model->vk_pct < 0) model->vk_pct = 0;
+                if (model->vk_pct > 100) model->vk_pct = 100;
+                if (build_tq2_vk_cache(model) != 0) {
+                    free_tq2_vk_cache(model);
+                    bq_vk_destroy(g_model_vk);
+                    g_model_vk = NULL;
+                    model->vk_pct = 0;
+                } else if (getenv("BITNET_VULKAN_DEBUG") != NULL) {
+                    fprintf(stderr, "[bitnet] vulkan: %d%% of each matvec's rows on the GPU"
+                            " (groups under %d M weights stay on the CPU)\n",
+                            model->vk_pct, model->vk_minw / 1000);
+                }
+            }
+        }
 #endif
+    }
 
 #if BITNET_USE_TQ2_I2S
     if (model->output_is_tied_token_embd) {
@@ -3550,6 +3813,11 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
     double profile_gate_up_sec = 0.0;
     double profile_ffn_down_sec = 0.0;
     double profile_lut_build_sec = 0.0;
+    /* Declared here, not in the LUT branch that first used it: the later
+     * gate/up and down sites sit in a different preprocessor branch, so a
+     * build without dotprod (which compiles the LUT path) failed on an
+     * undeclared identifier. */
+    double profile_lut_start BITNET_MAYBE_UNUSED = 0.0;
     float tq2_hidden_scale BITNET_MAYBE_UNUSED = 0.0f;
     float tq2_ffn_scale BITNET_MAYBE_UNUSED = 0.0f;
     float tq2_ffn_max_abs BITNET_MAYBE_UNUSED = 0.0f;
@@ -3690,13 +3958,36 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
                 /* One activation quantization serves q, k and v. */
                 bitnet_q8k_block_t q8k_hidden[BITNET_Q8K_MAX_BLOCKS];
-                if (bitnet_quantize_q8k(hidden, emb_dim, q8k_hidden) != 0 ||
-                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->attn_q), bt->attn_q->type,
-                                               q_dim, emb_dim, q8k_hidden, q) != 0 ||
-                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->attn_k), bt->attn_k->type,
-                                               kv_dim, emb_dim, q8k_hidden, k) != 0 ||
-                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->attn_v), bt->attn_v->type,
-                                               kv_dim, emb_dim, q8k_hidden, v) != 0) goto cleanup;
+                const void *wq = tq2_matvec_ptr(model, block_idx, 0, bt->attn_q);
+                const void *wk = tq2_matvec_ptr(model, block_idx, 1, bt->attn_k);
+                const void *wv = tq2_matvec_ptr(model, block_idx, 2, bt->attn_v);
+                int gq;
+                if (bitnet_quantize_q8k(hidden, emb_dim, q8k_hidden) != 0) goto cleanup;
+                gq = vk_rows(model, emb_dim, q_dim);
+                if (gq > 0 &&
+                    (vk_begin(model, hidden, emb_dim, gq + 2 * kv_dim) != 0 ||
+                     vk_add(model, block_idx, 0, emb_dim, 0, gq, q) != 0 ||
+                     vk_add(model, block_idx, 1, emb_dim, 0, kv_dim, k) != 0 ||
+                     vk_add(model, block_idx, 2, emb_dim, 0, kv_dim, v) != 0 ||
+                     vk_end() != 0)) {
+                    vk_abort();
+                    gq = 0;
+                }
+                if (gq > 0) {
+                    /* The GPU has rows [0,gq) of q and all of k/v; the CPU
+                     * takes the rest of q while that is in flight. */
+                    size_t rb = (size_t)(emb_dim / 256) * 66u;
+                    if ((gq < q_dim &&
+                         bitnet_matmul_q8k_prepared((const uint8_t *)wq + (size_t)gq * rb,
+                                                    bt->attn_q->type, q_dim - gq, emb_dim,
+                                                    q8k_hidden, q + gq) != 0) ||
+                        vk_wait(model) != 0) goto cleanup;
+                } else if (bitnet_matmul_q8k_prepared(wq, bt->attn_q->type, q_dim, emb_dim,
+                                                     q8k_hidden, q) != 0 ||
+                           bitnet_matmul_q8k_prepared(wk, bt->attn_k->type, kv_dim, emb_dim,
+                                                      q8k_hidden, k) != 0 ||
+                           bitnet_matmul_q8k_prepared(wv, bt->attn_v->type, kv_dim, emb_dim,
+                                                      q8k_hidden, v) != 0) goto cleanup;
             } else {
 #if BITNET_USE_TQ2_I2S
             /* Quantized together with attn RMSNorm above. */
@@ -3734,7 +4025,7 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
                 goto cleanup;
             }
 #else
-            double profile_lut_start = profile_eval ? profile_step_start : 0.0;
+            profile_lut_start = profile_eval ? profile_step_start : 0.0;
             if (bitnet_tq2_0_build_vec_lut(hidden, emb_dim,
                                            tq2_lut, ctx->tq2_lut_count) != 0) {
                 goto cleanup;
@@ -4084,10 +4375,28 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             {
                 if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
                     bitnet_q8k_block_t q8k_attn[BITNET_Q8K_MAX_BLOCKS];
-                    if (bitnet_quantize_q8k(attn_buffer, attn_dim, q8k_attn) != 0 ||
-                        bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->attn_output),
-                                                   bt->attn_output->type, emb_dim, attn_dim,
-                                                   q8k_attn, down) != 0) goto cleanup;
+                    const void *wo = tq2_matvec_ptr(model, block_idx, 3, bt->attn_output);
+                    int gq;
+                    if (bitnet_quantize_q8k(attn_buffer, attn_dim, q8k_attn) != 0) goto cleanup;
+                    gq = vk_rows(model, attn_dim, emb_dim);
+                    if (gq > 0 &&
+                        (vk_begin(model, attn_buffer, attn_dim, gq) != 0 ||
+                         vk_add(model, block_idx, 3, attn_dim, 0, gq, down) != 0 ||
+                         vk_end() != 0)) {
+                        vk_abort();
+                        gq = 0;
+                    }
+                    if (gq > 0) {
+                        size_t rb = (size_t)(attn_dim / 256) * 66u;
+                        if ((gq < emb_dim &&
+                             bitnet_matmul_q8k_prepared((const uint8_t *)wo + (size_t)gq * rb,
+                                                        bt->attn_output->type, emb_dim - gq,
+                                                        attn_dim, q8k_attn, down + gq) != 0) ||
+                            vk_wait(model) != 0) goto cleanup;
+                    } else if (bitnet_matmul_q8k_prepared(wo, bt->attn_output->type, emb_dim,
+                                                         attn_dim, q8k_attn, down) != 0) {
+                        goto cleanup;
+                    }
                 } else {
 #if BITNET_USE_TQ2_I2S
                 if (bitnet_tq2_0_matmul_i2s_neon_parallel(bw->attn_output,
@@ -4164,11 +4473,33 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
                 /* One activation quantization serves gate and up. */
                 bitnet_q8k_block_t q8k_hidden[BITNET_Q8K_MAX_BLOCKS];
-                if (bitnet_quantize_q8k(hidden, emb_dim, q8k_hidden) != 0 ||
-                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->ffn_gate), bt->ffn_gate->type,
-                                               ffn_dim, emb_dim, q8k_hidden, gate) != 0 ||
-                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->ffn_up), bt->ffn_up->type,
-                                               ffn_dim, emb_dim, q8k_hidden, up) != 0) goto cleanup;
+                const void *wg = tq2_matvec_ptr(model, block_idx, 4, bt->ffn_gate);
+                const void *wu = tq2_matvec_ptr(model, block_idx, 5, bt->ffn_up);
+                int gq;
+                if (bitnet_quantize_q8k(hidden, emb_dim, q8k_hidden) != 0) goto cleanup;
+                gq = vk_rows(model, emb_dim, ffn_dim);
+                if (gq > 0 &&
+                    (vk_begin(model, hidden, emb_dim, 2 * gq) != 0 ||
+                     vk_add(model, block_idx, 4, emb_dim, 0, gq, gate) != 0 ||
+                     vk_add(model, block_idx, 5, emb_dim, 0, gq, up) != 0 ||
+                     vk_end() != 0)) {
+                    vk_abort();
+                    gq = 0;
+                }
+                if (gq > 0) {
+                    size_t rb = (size_t)(emb_dim / 256) * 66u;
+                    if ((gq < ffn_dim &&
+                         (bitnet_matmul_q8k_prepared((const uint8_t *)wg + (size_t)gq * rb,
+                                                     bt->ffn_gate->type, ffn_dim - gq, emb_dim,
+                                                     q8k_hidden, gate + gq) != 0 ||
+                          bitnet_matmul_q8k_prepared((const uint8_t *)wu + (size_t)gq * rb,
+                                                     bt->ffn_up->type, ffn_dim - gq, emb_dim,
+                                                     q8k_hidden, up + gq) != 0)) ||
+                        vk_wait(model) != 0) goto cleanup;
+                } else if (bitnet_matmul_q8k_prepared(wg, bt->ffn_gate->type, ffn_dim, emb_dim,
+                                                     q8k_hidden, gate) != 0 ||
+                           bitnet_matmul_q8k_prepared(wu, bt->ffn_up->type, ffn_dim, emb_dim,
+                                                      q8k_hidden, up) != 0) goto cleanup;
             } else {
             {
 #if BITNET_USE_TQ2_I2S
@@ -4315,9 +4646,28 @@ int bitnet_eval(bitnet_context_t *ctx, const int *tokens, int n_tokens) {
             profile_step_start = profile_eval ? monotonic_seconds() : 0.0;
             if (model->weight_format == BITNET_WEIGHT_FORMAT_TQ2_0) {
                 bitnet_q8k_block_t q8k_gate[BITNET_Q8K_MAX_BLOCKS];
-                if (bitnet_quantize_q8k(gate, ffn_dim, q8k_gate) != 0 ||
-                    bitnet_matmul_q8k_prepared(gguf_get_tensor_ptr(&model->gguf, bt->ffn_down), bt->ffn_down->type,
-                                               emb_dim, ffn_dim, q8k_gate, down) != 0) goto cleanup;
+                const void *wd = tq2_matvec_ptr(model, block_idx, 6, bt->ffn_down);
+                int gq;
+                if (bitnet_quantize_q8k(gate, ffn_dim, q8k_gate) != 0) goto cleanup;
+                gq = vk_rows(model, ffn_dim, emb_dim);
+                if (gq > 0 &&
+                    (vk_begin(model, gate, ffn_dim, gq) != 0 ||
+                     vk_add(model, block_idx, 6, ffn_dim, 0, gq, down) != 0 ||
+                     vk_end() != 0)) {
+                    vk_abort();
+                    gq = 0;
+                }
+                if (gq > 0) {
+                    size_t rb = (size_t)(ffn_dim / 256) * 66u;
+                    if ((gq < emb_dim &&
+                         bitnet_matmul_q8k_prepared((const uint8_t *)wd + (size_t)gq * rb,
+                                                    bt->ffn_down->type, emb_dim - gq, ffn_dim,
+                                                    q8k_gate, down + gq) != 0) ||
+                        vk_wait(model) != 0) goto cleanup;
+                } else if (bitnet_matmul_q8k_prepared(wd, bt->ffn_down->type, emb_dim, ffn_dim,
+                                                     q8k_gate, down) != 0) {
+                    goto cleanup;
+                }
             } else {
             {
 #if BITNET_USE_TQ2_I2S
@@ -4671,6 +5021,13 @@ void bitnet_free_model(bitnet_model_t *model) {
     free_metal_output_cache(model);
     free_output_q6k_cache(model);
     free_tq2_i2s_cache(&model->i2s_cache, model->block_count);
+    free_tq2_vk_cache(model);
+#if defined(BITNET_ENABLE_VULKAN)
+    if (g_model_vk != NULL) {
+        bq_vk_destroy(g_model_vk);
+        g_model_vk = NULL;
+    }
+#endif
     free_tq2_scale_cache(&model->scale_cache, model->block_count);
     free_tq2_tl1_cache(&model->tl1_cache, model->block_count);
     bitnet_free_tensor_cache(&model->tensor_cache);

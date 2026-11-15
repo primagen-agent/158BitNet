@@ -1,0 +1,39 @@
+#version 450
+/* Stage 3: out[h][d] = sum_t p[h][t] * V[t][h/rep][d].  One invocation per
+ * (head, d); V is walked along the cache with a fixed stride so the loads stay
+ * coalesced across the workgroup for a fixed t.
+ */
+#ifndef LS
+#define LS 128
+#endif
+layout(local_size_x = LS) in;
+
+layout(std430, binding = 0) readonly buffer P { float p[]; };   /* n_head * nt   */
+layout(std430, binding = 1) readonly buffer V { float v[]; };   /* nt * nkv * hd */
+layout(std430, binding = 2) writeonly buffer O { float o[]; };  /* n_head * hd   */
+
+layout(push_constant) uniform PC {
+    uint n_head;
+    uint nkv;
+    uint hd;
+    uint nt;
+    uint rep;
+    uint pad0;
+    uint pad1;
+    uint pad2;
+} pc;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    uint total = pc.n_head * pc.hd;
+    if (i >= total) return;
+    uint h = i / pc.hd;
+    uint d = i - h * pc.hd;
+    uint kh = h / pc.rep;
+
+    uint po = h * pc.nt;
+    float acc = 0.0;
+    for (uint t = 0u; t < pc.nt; ++t)
+        acc += p[po + t] * v[(t * pc.nkv + kh) * pc.hd + d];
+    o[i] = acc;
+}

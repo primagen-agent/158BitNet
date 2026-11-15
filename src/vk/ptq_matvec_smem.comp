@@ -1,0 +1,100 @@
+#version 450
+/* PTQ1_0 ternary matvec with the activation staged in workgroup memory.
+ *
+ * Every invocation in a workgroup walks the same 512-byte activation block,
+ * so the one-row kernel issues 50 activation loads per block per lane for
+ * data the workgroup as a whole touches once.  Here lanes 0..49 each fetch
+ * one element (26 vec4 + 24 scalars) into shared memory, one barrier makes it
+ * visible, and the row loop reads it back from there.
+ *
+ * The barrier is workgroup-scoped: there is no cross-workgroup coordination
+ * and no early return before a barrier (inactive lanes stay in the loop).
+ *
+ * Measured stand-alone (5120 inputs, G weights/s, 150 iterations):
+ *
+ *   rows    one-row   staged
+ *   3072     32.5      27.4     small dispatches lose to the barrier
+ *   8192     34.7      39.0
+ *   20480    43.0      58.6
+ *   65536    53.3      78.2
+ *   and on an Adreno 650, where the effect matters most:
+ *   3072      6.2       7.5
+ *   8192      8.1      11.2
+ *   20480     9.3      13.2
+ *   65536    11.8      17.0
+ *
+ * So the backend only picks this kernel for windows of at least
+ * BQ_VK_SMEM_MIN_ROWS rows, and only on drivers known to handle the barrier:
+ * the vendored Qualcomm driver does, Mesa's Turnip hangs the GPU on it.
+ */
+#ifndef LS
+#define LS 128
+#endif
+layout(local_size_x = LS) in;
+
+layout(std430, binding = 0) readonly buffer WBuf { uint w[]; };
+layout(std430, binding = 1) readonly buffer XA { vec4 xa[]; };
+layout(std430, binding = 2) writeonly buffer YBuf { float y[]; };
+layout(std430, binding = 3) readonly buffer XB { float xb[]; };
+
+layout(push_constant) uniform PC { uint n_blocks; float xscale; uint n_rows; uint pad; } pc;
+
+shared vec4 sxa[26];
+shared float sxb[24];
+
+int trit(uint b, uint p3) { return int(((b * p3) & 0xFFu) * 3u >> 8u) - 1; }
+
+void main() {
+    uint row = gl_GlobalInvocationID.x;
+    uint lid = gl_LocalInvocationID.x;
+    bool live = row < pc.n_rows;
+    uint nb = pc.n_blocks;
+    uint p = row * nb * 7u;
+    float acc = 0.0;
+
+    for (uint b = 0u; b < nb; ++b) {
+        uint ap = b * 26u;
+        uint bp = b * 24u;
+        if (lid < 26u) {
+            sxa[lid] = xa[ap + lid];
+        } else if (lid < 50u) {
+            sxb[lid - 26u] = xb[bp + lid - 26u];
+        }
+        barrier();
+
+        if (live) {
+            uint wp = p + b * 7u;
+            float s = 0.0;
+            for (int i = 0; i < 4; ++i) {
+                uint by4 = w[wp + uint(i)];
+                for (int j = 0; j < 4; ++j) {
+                    uint by = (by4 >> (uint(j) * 8u)) & 0xFFu;
+                    vec4 x4 = sxa[i * 4 + j];
+                    s += float(trit(by, 1u)) * x4.x + float(trit(by, 3u)) * x4.y
+                       + float(trit(by, 9u)) * x4.z + float(trit(by, 27u)) * x4.w
+                       + float(trit(by, 81u)) * sxb[i * 4 + j];
+                }
+            }
+            for (int i = 0; i < 2; ++i) {
+                uint by4 = w[wp + 4u + uint(i)];
+                for (int j = 0; j < 4; ++j) {
+                    uint by = (by4 >> (uint(j) * 8u)) & 0xFFu;
+                    vec4 x4 = sxa[16 + i * 4 + j];
+                    s += float(trit(by, 1u)) * x4.x + float(trit(by, 3u)) * x4.y
+                       + float(trit(by, 9u)) * x4.z + float(trit(by, 27u)) * x4.w
+                       + float(trit(by, 81u)) * sxb[16 + i * 4 + j];
+                }
+            }
+            uint by2 = w[wp + 6u];
+            for (int h = 0; h < 2; ++h) {
+                uint by = (by2 >> (uint(h) * 8u)) & 0xFFu;
+                vec4 x4 = sxa[24 + h];
+                s += float(trit(by, 1u)) * x4.x + float(trit(by, 3u)) * x4.y
+                   + float(trit(by, 9u)) * x4.z + float(trit(by, 27u)) * x4.w;
+            }
+            acc += s * unpackHalf2x16(by2 >> 16u).x;
+        }
+        barrier();
+    }
+    if (live) y[row] = acc * pc.xscale;
+}

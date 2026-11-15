@@ -1,0 +1,68 @@
+#version 450
+/* Elementwise and normalisation stages, one invocation per row.
+ *
+ * A row is the whole vector for a full-width norm, or one head for the
+ * per-head norms, so S x S and head-dim cases get their parallelism from
+ * nrow.  No two invocations touch the same data, so no barrier is involved.
+ */
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) readonly buffer ABuf { float a[]; };
+layout(std430, binding = 1) readonly buffer BBuf { float b[]; };
+layout(std430, binding = 2) readonly buffer WBuf { float w[]; };
+layout(std430, binding = 3) writeonly buffer OBuf { float o[]; };
+
+/* 0 rms(x)*w   1 rms(x)*w*silu(b)   2 l2(x)
+ * 3 silu(a)*b  4 a*sigmoid(b)       5 a+b        6 a*w */
+layout(push_constant) uniform PC {
+    uint mode; uint n; uint nrow; uint has_w;
+    float eps;
+} pc;
+
+float sigmoid_of(float v) { return 1.0 / (1.0 + exp(-v)); }
+
+void main() {
+    uint r = gl_GlobalInvocationID.x;
+    if (r >= pc.nrow) return;
+    uint base = r * pc.n;
+    uint i;
+
+    if (pc.mode == 3u) {
+        for (i = 0; i < pc.n; ++i)
+            o[base + i] = (a[base + i] / (1.0 + exp(-a[base + i]))) * b[base + i];
+        return;
+    }
+    if (pc.mode == 4u) {
+        for (i = 0; i < pc.n; ++i) o[base + i] = a[base + i] * sigmoid_of(b[base + i]);
+        return;
+    }
+    if (pc.mode == 5u) {
+        for (i = 0; i < pc.n; ++i) o[base + i] = a[base + i] + b[base + i];
+        return;
+    }
+    if (pc.mode == 6u) {
+        for (i = 0; i < pc.n; ++i) o[base + i] = a[base + i] * w[i];
+        return;
+    }
+
+    /* normalising modes: one pass for the statistic, one to apply it.
+     * The weight of a norm is shared by every row (it belongs to the layer,
+     * not to the head), so it is read from the start of w, not from base. */
+    float sum = 0.0;
+    for (i = 0; i < pc.n; ++i) sum += a[base + i] * a[base + i];
+    float scale;
+    if (pc.mode == 2u) scale = 1.0 / max(sqrt(sum), pc.eps);
+    else               scale = 1.0 / sqrt(sum / float(pc.n) + pc.eps);
+
+    if (pc.mode == 0u) {
+        for (i = 0; i < pc.n; ++i)
+            o[base + i] = a[base + i] * scale * (pc.has_w != 0u ? w[i] : 1.0);
+    } else if (pc.mode == 1u) {
+        for (i = 0; i < pc.n; ++i) {
+            float v = a[base + i] * scale * (pc.has_w != 0u ? w[i] : 1.0);
+            o[base + i] = v * (b[base + i] / (1.0 + exp(-b[base + i])));
+        }
+    } else {
+        for (i = 0; i < pc.n; ++i) o[base + i] = a[base + i] * scale;
+    }
+}

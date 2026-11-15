@@ -1,0 +1,63 @@
+#version 450
+/* PTQ1_0 ternary matvec, trit lookup table.
+ *
+ * Decoding a packed byte costs five mul/mask/shift chains -- roughly 780 ALU
+ * ops per 128-weight block, against ~120 FMAs of actual dot product.  The
+ * table turns every digit into a load instead:
+ *
+ *   lt4[b]  the low four trits of byte b, one aligned vec4
+ *   lt5[b]  the fifth trit of byte b
+ *
+ * Both share one 5 KiB buffer, which stays resident in L1.
+ */
+#ifndef LS
+#define LS 128
+#endif
+layout(local_size_x = LS) in;
+
+layout(std430, binding = 0) readonly buffer WBuf { uint w[]; };
+layout(std430, binding = 1) readonly buffer XA { vec4 xa[]; };
+layout(std430, binding = 2) writeonly buffer YBuf { float y[]; };
+layout(std430, binding = 3) readonly buffer XB { vec4 xb4[]; };
+/* A block may hold a sized array followed by another member, so the 4 KiB
+ * low-digit table and the 1 KiB fifth-digit table share one binding. */
+layout(std430, binding = 4) readonly buffer LUT { vec4 lt4[256]; float lt5[256]; };
+
+layout(push_constant) uniform PC { uint n_blocks; float xscale; uint n_rows; uint pad; } pc;
+
+void main() {
+    uint row = gl_GlobalInvocationID.x;
+    if (row >= pc.n_rows) return;
+    uint nb = pc.n_blocks;
+    uint p = row * nb * 7u;
+    float acc = 0.0;
+    for (uint b = 0u; b < nb; ++b) {
+        uint wp = p + b * 7u;
+        uint ap = b * 26u;
+        uint bp = b * 6u;
+        float s = 0.0;
+        for (int i = 0; i < 4; ++i) {
+            uint by4 = w[wp + uint(i)];
+            vec4 x5v = xb4[bp + uint(i)];
+            for (int j = 0; j < 4; ++j) {
+                uint by = (by4 >> (uint(j) * 8u)) & 0xFFu;
+                s += dot(lt4[by], xa[ap + uint(i * 4 + j)]) + lt5[by] * x5v[j];
+            }
+        }
+        for (int i = 0; i < 2; ++i) {
+            uint by4 = w[wp + 4u + uint(i)];
+            vec4 x5v = xb4[bp + 4u + uint(i)];
+            for (int j = 0; j < 4; ++j) {
+                uint by = (by4 >> (uint(j) * 8u)) & 0xFFu;
+                s += dot(lt4[by], xa[ap + 16u + uint(i * 4 + j)]) + lt5[by] * x5v[j];
+            }
+        }
+        uint by2 = w[wp + 6u];
+        for (int h = 0; h < 2; ++h) {
+            uint by = (by2 >> (uint(h) * 8u)) & 0xFFu;
+            s += dot(lt4[by], xa[ap + 24u + uint(h)]);
+        }
+        acc += s * unpackHalf2x16(by2 >> 16u).x;
+    }
+    y[row] = acc * pc.xscale;
+}
