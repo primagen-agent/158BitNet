@@ -558,6 +558,14 @@ minicpm_model_t *minicpm_load_model(const char *path, int n_threads) {
             m->rope_factors_short = (const float *)gguf_get_tensor_ptr(&m->gguf, ts);
             m->rope_factors_long = (const float *)gguf_get_tensor_ptr(&m->gguf, tl);
             m->rope_factor_count = (int)needed;
+        } else if (s != NULL && s->type == GGUF_TYPE_STRING && s->string_value != NULL &&
+                   strcmp(s->string_value, "longrope") == 0) {
+            /* The published BitCPM-CANN / MiniCPM4.1 1B and 3B GGUFs declare
+             * longrope but ship without the factor tensors, so decoding would
+             * silently use plain RoPE and lose accuracy.  Say so once. */
+            fprintf(stderr, "minicpm: %s: longrope factors missing from the file; "
+                            "plain RoPE in use (repair with tools/gguf_rope_fix.c)\n",
+                    path);
         }
     }
 

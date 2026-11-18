@@ -828,29 +828,48 @@ Multi-turn KV-cache profiling:
 
 ## Measured Accuracy
 
-MMLU and ARC for every local BitCPM size, 5-shot, greedy, `max_tokens 16`,
-2048 context, 4 threads, on the Snapdragon 865 board. MMLU takes 20 test items
-from each of six subjects with five `dev` examples; 105 items are answered
-because the `high_school_world_history` prompts (5.5-8.6 KB with five
-examples) do not fit the context. ARC takes 30 items from each config (60
-total) with five `train` examples. The +- is the binomial standard error.
+MMLU and ARC for every local BitCPM size on the Snapdragon 865 board: 5-shot,
+greedy, `max_tokens 16`, 2048 context. MMLU takes 20 test items from each of six
+subjects with five `dev` examples; 105 are answered because the
+`high_school_world_history` prompts (5.5-8.6 KB with five examples) do not fit
+the context. ARC takes 30 items from each config with five `train` examples.
+The official columns are the numbers published for the BitCPM-CANN release
+(MMLU 5-shot, `BitCPM_CANN.pdf`).
 
-| Model | MMLU | ARC | s/item (MMLU / ARC) |
-| --- | ---: | ---: | ---: |
-| cpm05 0.5B | 45.7% +-4.9 (48/105) | 51.7% +-6.5 (31/60) | 4.8 / 2.7 |
-| cpm1b 1B | 46.7% +-4.9 (49/105) | 65.0% +-6.2 (39/60) | 14.7 / 6.9 |
-| cpm3b 3B | 60.0% +-4.8 (63/105) | 81.7% +-5.0 (49/60) | 32.5 / 15.3 |
-| cpm8b 8B | 70.5% +-4.5 (74/105) | 86.7% +-4.4 (52/60) | 61.4 / 31.4 |
+| Model | MMLU | ARC-c | ARC-e | Official MMLU | Official ARC-c | Official ARC-e |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| cpm05 0.5B | 45.7% (48/105) | 46.7% (14/30) | 56.7% (17/30) | 50.73 | 50.51 | 65.08 |
+| cpm1b 1B | 59.0% (62/105) | 63.3% (19/30) | 83.3% (25/30) | 57.71 | 67.12 | 79.01 |
+| cpm3b 3B | 64.8% (68/105) | 80.0% (24/30) | 90.0% (27/30) | 64.41 | 78.98 | 88.36 |
+| cpm8b 8B | 70.5% (74/105) | 83.3% (25/30) | 90.0% (27/30) | 70.65 | 86.10 | 93.47 |
 
 - 0-shot letter prompting does not work on this family at any size: the model
   answers with reasoning text ("To find the degree ...") instead of a letter.
   Five exemplars are what make the numbers comparable at all.
 - The 0.5B still misses the format on 9 of 105 items, all in
-  `abstract_algebra` and `econometrics`; 1B and up answer every item.
-- 0.5B and 1B are equal on MMLU (45.7 vs 46.7): the extra size buys format, not
-  knowledge. ARC grows monotonically, 51.7 / 65.0 / 81.7 / 86.7.
+  `abstract_algebra` and `econometrics`; every other size answers every item.
+- MMLU grows with size: 45.7 / 59.0 / 64.8 / 70.5.
 - The ternary output head does not change answers: `BQ_MC_HEAD=0` (native head)
   and the default mode 2 agreed on 66 of 66 items (22 each at 0.5B, 3B, 8B).
+
+### LongRoPE factors in the official 1B/3B GGUFs
+
+The published 1B and 3B files declare `rope.scaling.type = longrope` but carry
+no `rope_factors_short.weight` / `rope_factors_long.weight` tensor (0.5B and 8B
+carry both). Without them the runtime falls back to plain RoPE and loses
+accuracy, so the 1B and 3B rows above are measured on repaired copies:
+
+```sh
+python3 -c 'import json,sys; c=json.load(open(sys.argv[1]))["rope_scaling"]; \
+            print("\n".join(map(str,c["short_factor"])))' config.json > /tmp/f.txt
+./build/gguf_rope_fix models/bitcpm4-1b-tq2_0.gguf \
+                      models/bitcpm4-1b-tq2_0-ropefix.gguf /tmp/f.txt
+```
+
+`tools/gguf_rope_fix` rewrites only the header (`n_tensors` +2) and the
+tensor-info block, copies the data section unchanged and appends the factors
+(+640 bytes for 1B, +608 for 3B); a second run is a no-op. `src/minicpm.c`
+prints a warning when a model declares longrope without the tensors.
 
 ## Notes
 

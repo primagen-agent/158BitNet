@@ -123,6 +123,7 @@ if(Vulkan_FOUND)
 endif()
 
 add_executable(gguf_inspect tools/gguf_inspect.c)
+add_executable(gguf_rope_fix tools/gguf_rope_fix.c)
 add_executable(tok_probe tools/tok_probe.c)
 target_include_directories(tok_probe PRIVATE src include)
 target_link_libraries(tok_probe PRIVATE bitnet m)
