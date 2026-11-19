@@ -150,24 +150,27 @@ Context is memory bound, not file bound: the checkpoint declares 262144
 positions, but its KV cache is 128 KB per token, so a 28 GB board runs out of
 memory long before the server's 32768 cap.
 
-## Android 865 Best Known Results
+## Snapdragon 865 Best Known Results
 
-Historical best results observed on the Snapdragon 865 Android device used for
-this project are listed below. These numbers are direct `test_profile_decode`
-short-context decode microbenchmarks after the ARM/Android optimization work.
-They are not HTTP long-generation throughput numbers, and they are not measured
-with LoRA enabled.
+Latest measurements on the Snapdragon 865 (SM8250) board used for this project
+(`OR65M52X12U245200046`: Ubuntu 24.04, one A77 at 2.84 GHz plus three at
+2.42 GHz and four A55s, 11 GB RAM, ~23.5 GB/s DRAM read ceiling). One binary,
+`bonsai_server --threads 3 --ctx 2048 --no-gpu`, greedy decoding, 64 generated
+tokens from a 26-token prompt, best of three runs. Decode is the steady-state
+rate the server reports in `perf.decode_tokens_per_s`; prefill is for the same
+26-token prompt.
 
-| Model | GGUF file | Best observed decode | Notes |
-| --- | --- | ---: | --- |
-| 0.5B | `bitcpm4-0.5b-tq2_0.gguf` | `>100 tok/s` | Best historical 0.5B Android decode result after tied-output and 865 tuning. |
-| 1B | `bitcpm4-1b-tq2_0.gguf` | `~34 tok/s` | Best historical 1B Android microbenchmark; HTTP long generation was lower. |
-| 3B | `bitcpm4-3b-tq2_0.gguf` | `~16 tok/s` | Best historical 3B Android result after output chunk tuning. |
-| 8B | `bitcpm4-8b-tq2_0.gguf` | `~8 tok/s` | Best historical 8B Android result; this was the corrected 8B baseline. |
+| Model | GGUF file | Decode | Prefill |
+| --- | --- | ---: | ---: |
+| 0.5B | `bitcpm4-0.5b-tq2_0.gguf` | 153-155 tok/s | ~310 tok/s |
+| 1B | `bitcpm4-1b-tq2_0.gguf` | 50-51 tok/s | ~93 tok/s |
+| 3B | `bitcpm4-3b-tq2_0.gguf` | 20.4-20.8 tok/s | ~32 tok/s |
+| 8B | `bitcpm4-8b-tq2_0.gguf` | 9.3-9.7 tok/s | ~16 tok/s |
 
 Use these numbers as regression guardrails. When comparing new optimizations,
-keep the benchmark type, model, thread count, context length, and background
-process state the same.
+keep the model, thread count, context length, prompt shape, and background
+process state the same: a shorter generation reads higher, at 32 tokens
+156-160 / 54 / 22-24 / 10.9 tok/s on the same board.
 
 ## Architecture
 
@@ -770,8 +773,8 @@ adb -s 192.168.210.10:5555 shell \
 ```
 
 For decode-only regression checks on Snapdragon 865, compare against the
-[best known Android results](#android-865-best-known-results) rather than HTTP
-long-generation throughput.
+[best known 865 results](#snapdragon-865-best-known-results) with the same
+binary, thread count, context length and 64-token protocol.
 
 ## Tests And Profiling
 
